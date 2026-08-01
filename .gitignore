@@ -41,6 +41,44 @@ logs/
 htmlcov/
 .coverage
 coverage.xml
+.pytest_cache/
+
+# Local dependency bundles
+.python-packages/
+.runtime-packages/
+.runtime-wheels/
+
+# Model weights and training outputs
+*.pt
+*.onnx
+runs/
+models/_output_.zip
+models/cctv_dataset.zip
+models/cctv_dataset/
+kaggle_pipeline/dataset/
+kaggle_pipeline/kernel/
+kaggle_pipeline/cctv_dataset/
+kaggle_pipeline/cctv_dataset.zip
+outputs/
+training/
+
+# Downloaded/generated datasets
+datasets/cctv_abandoned_combined/
+datasets/temp_extracted/
+datasets/temp_baggage.zip
+datasets/raw/
+
+# Generated runtime artifacts
+artifacts/backend_events/
+artifacts/events/
+artifacts/evidence/
+artifacts/test_evidence/
+artifacts/diagnostic-*.jpg
+artifacts/qa-*
+artifacts/runtime/
+
+# Scratch files
+temp-chat.txt
 
 # Docker
 docker-compose.override.yml

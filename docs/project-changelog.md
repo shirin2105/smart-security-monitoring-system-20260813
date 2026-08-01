@@ -1,0 +1,33 @@
+# Project Changelog
+
+## 2026-08-01
+
+### Added
+
+- Class-independent static-region detection with baseline warm-up, persistence, clearing, and re-arming identities.
+- `static_regions` candidate routing through the abandoned-object engine, including owner-absence timing, cached validation, evidence capture, and deduplication.
+- Deterministic UTC video timestamps derived from source epoch, zero-based frame offset, and source FPS.
+- Hugging Face multimodal validator using environment-only `HF_TOKEN`, strict JSON parsing, bounded image/request settings, and explicit unavailable results.
+- Bounded `MultiCameraRunner` supervision for up to six enabled cameras with a shared lock-protected detector and per-camera failure isolation.
+- Canonical PETS real-data generator, annotated video, and JSON summary with source integrity and semantic-validation disclosure.
+- Temporal full-scene validation: proportional 480-pixel sampling at 1 FPS over `T-8s..T+8s`, an 8-second post-roll wait, maximum 17 frames, 12 MB per-camera memory ceiling, and 12 MB aggregate Hugging Face request budget.
+- End-of-stream cleanup that drops incomplete temporal windows without validation or event emission and reports incomplete region IDs.
+
+### Changed
+
+- Default abandoned-object configuration now selects `candidate_source: static_regions`.
+- Heuristic validation is named and disclosed as non-semantic; compatibility alias `local` remains accepted internally, but the demo CLI exposes `disabled`, `heuristic`, and `huggingface`.
+- Validator unavailability fails open at the event engine; explicit rejection suppresses the candidate.
+- Deferred temporal decisions preserve the original candidate timestamp `T` in emitted events rather than using the later decision time.
+- Production abandoned-object configuration now enables temporal Hugging Face validation by default with `google/gemma-3-4b-it`.
+- Worker construction performs no provider request. With no `HF_TOKEN`, validation returns `unavailable` without network access after the 8-second post-roll wait, and the event engine fails open.
+- The canonical demo static-region threshold is now 6 seconds.
+
+### Verification notes
+
+- The committed authenticated PETS summary records one real Hugging Face decision over 16 ordered full-scene frames. The model identified the region as a person and rejected it at `0.99` confidence, so no alert was emitted.
+- The detector/heuristic PETS comparison processed all 1,510 frames and emitted three alerts; the first occurred at 45.5 seconds and `semantic_vlm_executed` is `false`.
+- The six-camera behavior is contract-tested only. No real six-camera performance benchmark has been completed.
+- The PETS artifact demonstrates execution on real footage; it is not a labeled accuracy benchmark.
+
+See [`system-architecture.md`](./system-architecture.md) for the verified command, artifacts, behavior, and limitations.

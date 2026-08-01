@@ -1,0 +1,16 @@
+cameras:
+  - camera_id: cam_01
+    name: Cổng kỹ thuật
+    source_type: SIMULATED
+    source_uri: ./tests/clips/intrusion_positive.mp4
+    location: Gate A
+    inference_fps: 5
+    enabled: true
+
+  - camera_id: cam_02
+    name: Sảnh chính
+    source_type: SIMULATED
+    source_uri: ./tests/clips/crowd_positive.mp4
+    location: Lobby
+    inference_fps: 5
+    enabled: true

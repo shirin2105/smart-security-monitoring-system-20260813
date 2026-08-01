@@ -5,6 +5,12 @@ pydantic>=2.10.0
 pydantic-settings>=2.7.0
 python-dotenv>=1.0.0
 
+# Computer Vision & Geometry
+ultralytics>=8.3.0
+opencv-python-headless>=4.10.0
+shapely>=2.0.0
+pyyaml>=6.0.1
+
 # AI / LangChain
 langchain>=0.3.0
 langchain-openai>=0.3.0
@@ -23,3 +29,4 @@ ruff>=0.8.0
 pytest>=8.0.0
 pytest-asyncio>=0.24.0
 httpx>=0.28.0
+
