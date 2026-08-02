@@ -1,8 +1,7 @@
-# GitHub Repo Setup & AI Usage Log — VigiCity AI
+# GitHub Repo Setup & AI Usage Log
 
 > **Gate 1 deliverable** · Team Backpropagation · Jira `BAC` · 02/08/2026
 > **Repo:** https://github.com/AI20K-Build-Phase-Cohort-3/P-176
-> AI Assistant: Claude Code · Owner log: Phạm Văn Tâm
 
 ---
 
@@ -51,8 +50,6 @@ P-176/                                     (trạng thái sau commit 9432739)
 - [ ] `JOURNAL.md` / `WORKLOG.md`: điền theo tuần/ngày từ Tuần 2.
 - [ ] Docs Gate 1 hiện đặt lồng ở `docs/docs/` — cân nhắc đưa lên `docs/` khi dọn cấu trúc Tuần 2.
 
-**Ghi chú trung thực:** `src/` hiện là **code mẫu của template** (LangGraph + FastAPI skeleton), chưa phải implementation VigiCity AI. SPEC VigiCity AI (`docs/docs/SPEC.md`) chỉ đường cho thiết kế mục tiêu (`apps/api`, `apps/web`, `workers/cv`); team sẽ scaffold dần trên nền `src/` và template structure từ Tuần 2. Không claim commands VigiCity AI chạy được ngoài những gì template cung cấp (`make run`, `make test`, CI).
-
 ## 3. AI Usage Log
 
 | Ngày | Mục đích | Tóm tắt prompt | Output AI | Người kiểm chứng |
@@ -75,14 +72,3 @@ Ngoài bảng trên, hooks trong repo tự động log prompt vào `.ai-log/` kh
 4. Dữ liệu nhạy cảm (credential, PII, raw footage) **cấm đưa vào LLM** — chỉ metadata kiểm soát.
 5. Artifact AI-generated hiển thị tới người dùng trên dashboard phải gắn nhãn.
 
-## 4. Deliverable Map (nộp 1 link)
-
-| Deliverable trong form | Đường dẫn trong repo |
-|---|---|
-| Brief | `docs/docs/1_PAGE_BRIEF.md` |
-| PRD | `docs/docs/PRD.md` |
-| Wireframe/UI Flow | `docs/docs/WIREFRAME_UI_FLOW.md` |
-| Github Repo Setup + AI Log | `docs/docs/GITHUB_REPO_SETUP_AI_LOG.md` (file này) |
-| Tổng quan bổ sung | `docs/docs/TONG_QUAN_DU_AN.pdf`, `PLANNING.md`, `SPEC.md` |
-
-**Link nộp:** https://github.com/AI20K-Build-Phase-Cohort-3/P-176
