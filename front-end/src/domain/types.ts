@@ -106,6 +106,13 @@ export function isSevere(severity: Severity): boolean {
   return SEVERE_SEVERITIES.includes(severity);
 }
 
+/** Trạng thái đã đóng — không còn hành động nào và không cần thông báo nữa. */
+export const TERMINAL_STATES: EventState[] = ['RESOLVED', 'DISMISSED', 'EXPIRED'];
+
+export function isTerminal(state: EventState): boolean {
+  return TERMINAL_STATES.includes(state);
+}
+
 export const EVENT_TYPE_LABEL: Record<EventType, string> = {
   ZONE_INTRUSION: 'Xâm nhập vùng cấm',
   CROWD_THRESHOLD: 'Tụ tập đông người',

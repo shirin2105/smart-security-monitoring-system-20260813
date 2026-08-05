@@ -14,11 +14,11 @@
 
 import {
   ActionType,
-  EventState,
   Role,
   SecurityEvent,
   Severity,
   isSevere,
+  isTerminal,
 } from './types';
 
 export interface ActionSpec {
@@ -74,7 +74,6 @@ export const ACTION_SPECS: Record<ActionType, ActionSpec> = {
   },
 };
 
-const TERMINAL_STATES: EventState[] = ['RESOLVED', 'DISMISSED', 'EXPIRED'];
 
 /** Reason bắt buộc cho severe dismiss/resolve, ngoài các action vốn đã yêu cầu. */
 export function reasonRequired(action: ActionType, severity: Severity): boolean {
@@ -85,7 +84,7 @@ export function reasonRequired(action: ActionType, severity: Severity): boolean 
 
 /** Action hợp lệ theo state + severity, chưa xét role. */
 function stateAllowedActions(event: SecurityEvent): ActionType[] {
-  if (TERMINAL_STATES.includes(event.state)) return [];
+  if (isTerminal(event.state)) return [];
 
   const allowed: ActionType[] = [];
 
@@ -159,7 +158,7 @@ export function allowedActions(
  * thông báo thay vì để trống, giúp người trực hiểu tại sao không bấm được.
  */
 export function blockedReason(event: SecurityEvent, role: Role): string | null {
-  if (TERMINAL_STATES.includes(event.state)) return null;
+  if (isTerminal(event.state)) return null;
   if (role !== 'GUARD') return null;
   if (!isSevere(event.effectiveSeverity)) return null;
   return 'Sự cố mức nghiêm trọng — chỉ Quản lý an ninh mới được xác nhận hoặc bỏ qua.';
