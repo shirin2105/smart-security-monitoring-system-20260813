@@ -1,0 +1,85 @@
+[
+  {
+    "id": "aud_010",
+    "actorName": "Quản Lý Trần Văn B",
+    "actorRole": "MANAGER",
+    "action": "Xác nhận sự cố mở cửa phòng server",
+    "eventId": "evt_01H8ZM",
+    "reason": "Đã đối chiếu lịch bảo trì, không có phiếu công tác nào trong khung giờ này.",
+    "at": "2026-08-05T01:24:12Z"
+  },
+  {
+    "id": "aud_009",
+    "actorName": "Bảo Vệ Nguyễn Văn A",
+    "actorRole": "FIELD_GUARD",
+    "action": "Báo cáo kết quả kiểm tra hiện trường",
+    "eventId": "evt_01H8ZM",
+    "reason": "Cửa phòng server đã khóa lại. Không thấy dấu hiệu cạy phá.",
+    "at": "2026-08-05T01:22:47Z"
+  },
+  {
+    "id": "aud_008",
+    "actorName": "Bảo Vệ Nguyễn Văn A",
+    "actorRole": "FIELD_GUARD",
+    "action": "Tiếp nhận xử lý sự cố",
+    "eventId": "evt_01H8ZM",
+    "at": "2026-08-05T01:21:30Z"
+  },
+  {
+    "id": "aud_007",
+    "actorName": "Bảo Vệ Lê Văn C",
+    "actorRole": "FIELD_GUARD",
+    "action": "Tiếp nhận xử lý sự cố",
+    "eventId": "evt_01H8ZL",
+    "at": "2026-08-05T01:54:03Z"
+  },
+  {
+    "id": "aud_006",
+    "actorName": "Bảo Vệ Lê Văn C",
+    "actorRole": "FIELD_GUARD",
+    "action": "Tiếp nhận xử lý sự cố",
+    "eventId": "evt_01H8ZP",
+    "at": "2026-08-05T00:33:20Z"
+  },
+  {
+    "id": "aud_005",
+    "actorName": "Quản Lý Trần Văn B",
+    "actorRole": "MANAGER",
+    "action": "Bỏ qua sự cố vật thể bỏ quên",
+    "eventId": "evt_01H8ZS",
+    "reason": "Đã xác minh với bộ phận kho, đây là hàng hóa để tạm có phép.",
+    "at": "2026-08-04T22:19:11Z"
+  },
+  {
+    "id": "aud_004",
+    "actorName": "Bảo Vệ Nguyễn Văn A",
+    "actorRole": "FIELD_GUARD",
+    "action": "Đóng sự cố tụ tập giờ nghỉ",
+    "eventId": "evt_01H8ZR",
+    "reason": "Nhóm nhân viên đã giải tán, khu vực trở lại bình thường.",
+    "at": "2026-08-04T23:45:50Z"
+  },
+  {
+    "id": "aud_003",
+    "actorName": "Bảo Vệ Nguyễn Văn A",
+    "actorRole": "FIELD_GUARD",
+    "action": "Tiếp nhận xử lý sự cố",
+    "eventId": "evt_01H8ZR",
+    "at": "2026-08-04T23:42:06Z"
+  },
+  {
+    "id": "aud_002",
+    "actorName": "Bảo vệ trực ca 2",
+    "actorRole": "FIELD_GUARD",
+    "action": "Gửi điều phối: Ra kiểm tra bãi xe B1",
+    "eventId": "evt_01H8ZQ",
+    "at": "2026-08-05T00:15:22Z"
+  },
+  {
+    "id": "aud_001",
+    "actorName": "Quản Lý Trần Văn B",
+    "actorRole": "MANAGER",
+    "action": "Đăng nhập hệ thống",
+    "at": "2026-08-04T21:58:00Z"
+  }
+]
