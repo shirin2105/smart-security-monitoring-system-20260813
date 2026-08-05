@@ -69,6 +69,8 @@ nâng cấp theo, **chỉ cần sửa một file** — UI chạy tiếp không �
 
 ## Định tuyến
 
+### Bản desktop — trạm trực ban
+
 | Route | Quyền | Ticket |
 | --- | --- | --- |
 | `/login` | công khai | BAC-52 |
@@ -77,6 +79,54 @@ nâng cấp theo, **chỉ cần sửa một file** — UI chạy tiếp không �
 | `/incidents/:id` | đã đăng nhập | BAC-53, BAC-54 |
 | `/audit` | đã đăng nhập | BAC-54 |
 | `/heatmap` | chỉ `MANAGER` | BAC-55 (chưa mở) |
+
+### Bản điện thoại — Quản lý an ninh trực từ xa
+
+Theo bản chốt scope ngày 03/08. **Là web responsive, không phải app native** —
+tech stack chốt là `FastAPI, React, WebSocket, Docker`, và cả PRD §6 lẫn
+PLANNING §3 đều xếp "mobile app native" vào mục không làm trong MVP.
+
+| Route | Quyền | Nội dung |
+| --- | --- | --- |
+| `/m` | chỉ `MANAGER` | Hộp thư thông báo quan trọng |
+| `/m/incidents/:id` | chỉ `MANAGER` | Chi tiết + quyết định HITL |
+| `/m/audit` | chỉ `MANAGER` | Nhật ký thao tác |
+
+Điều hướng nằm ở cạnh dưới màn hình (vùng ngón cái), có badge đếm việc đang chờ
+quyết định, và chừa `safe-area-inset` để không bị thanh home của iPhone che.
+
+---
+
+## Thông báo quan trọng
+
+### Cái gì được coi là "quan trọng"
+
+`domain/notifications.ts` quyết định, chỉ hai nhóm:
+
+1. Sự cố **HIGH/CRITICAL chưa đóng** — chỉ Quản lý mới xác nhận được.
+2. **Escalation đang chờ duyệt** — Bảo vệ đã xin ý kiến, không ai quyết thay được.
+
+Nhóm 2 không phụ thuộc mức độ: Bảo vệ được xin ý kiến trên cả sự cố nhẹ, và một
+khi đã xin thì Quản lý bắt buộc phải trả lời.
+
+### Hai kênh song song
+
+| Kênh | Tới được khi | Ràng buộc |
+| --- | --- | --- |
+| Thông báo hệ thống | đang ở tab khác, app thu nhỏ | Cần cấp quyền; chỉ chạy trên HTTPS hoặc `localhost` |
+| Thông báo trong app | đang mở app | Luôn hoạt động, không cần quyền |
+
+Mở dashboard qua IP LAN (`http://192.168.x.x`) sẽ **không** có thông báo hệ
+thống vì trình duyệt coi đó là origin không bảo mật. Muốn demo trên điện thoại
+thật thì cần HTTPS, hoặc chấp nhận chỉ có thông báo trong app.
+
+### Chỉ báo cái vừa xảy ra
+
+`EventsProvider.subscribe()` chỉ phát những sự kiện **đến từ kênh realtime**,
+không phát lịch sử tải qua REST. Bản đầu tiên phân biệt bằng mốc "đã tải xong",
+và cảnh báo nào rơi đúng lúc trang đang tải lần đầu thì bị xếp nhầm là lịch sử
+rồi im lặng luôn — với hệ thống an ninh thì đó là mất cảnh báo. Test
+`cảnh báo tới lúc trang đang tải lần đầu vẫn được báo` khóa lại hành vi này.
 
 ---
 
@@ -100,8 +150,12 @@ Ba bảo đảm ở tầng UI: chỉ hiện action hợp lệ, khóa toàn bộ 
 ## Kiểm thử
 
 ```
-src/domain/permissions.test.ts   23 test — allow/deny matrix, scope, yêu cầu lý do
-src/App.test.tsx                  5 test — mount, điều hướng, chặn route theo role
+src/domain/permissions.test.ts     23 test — allow/deny matrix, scope, yêu cầu lý do
+src/domain/notifications.test.ts   18 test — lọc và xếp thứ tự thông báo quan trọng
+src/api/adapters.test.ts           19 test — quy đổi schema, dùng payload thật từ backend
+src/realtime/useAlertStream.test.ts 13 test — reconnect, backoff, chống trùng
+src/pages/mobile/mobile.test.tsx   10 test — phân quyền mobile, hộp thư, thông báo
+src/App.test.tsx                    5 test — mount, điều hướng, chặn route theo role
 ```
 
 Bộ test matrix phục vụ trực tiếp điều kiện PASS Gate 2: *"full state/role/scope
