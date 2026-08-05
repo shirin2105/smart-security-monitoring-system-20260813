@@ -1,6 +1,5 @@
 import { Outlet } from 'react-router-dom';
 
-import { ToastStack } from '../../notifications/ToastStack';
 import { useEvents } from '../../realtime/EventsProvider';
 import { Navbar } from './Navbar';
 
@@ -10,7 +9,6 @@ export function AppLayout() {
 
   return (
     <div className="flex min-h-screen flex-col bg-[#0B0F19] font-sans text-gray-100">
-      <ToastStack />
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-blue-600 focus:px-4 focus:py-2 focus:text-sm focus:text-white"
