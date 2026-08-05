@@ -18,6 +18,8 @@ interface HitlActionBarProps {
   event: SecurityEvent;
   /** Bố cục gọn cho sidebar, rộng cho trang chi tiết. */
   compact?: boolean;
+  /** Vùng chạm ≥44px cho màn cảm ứng — dùng ở giao diện điện thoại. */
+  touch?: boolean;
   onDone?: (updated: SecurityEvent) => void;
 }
 
@@ -40,7 +42,7 @@ const TONE_CLASS: Record<ActionSpec['tone'], string> = {
  *   2. Khóa toàn bộ nút trong lúc gửi → không double-submit.
  *   3. Lỗi 403 / 409 / chưa-có-backend hiện thành thông điệp đọc được.
  */
-export function HitlActionBar({ event, compact, onDone }: HitlActionBarProps) {
+export function HitlActionBar({ event, compact, touch, onDone }: HitlActionBarProps) {
   const { user, reportApiError } = useAuth();
   const { upsert } = useEvents();
 
@@ -110,9 +112,11 @@ export function HitlActionBar({ event, compact, onDone }: HitlActionBarProps) {
               onClick={() => handleClick(spec)}
               disabled={disabled}
               aria-busy={isSubmitting}
-              className={`flex items-center justify-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all focus:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+              className={`flex items-center justify-center gap-1.5 rounded-lg border font-semibold transition-all focus:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50 ${
                 TONE_CLASS[spec.tone]
-              } ${compact ? 'flex-1' : ''}`}
+              } ${compact ? 'flex-1' : ''} ${
+                touch ? 'min-h-11 flex-1 px-4 py-3 text-sm' : 'px-3 py-1.5 text-xs'
+              }`}
             >
               {isSubmitting && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />}
               <span>{spec.label}</span>
