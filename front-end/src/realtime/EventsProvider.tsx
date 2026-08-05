@@ -34,6 +34,15 @@ interface EventsContextValue {
   /** Ghi đè một event sau khi POST action thành công. */
   upsert: (event: SecurityEvent) => void;
   triggerSimulation: () => Promise<void>;
+  /**
+   * Đăng ký nhận những sự kiện ĐẾN TỪ KÊNH REALTIME.
+   *
+   * Khác với `events` (gồm cả lịch sử tải qua REST), callback này chỉ chạy cho
+   * cái vừa xảy ra. Nhờ vậy trung tâm thông báo không cần đoán đâu là lịch sử —
+   * trước đây phải baseline theo thời điểm tải xong, và cảnh báo nào rơi đúng
+   * lúc đang tải lần đầu sẽ bị nuốt mất.
+   */
+  subscribe: (listener: (event: SecurityEvent) => void) => () => void;
 }
 
 const EventsContext = createContext<EventsContextValue | null>(null);
@@ -82,16 +91,41 @@ export function EventsProvider({ children }: { children: ReactNode }) {
     setRevision((value) => value + 1);
   }, []);
 
+  const streamListeners = useRef<Set<(event: SecurityEvent) => void>>(new Set());
+
+  const subscribe = useCallback((listener: (event: SecurityEvent) => void) => {
+    streamListeners.current.add(listener);
+    return () => streamListeners.current.delete(listener);
+  }, []);
+
+  /**
+   * Chỉ gọi từ các nhánh xử lý message realtime — không gọi trong `reload` hay
+   * sau khi người dùng tự bấm hành động, để không tự báo lại việc mình vừa làm.
+   */
+  const announce = useCallback((event: SecurityEvent) => {
+    streamListeners.current.forEach((listener) => listener(event));
+  }, []);
+
+  const handleCreated = useCallback(
+    (event: SecurityEvent) => {
+      upsert(event);
+      announce(event);
+    },
+    [upsert, announce],
+  );
+
   const refetchOne = useCallback(
     async (eventId: number) => {
       try {
-        upsert(await api.getEvent(eventId));
+        const event = await api.getEvent(eventId);
+        upsert(event);
+        announce(event);
       } catch {
         // Không lấy được chi tiết thì đồng bộ lại cả danh sách.
         void reload();
       }
     },
-    [upsert, reload],
+    [upsert, announce, reload],
   );
 
   // Ref vì `onReconcile` được giữ nguyên qua các lần render của hook stream.
@@ -99,7 +133,7 @@ export function EventsProvider({ children }: { children: ReactNode }) {
   userRef.current = user;
 
   const { status: streamStatus } = useAlertStream({
-    onEventCreated: upsert,
+    onEventCreated: handleCreated,
     onEventUpdated: refetchOne,
     onReconcile: () => {
       // Chỉ tải khi đã đăng nhập — tránh gọi API rồi nhận 401 ở màn login.
@@ -125,8 +159,19 @@ export function EventsProvider({ children }: { children: ReactNode }) {
       reload,
       upsert,
       triggerSimulation,
+      subscribe,
     }),
-    [events, loading, error, streamStatus, revision, reload, upsert, triggerSimulation],
+    [
+      events,
+      loading,
+      error,
+      streamStatus,
+      revision,
+      reload,
+      upsert,
+      triggerSimulation,
+      subscribe,
+    ],
   );
 
   return <EventsContext.Provider value={value}>{children}</EventsContext.Provider>;
