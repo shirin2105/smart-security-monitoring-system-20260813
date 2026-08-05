@@ -1,19 +1,21 @@
-from typing import List, Optional, Dict, Any, Literal
+from typing import Any, Literal
+
 from pydantic import BaseModel, ConfigDict, Field
-from app.common.enums import EventType, SourceEngine, RedactionStatus
+
+from app.common.enums import EventType, RedactionStatus, SourceEngine
 
 
 class DetectionResult(BaseModel):
     class_id: int
     class_name: str
-    bbox: List[float]  # [x1, y1, x2, y2]
+    bbox: list[float]  # [x1, y1, x2, y2]
     confidence: float
 
 
 class TrackResult(BaseModel):
     track_id: int
     class_name: str
-    bbox: List[float]  # [x1, y1, x2, y2]
+    bbox: list[float]  # [x1, y1, x2, y2]
     confidence: float
     first_seen_at: str
     last_seen_at: str
@@ -26,13 +28,13 @@ class FrameData(BaseModel):
     source_type: str
     source_fps: float
     inference_fps: float
-    image: Optional[Any] = Field(default=None, exclude=True)  # Raw frame matrix in memory
+    image: Any | None = Field(default=None, exclude=True)  # Raw frame matrix in memory
 
 
 class StaticRegionObservation(BaseModel):
     model_config = ConfigDict(frozen=True)
     region_id: str
-    bbox: List[float]
+    bbox: list[float]
     first_seen_at: str
     last_seen_at: str
     persistence_seconds: float
@@ -42,28 +44,47 @@ class VLMValidationResult(BaseModel):
     model_config = ConfigDict(frozen=True)
     verdict: Literal["accepted", "rejected", "unavailable"]
     confidence: float = 0.0
-    reason: Optional[str] = None
+    reason: str | None = None
 
 class ObservationData(BaseModel):
     personCount: int = 0
-    dwellSeconds: Optional[float] = None
+    dwellSeconds: float | None = None
     insideZone: bool = False
-    stationarySeconds: Optional[float] = None
-    ownerAbsentSeconds: Optional[float] = None
+    stationarySeconds: float | None = None
+    ownerAbsentSeconds: float | None = None
 
 
 class ArtifactData(BaseModel):
     available: bool = False
     contentType: str = "image/jpeg"
     redactionStatus: RedactionStatus = RedactionStatus.PENDING
-    uri: Optional[str] = None
+    uri: str | None = None
+
+
+class EnrichmentOutput(BaseModel):
+    """Agent enrichment output. Advisory only: never mutates event severity/state."""
+
+    recommendedSeverity: Literal["INFO", "WARNING", "HIGH", "CRITICAL"]
+    rationale: str
+    summary: str
+    actionChecklist: list[str] = Field(default_factory=list)
+
+
+class EnrichmentTelemetry(BaseModel):
+    eventType: str
+    candidateId: str
+    latencyMs: float
+    model: str
+    fallbackUsed: bool
+    outputValid: bool
+    error: str | None = None
 
 
 class EventCandidate(BaseModel):
     candidateId: str
     sourceEngine: SourceEngine = SourceEngine.CV
     cameraId: str
-    zoneId: Optional[str] = None
+    zoneId: str | None = None
     sourceType: str = "SIMULATED"
 
     eventType: EventType
@@ -75,7 +96,7 @@ class EventCandidate(BaseModel):
 
     confidence: float
     trackCount: int = 1
-    trackIds: List[int] = Field(default_factory=list)
+    trackIds: list[int] = Field(default_factory=list)
 
     observations: ObservationData
     modelVersion: str = "yolo-v11n"
