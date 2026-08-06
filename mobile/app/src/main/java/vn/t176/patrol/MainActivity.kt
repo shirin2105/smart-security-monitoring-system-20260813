@@ -1,6 +1,7 @@
 package vn.t176.patrol
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -17,6 +18,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.rememberNavController
 import vn.t176.patrol.data.AppContainer
 import vn.t176.patrol.domain.model.UserSession
 import vn.t176.patrol.navigation.PatrolNavGraph
@@ -26,6 +29,16 @@ import vn.t176.patrol.ui.theme.PatrolTheme
 class MainActivity : ComponentActivity() {
 
     private lateinit var container: AppContainer
+
+    /**
+     * Giữ lại để [onNewIntent] điều hướng được.
+     *
+     * Activity khai báo `launchMode="singleTask"`, nên khi app đang chạy thì
+     * thông báo mới KHÔNG tạo Activity mới — intent đi thẳng vào `onNewIntent`.
+     * Navigation Compose chỉ đọc intent một lần lúc khởi tạo, nên nếu không tự
+     * chuyển tiếp thì chạm vào thông báo lúc app đang mở sẽ không đi đâu cả.
+     */
+    private var navController: NavHostController? = null
 
     /**
      * Android 13+ bắt buộc xin quyền thông báo lúc chạy. Đây là bẫy số một ở
@@ -42,6 +55,9 @@ class MainActivity : ComponentActivity() {
         setContent {
             PatrolTheme {
                 var session by remember { mutableStateOf(container.sessionStore.load()) }
+                val nav = rememberNavController()
+
+                LaunchedEffect(nav) { navController = nav }
 
                 LaunchedEffect(session) {
                     // Chỉ xin quyền sau khi đã đăng nhập — xin ngay lúc mở app
@@ -61,6 +77,7 @@ class MainActivity : ComponentActivity() {
                     PatrolNavGraph(
                         container = container,
                         session = session,
+                        navController = nav,
                         onSignedIn = { newSession: UserSession ->
                             container.sessionStore.save(newSession)
                             session = newSession
@@ -76,6 +93,17 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    /**
+     * Chạm vào thông báo khi app đang chạy: chuyển tiếp intent cho NavController
+     * để nó mở đúng màn hình. Không có hàm này thì thông báo chỉ đưa app ra
+     * trước mặt rồi đứng yên ở màn hình cũ.
+     */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        navController?.handleDeepLink(intent)
     }
 
     private fun requestNotificationPermissionIfNeeded() {
