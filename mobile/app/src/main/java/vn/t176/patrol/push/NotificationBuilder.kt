@@ -70,6 +70,56 @@ object NotificationBuilder {
     }
 
     /**
+     * Tin nhắn điều phối do người trực web gửi tay.
+     *
+     * Dùng channel riêng để người dùng chỉnh âm thanh tách khỏi cảnh báo tự
+     * động, và vì đây là việc do người gửi chứ không phải máy phát hiện.
+     */
+    fun showDispatch(
+        context: Context,
+        dispatchId: String,
+        eventId: String?,
+        fromUser: String,
+        message: String,
+    ) {
+        // Có eventId thì mở thẳng sự cố liên quan; không thì chỉ mở app.
+        val intent = if (eventId != null) {
+            Intent(
+                Intent.ACTION_VIEW,
+                Uri.parse("app://event/$eventId"),
+                context,
+                MainActivity::class.java,
+            )
+        } else {
+            Intent(context, MainActivity::class.java)
+        }.apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+
+        val pending = PendingIntent.getActivity(
+            context,
+            dispatchId.hashCode(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+
+        val notification = NotificationCompat.Builder(context, NotificationChannels.DISPATCH)
+            .setSmallIcon(R.drawable.ic_shield)
+            .setContentTitle("Điều phối từ $fromUser")
+            .setContentText(message)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(message))
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+            .setAutoCancel(true)
+            .setContentIntent(pending)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
+            .build()
+
+        ContextCompat.getSystemService(context, NotificationManager::class.java)
+            ?.notify(dispatchId.hashCode(), notification)
+    }
+
+    /**
      * Gỡ thông báo khi sự cố đã được xử lý ở nơi khác — tương ứng message FCM
      * `action=RESOLVED` ở mục 6.2 của plan.
      */

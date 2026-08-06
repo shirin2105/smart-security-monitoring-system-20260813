@@ -20,6 +20,7 @@ import androidx.core.content.ContextCompat
 import vn.t176.patrol.data.AppContainer
 import vn.t176.patrol.domain.model.UserSession
 import vn.t176.patrol.navigation.PatrolNavGraph
+import vn.t176.patrol.push.PushTokenRegistrar
 import vn.t176.patrol.ui.theme.PatrolTheme
 
 class MainActivity : ComponentActivity() {
@@ -45,7 +46,12 @@ class MainActivity : ComponentActivity() {
                 LaunchedEffect(session) {
                     // Chỉ xin quyền sau khi đã đăng nhập — xin ngay lúc mở app
                     // khi người dùng chưa hiểu app làm gì thì tỉ lệ từ chối cao.
-                    if (session != null) requestNotificationPermissionIfNeeded()
+                    if (session != null) {
+                        requestNotificationPermissionIfNeeded()
+                        // Token phải gắn với người dùng cụ thể thì backend mới
+                        // biết gửi cảnh báo cho ai.
+                        PushTokenRegistrar.fetchAndLog()
+                    }
                 }
 
                 Surface(
@@ -60,8 +66,9 @@ class MainActivity : ComponentActivity() {
                             session = newSession
                         },
                         onSignedOut = {
-                            // Phase 3 bổ sung: gọi DELETE /api/v1/devices/{token}
-                            // trước khi xóa cục bộ (bất biến mục 4.4).
+                            // Bất biến mục 4.4: gỡ token trước, nếu không máy
+                            // này vẫn nhận cảnh báo của người dùng cũ.
+                            PushTokenRegistrar.unregister()
                             container.sessionStore.clear()
                             session = null
                         },
