@@ -61,6 +61,7 @@ kaggle_pipeline/cctv_dataset/
 kaggle_pipeline/cctv_dataset.zip
 outputs/
 training/
+kaggle_pipeline/phase5_checkpoint_dataset/*.pth
 
 # Downloaded/generated datasets
 datasets/cctv_abandoned_combined/
@@ -76,6 +77,7 @@ artifacts/test_evidence/
 artifacts/diagnostic-*.jpg
 artifacts/qa-*
 artifacts/runtime/
+artifacts/phase5-results/
 
 # Scratch files
 temp-chat.txt
