@@ -78,6 +78,8 @@ artifacts/diagnostic-*.jpg
 artifacts/qa-*
 artifacts/runtime/
 artifacts/phase5-results/
+artifacts/phase7a-results/
+artifacts/phase7a-kernel-log/
 
 # Scratch files
 temp-chat.txt
