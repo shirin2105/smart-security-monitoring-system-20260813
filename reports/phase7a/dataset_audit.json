@@ -1,0 +1,60 @@
+{
+  "target_categories": [
+    {
+      "id": 0,
+      "name": "person",
+      "supercategory": "person"
+    },
+    {
+      "id": 1,
+      "name": "backpack",
+      "supercategory": "luggage"
+    },
+    {
+      "id": 2,
+      "name": "handbag",
+      "supercategory": "luggage"
+    },
+    {
+      "id": 3,
+      "name": "suitcase",
+      "supercategory": "luggage"
+    }
+  ],
+  "selection_policy": {
+    "visdrone": "Keep images with raw category 1/2; merge both to person.",
+    "coco": "Keep only images containing backpack/handbag/suitcase; retain target annotations person+backpack+handbag+suitcase."
+  },
+  "train": {
+    "split": "train",
+    "images_total": 17673,
+    "annotations_total": 197399,
+    "source_counts": {
+      "visdrone_images": 5684,
+      "coco_luggage_images": 11989
+    },
+    "class_counts": {
+      "person": 170133,
+      "handbag": 12354,
+      "backpack": 8720,
+      "suitcase": 6192
+    }
+  },
+  "val": {
+    "split": "val",
+    "images_total": 1021,
+    "annotations_total": 17924,
+    "source_counts": {
+      "visdrone_images": 531,
+      "coco_luggage_images": 490
+    },
+    "class_counts": {
+      "person": 16710,
+      "handbag": 540,
+      "suitcase": 303,
+      "backpack": 371
+    }
+  },
+  "val_visdrone_images": 531,
+  "val_coco_luggage_images": 490
+}

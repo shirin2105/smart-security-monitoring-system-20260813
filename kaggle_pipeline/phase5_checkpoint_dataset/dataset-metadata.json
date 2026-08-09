@@ -1,0 +1,6 @@
+{
+  "title": "DEIMv2-S VisDrone Phase 4 Best Checkpoint",
+  "id": "shirin21st/deimv2-s-visdrone-phase4-best",
+  "licenses": [{"name": "CC-BY-4.0"}],
+  "description": "Phase 4 best DEIMv2-S VisDrone 10-class checkpoint for inference-only Phase 5 tiling evaluation."
+}
