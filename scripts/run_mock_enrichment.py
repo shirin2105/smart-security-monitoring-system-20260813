@@ -1,9 +1,8 @@
 """Mock EventCandidate dataset for agent enrichment testing with a real LLM.
 
-Each entry is (candidate_id, event_type, zone_id, confidence, track_count,
-observations). The set varies confidence, track count, dwell, owner-absence,
-and zone so severity distribution can be observed across the five event
-types. Output goes to a fresh temp dir; run the eval reporter over it.
+Candidates live in datasets/mock_enrichment_candidates.json: 13 entries
+across the five event types, varying confidence, track count, dwell,
+owner-absence, and zone so severity distribution can be observed.
 
 Usage:
     python scripts/run_mock_enrichment.py
@@ -26,59 +25,33 @@ from app.common.schemas import EventCandidate  # noqa: E402
 from app.services.enrichment import create_enrichment_service  # noqa: E402
 from app.services.enrichment_eval import EvaluationReporter  # noqa: E402
 
-# (candidate_id, event_type, zone_id, confidence, track_count, observations)
-MOCK_CANDIDATES: list[tuple[str, str, str | None, float, int, dict]] = [
-    ("mock-real-intrusion-high", "ZONE_INTRUSION", "restricted_gate", 0.97, 1,
-     {"personCount": 1, "dwellSeconds": 9.8, "insideZone": True}),
-    ("mock-real-intrusion-low", "ZONE_INTRUSION", "restricted_gate", 0.55, 1,
-     {"personCount": 1, "dwellSeconds": 1.1, "insideZone": True}),
-    ("mock-real-intrusion-multi", "ZONE_INTRUSION", "restricted_gate", 0.91, 3,
-     {"personCount": 3, "dwellSeconds": 4.2, "insideZone": True}),
-    ("mock-real-crowd-thresh", "CROWD_THRESHOLD", "plaza", 0.83, 12,
-     {"personCount": 12, "dwellSeconds": None, "insideZone": True}),
-    ("mock-real-crowd-large", "CROWD_THRESHOLD", "plaza", 0.92, 45,
-     {"personCount": 45, "dwellSeconds": None, "insideZone": True}),
-    ("mock-real-crowd-small", "CROWD_THRESHOLD", "gate_area", 0.66, 4,
-     {"personCount": 4, "dwellSeconds": None, "insideZone": True}),
-    ("mock-real-abandon-bag", "ABANDONED_OBJECT", "lobby", 0.74, 1,
-     {"personCount": 1, "stationarySeconds": 12.0, "ownerAbsentSeconds": 10.0, "insideZone": False}),
-    ("mock-real-abandon-owner", "ABANDONED_OBJECT", "corridor", 0.61, 2,
-     {"personCount": 2, "stationarySeconds": 6.0, "ownerAbsentSeconds": 1.0, "insideZone": False}),
-    ("mock-real-abandon-short", "ABANDONED_OBJECT", "entrance", 0.58, 1,
-     {"personCount": 1, "stationarySeconds": 3.5, "ownerAbsentSeconds": 2.0, "insideZone": False}),
-    ("mock-real-fall-unattended", "SUSPECTED_FALL", "stairwell", 0.82, 1,
-     {"personCount": 1, "insideZone": False}),
-    ("mock-real-fall-low", "SUSPECTED_FALL", "corridor", 0.52, 1,
-     {"personCount": 1, "insideZone": False}),
-    ("mock-real-coverage-blur", "COVERAGE_DEGRADED", None, 0.48, 0,
-     {"personCount": 0, "insideZone": False}),
-    ("mock-real-coverage-offline", "COVERAGE_DEGRADED", None, 0.9, 0,
-     {"personCount": 0, "insideZone": False}),
-]
+DEFAULT_DATASET = ROOT / "datasets" / "mock_enrichment_candidates.json"
 
 
-def build_candidates() -> list[EventCandidate]:
+def load_candidates(path: Path = DEFAULT_DATASET) -> list[EventCandidate]:
+    with open(path, encoding="utf-8") as f:
+        payloads = json.load(f)
     return [
         EventCandidate(
-            candidateId=cid,
-            eventType=event_type,
+            candidateId=entry["candidateId"],
+            eventType=entry["eventType"],
             cameraId="cam_mock",
-            zoneId=zone,
+            zoneId=entry.get("zoneId"),
             sourceType="SIMULATED",
             detectedAt="2026-08-10T09:00:00Z",
             firstSeenAt="2026-08-10T08:59:55Z",
             lastSeenAt="2026-08-10T09:00:00Z",
-            confidence=confidence,
-            trackCount=track_count,
-            observations=observations,
+            confidence=entry["confidence"],
+            trackCount=entry["trackCount"],
+            observations=entry["observations"],
         )
-        for cid, event_type, zone, confidence, track_count, observations in MOCK_CANDIDATES
+        for entry in payloads
     ]
 
 
 async def main(output_dir: str) -> int:
     service = create_enrichment_service(output_dir=output_dir)
-    for candidate in build_candidates():
+    for candidate in load_candidates():
         result = await service.enrich(candidate)
         assessment = result.assessment
         print(
