@@ -1,10 +1,10 @@
 """Private LangGraph workflow behind the deep AssessmentRunner.
 
-Mirror of the legacy graph (``app.agents.graph``) with two differences:
-the state shape is local (``WorkflowState``) and the builder is private.
-The graph runs on controlled event metadata only, never mutates event
-severity/state, and never calls tools (FR-AI-04). On any LLM failure the
-``fallback`` node produces a deterministic output (FR-AI-06).
+The state is fully typed (``WorkflowState``): the candidate is passed as
+``EventCandidate`` and the provider returns ``ProviderResult``; on any
+LLM failure the ``fallback`` node produces a deterministic ``ProviderDraft``
+(FR-AI-06). The graph runs on controlled event metadata only, never
+mutates event severity/state, and never calls tools (FR-AI-04).
 
 The module name is private: only ``AssessmentRunner`` (``runtime.py``)
 may import it; later slices retire the legacy public graph.
@@ -12,87 +12,88 @@ may import it; later slices retire the legacy public graph.
 
 from __future__ import annotations
 
-from typing import Any, TypedDict
+from typing import TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
-from app.agents.fallback import build_fallback_output
-from app.common.schemas import EnrichmentOutput
-from app.llm.adapter import LLMAdapter
+from app.agents.policy import fallback_draft
+from app.agents.provider import AssessmentProvider, ProviderDraft, ProviderResult
+from app.common.schemas import EventCandidate
 
 SYSTEM_PROMPT = """Bạn là trợ lý đánh giá sự kiện an ninh camera.
 
-Chỉ được dùng dữ liệu metadata được cung cấp; không suy đoán danh tính,
-ý định phạm tội, hoặc kết luận tội lỗi. Bạn chỉ đề xuất — hệ thống và con
-người quyết định. Không được thực hiện hành động bên ngoài.
+Chỉ dùng metadata được cung cấp. Không suy đoán danh tính, ý định phạm tội,
+hoặc kết luận tội lỗi. Không thực hiện hành động bên ngoài.
 
-Trả về chính xác một JSON object với các trường:
+Trả về chính xác một JSON object gồm:
 - "recommendedSeverity": "INFO" | "WARNING" | "HIGH" | "CRITICAL"
-- "rationale": lý do ngắn gọn dựa trên metadata
-- "summary": mô tả sự kiện chỉ gồm sự kiện (fact-only)
-- "actionChecklist": mảng tối đa 5 mục hành động đề xuất cho người trực
+- "rationale": lý do ngắn gọn, chỉ dựa trên metadata
 
-Ràng buộc: ABANDONED_OBJECT tối đa "HIGH". Không thêm trường khác."""
+ABANDONED_OBJECT tối đa "HIGH". Không thêm trường khác."""
 
 
-def _build_prompt(event: dict[str, Any]) -> str:
+def _build_prompt(candidate: EventCandidate) -> str:
     return "\n".join(
         [
             "Sự kiện an ninh cần đánh giá:",
-            f"- eventType: {event.get('eventType')}",
-            f"- cameraId: {event.get('cameraId')}",
-            f"- zoneId: {event.get('zoneId')}",
-            f"- confidence: {event.get('confidence')}",
-            f"- trackCount: {event.get('trackCount')}",
-            f"- observations: {event.get('observations')}",
-            f"- sourceType: {event.get('sourceType')}",
-            f"- detectedAt: {event.get('detectedAt')}",
+            f"- eventType: {candidate.eventType.value}",
+            f"- cameraId: {candidate.cameraId}",
+            f"- zoneId: {candidate.zoneId}",
+            f"- confidence: {candidate.confidence}",
+            f"- trackCount: {candidate.trackCount}",
+            f"- observations: {candidate.observations.model_dump(mode='json')}",
+            f"- sourceType: {candidate.sourceType}",
+            f"- detectedAt: {candidate.detectedAt}",
         ]
     )
 
 
 class WorkflowState(TypedDict, total=False):
-    event: dict[str, Any]
-    llm_prompt: str
-    llm_system_prompt: str
-    output: EnrichmentOutput
+    candidate: EventCandidate
+    prompt: str
+    system_prompt: str
+    provider_result: ProviderResult
+    draft: ProviderDraft
     fallback_used: bool
-    telemetry: dict[str, Any]
-    error: str | None
 
 
-def _compile_graph(llm: LLMAdapter | None):
-    adapter = llm
-
+def _compile_graph(provider: AssessmentProvider | None):
     async def prepare(state: WorkflowState) -> dict:
-        event = state["event"]
-        return {"llm_prompt": _build_prompt(event), "llm_system_prompt": SYSTEM_PROMPT}
+        return {
+            "prompt": _build_prompt(state["candidate"]),
+            "system_prompt": SYSTEM_PROMPT,
+        }
 
     async def call_provider(state: WorkflowState) -> dict:
-        if adapter is None or not adapter.available:
-            return {"error": "llm_unavailable", "fallback_used": True}
-        output, telemetry = await adapter.enrich_async(
-            prompt=state["llm_prompt"],
-            system_prompt=state["llm_system_prompt"],
-        )
-        if output is None:
-            provider_error = (telemetry or {}).get("error", "llm_failed")
-            return {
-                "error": provider_error,
-                "fallback_used": True,
-                "telemetry": telemetry or {},
-            }
-        return {"output": output, "fallback_used": False, "telemetry": telemetry or {}}
+        if provider is None:
+            result = ProviderResult(
+                draft=None,
+                latency_ms=0.0,
+                model_name="",
+                error="llm_disabled",
+            )
+        else:
+            result = await provider.assess(
+                prompt=state["prompt"],
+                system_prompt=state["system_prompt"],
+            )
+        updates = {"provider_result": result, "fallback_used": result.draft is None}
+        if result.draft is not None:
+            updates["draft"] = result.draft
+        return updates
 
     async def apply_fallback(state: WorkflowState) -> dict:
+        result = state["provider_result"]
         return {
-            "output": build_fallback_output(state["event"]),
+            "draft": fallback_draft(
+                state["candidate"],
+                reason=result.error or "provider_output_invalid",
+            ),
             "fallback_used": True,
-            "error": state.get("error") or "llm_failed",
         }
 
     def route(state: WorkflowState) -> str:
-        return END if state.get("output") is not None else "fallback"
+        return END if state.get("draft") is not None else "fallback"
 
     graph = StateGraph(WorkflowState)
     graph.add_node("prepare", prepare)
@@ -106,8 +107,8 @@ def _compile_graph(llm: LLMAdapter | None):
 
 
 class AssessmentWorkflow:
-    def __init__(self, llm: LLMAdapter | None) -> None:
-        self._graph = _compile_graph(llm)
+    def __init__(self, provider: AssessmentProvider | None) -> None:
+        self._graph = _compile_graph(provider)
 
-    async def run(self, event: dict[str, Any]) -> WorkflowState:
-        return await self._graph.ainvoke({"event": event})
+    async def run(self, candidate: EventCandidate) -> WorkflowState:
+        return await self._graph.ainvoke({"candidate": candidate})

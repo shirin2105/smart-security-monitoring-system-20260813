@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from app.common.schemas import EnrichmentOutput
+from app.agents.provider import ProviderDraft
 from app.llm.adapter import LLMAdapter, create_llm_adapter
 
 
@@ -46,7 +46,7 @@ def _make_adapter(responses=None, available=True):
 
 
 @pytest.mark.asyncio
-async def test_enrich_async_does_not_block_event_loop():
+async def test_assess_does_not_block_event_loop():
     """C4: a slow provider call must not stall the event loop.
 
     The blocking invoke runs in a worker thread, so a concurrent timer
@@ -59,7 +59,7 @@ async def test_enrich_async_does_not_block_event_loop():
         def invoke(self, messages):
             time.sleep(0.3)
             return _FakeResponse(
-                '{"recommendedSeverity":"HIGH","rationale":"r","summary":"s","actionChecklist":[]}'
+                '{"recommendedSeverity":"HIGH","rationale":"r"}'
             )
 
     adapter = LLMAdapter(
@@ -81,68 +81,69 @@ async def test_enrich_async_does_not_block_event_loop():
             await asyncio.sleep(0.02)
 
     ticker = asyncio.create_task(_ticker())
-    output, _ = await adapter.enrich_async(prompt="p", system_prompt="s")
+    result = await adapter.assess(prompt="p", system_prompt="s")
     await ticker
 
-    assert output is not None
+    assert result.draft is not None
+    assert result.draft.recommended_severity == "HIGH"
     assert len(ticks) >= 5, f"event loop stalled, only {len(ticks)} ticks in 500ms"
 
 
-def test_available_without_api_key_is_false():
+@pytest.mark.asyncio
+async def test_available_without_api_key_is_false():
     adapter = _make_adapter(available=False)
     assert not adapter.available
-    output, telemetry = adapter.enrich(prompt="p", system_prompt="s")
-    assert output is None
-    assert telemetry["error"] == "adapter_unavailable"
+    result = await adapter.assess(prompt="p", system_prompt="s")
+    assert result.draft is None
+    assert result.error == "adapter_unavailable"
 
 
-def test_valid_json_output_parsed():
+@pytest.mark.asyncio
+async def test_valid_json_output_parsed():
     adapter = _make_adapter(responses=[json.dumps({
         "recommendedSeverity": "HIGH",
         "rationale": "person in restricted zone",
-        "summary": "Intrusion at gate",
-        "actionChecklist": ["Verify on camera"],
     })])
-    output, telemetry = adapter.enrich(prompt="p", system_prompt="s")
-    assert isinstance(output, EnrichmentOutput)
-    assert output.recommendedSeverity == "HIGH"
-    assert telemetry["output_valid"] is True
-    assert telemetry["error"] is None
+    result = await adapter.assess(prompt="p", system_prompt="s")
+    assert isinstance(result.draft, ProviderDraft)
+    assert result.draft.recommended_severity == "HIGH"
+    assert result.draft.rationale == "person in restricted zone"
+    assert result.error is None
 
 
-def test_code_fenced_json_accepted():
+@pytest.mark.asyncio
+async def test_code_fenced_json_accepted():
     raw = "```json\n" + json.dumps({
         "recommendedSeverity": "WARNING",
         "rationale": "crowd",
-        "summary": "Crowd detected",
-        "actionChecklist": ["Check area"],
     }) + "\n```"
     adapter = _make_adapter(responses=[raw])
-    output, _ = adapter.enrich(prompt="p", system_prompt="s")
-    assert output is not None
-    assert output.recommendedSeverity == "WARNING"
+    result = await adapter.assess(prompt="p", system_prompt="s")
+    assert result.draft is not None
+    assert result.draft.recommended_severity == "WARNING"
 
 
-def test_invalid_severity_rejected():
+@pytest.mark.asyncio
+async def test_invalid_severity_rejected():
     adapter = _make_adapter(responses=[json.dumps({
         "recommendedSeverity": "SEVERE",
         "rationale": "x",
-        "summary": "y",
-        "actionChecklist": [],
     })])
-    output, telemetry = adapter.enrich(prompt="p", system_prompt="s")
-    assert output is None
-    assert telemetry["output_valid"] is False
+    result = await adapter.assess(prompt="p", system_prompt="s")
+    assert result.draft is None
+    assert result.error == "ValidationError"
 
 
-def test_malformed_json_rejected():
+@pytest.mark.asyncio
+async def test_malformed_json_rejected():
     adapter = _make_adapter(responses=["not json at all"])
-    output, telemetry = adapter.enrich(prompt="p", system_prompt="s")
-    assert output is None
-    assert telemetry["output_valid"] is False
+    result = await adapter.assess(prompt="p", system_prompt="s")
+    assert result.draft is None
+    assert result.error == "JSONDecodeError"
 
 
-def test_provider_exception_returns_none():
+@pytest.mark.asyncio
+async def test_provider_exception_returns_none():
     class _RaisingLLM:
         def invoke(self, messages):
             raise TimeoutError("provider timeout")
@@ -151,10 +152,10 @@ def test_provider_exception_returns_none():
         model="m", api_key="k", base_url="https://x.invalid",
         timeout_seconds=1.0, temperature=0.0, llm=_RaisingLLM(),
     )
-    output, telemetry = adapter.enrich(prompt="p", system_prompt="s")
-    assert output is None
-    assert telemetry["error"] == "TimeoutError"
-    assert telemetry["latency_ms"] >= 0
+    result = await adapter.assess(prompt="p", system_prompt="s")
+    assert result.draft is None
+    assert result.error == "TimeoutError"
+    assert result.latency_ms >= 0
 
 
 def test_no_tools_bound_by_construction():

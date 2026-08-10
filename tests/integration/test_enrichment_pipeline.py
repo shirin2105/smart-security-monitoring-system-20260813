@@ -29,8 +29,6 @@ INTRUSION_EVENT = {
 VALID_LLM_RESPONSE = json.dumps({
     "recommendedSeverity": "HIGH",
     "rationale": "Person inside restricted zone beyond dwell",
-    "summary": "Intrusion candidate at restricted_gate",
-    "actionChecklist": ["Verify zone", "Check authorized personnel"],
 })
 
 

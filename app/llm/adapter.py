@@ -15,10 +15,20 @@ from typing import Any
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
-from pydantic import ValidationError
 
-from app.common.schemas import EnrichmentOutput
+from app.agents.provider import ProviderDraft, ProviderResult
 from app.config import settings
+
+
+def _strip_json_fence(raw: str) -> str:
+    text = raw.strip()
+    if not text.startswith("```"):
+        return text
+    lines = text.splitlines()
+    text = "\n".join(lines[1:-1]).strip()
+    if text.lower().startswith("json"):
+        text = text[4:].strip()
+    return text
 
 
 class LLMAdapter:
@@ -61,78 +71,50 @@ class LLMAdapter:
     def available(self) -> bool:
         return self._llm is not None
 
-    async def enrich_async(
-        self,
-        prompt: str,
-        system_prompt: str,
-    ) -> tuple[EnrichmentOutput | None, dict[str, Any] | None]:
-        """Async variant: runs the blocking provider call off the event loop.
+    async def assess(self, *, prompt: str, system_prompt: str) -> ProviderResult:
+        return await asyncio.to_thread(self._assess, prompt, system_prompt)
 
-        The synchronous ``invoke`` is moved to a worker thread so a slow
-        provider (measured p95 ~18.7s) never stalls the ingest event loop.
-        """
-        return await asyncio.to_thread(self.enrich, prompt, system_prompt)
-
-    def enrich(
-        self,
-        prompt: str,
-        system_prompt: str,
-    ) -> tuple[EnrichmentOutput | None, dict[str, Any] | None]:
-        """Call the model and validate the structured JSON output.
-
-        Returns ``(output, telemetry)``. On provider failure, timeout, or
-        schema-invalid response, ``output`` is ``None`` and the caller must
-        apply its deterministic fallback (FR-AI-06).
-        """
+    def _assess(self, prompt: str, system_prompt: str) -> ProviderResult:
         started = time.perf_counter()
         if not self.available:
-            elapsed = (time.perf_counter() - started) * 1000.0
-            return None, self._telemetry(elapsed, "adapter_unavailable")
-
+            return ProviderResult(
+                draft=None,
+                latency_ms=0.0,
+                model_name=self.model,
+                error="adapter_unavailable",
+            )
         try:
             response = self._llm.invoke(
                 [SystemMessage(content=system_prompt), HumanMessage(content=prompt)]
             )
+            elapsed = round((time.perf_counter() - started) * 1000.0, 2)
             raw = response.content
-            elapsed = (time.perf_counter() - started) * 1000.0
             if not isinstance(raw, str) or not raw.strip():
-                return None, self._telemetry(elapsed, "empty_response")
-            output = self._parse_output(raw)
-            return output, self._telemetry(elapsed, None, output is not None)
-        except Exception as exc:  # provider/network/schema failures never block the pipeline
-            elapsed = (time.perf_counter() - started) * 1000.0
-            return None, self._telemetry(elapsed, type(exc).__name__)
+                return ProviderResult(
+                    draft=None,
+                    latency_ms=elapsed,
+                    model_name=self.model,
+                    error="empty_response",
+                )
+            return ProviderResult(
+                draft=self._parse_draft(raw),
+                latency_ms=elapsed,
+                model_name=self.model,
+                error=None,
+            )
+        except Exception as exc:
+            elapsed = round((time.perf_counter() - started) * 1000.0, 2)
+            return ProviderResult(
+                draft=None,
+                latency_ms=elapsed,
+                model_name=self.model,
+                error=type(exc).__name__,
+            )
 
-    def _parse_output(self, raw: str) -> EnrichmentOutput | None:
-        text = raw.strip()
-        if text.startswith("```"):
-            lines = text.splitlines()
-            text = "\n".join(lines[1:-1]).strip()
-            if text.lower().startswith("json"):
-                text = text[4:].strip()
-        try:
-            parsed = json.loads(text)
-        except json.JSONDecodeError:
-            return None
-        if not isinstance(parsed, dict):
-            return None
-        try:
-            return EnrichmentOutput.model_validate(parsed)
-        except ValidationError:
-            return None
-
-    def _telemetry(
-        self,
-        latency_ms: float,
-        error: str | None,
-        output_valid: bool | None = None,
-    ) -> dict[str, Any]:
-        return {
-            "latency_ms": round(latency_ms, 2),
-            "model": self.model,
-            "error": error,
-            "output_valid": output_valid,
-        }
+    def _parse_draft(self, raw: str) -> ProviderDraft:
+        text = _strip_json_fence(raw)
+        parsed = json.loads(text)
+        return ProviderDraft.model_validate(parsed)
 
 
 def create_llm_adapter(

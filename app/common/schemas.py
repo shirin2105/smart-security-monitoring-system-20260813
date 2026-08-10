@@ -61,25 +61,6 @@ class ArtifactData(BaseModel):
     uri: str | None = None
 
 
-class EnrichmentOutput(BaseModel):
-    """Agent enrichment output. Advisory only: never mutates event severity/state."""
-
-    recommendedSeverity: Literal["INFO", "WARNING", "HIGH", "CRITICAL"]
-    rationale: str
-    summary: str
-    actionChecklist: list[str] = Field(default_factory=list)
-
-
-class EnrichmentTelemetry(BaseModel):
-    eventType: str
-    candidateId: str
-    latencyMs: float
-    model: str
-    fallbackUsed: bool
-    outputValid: bool
-    error: str | None = None
-
-
 class EventCandidate(BaseModel):
     candidateId: str
     sourceEngine: SourceEngine = SourceEngine.CV

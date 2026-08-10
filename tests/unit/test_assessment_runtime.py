@@ -10,7 +10,7 @@ import json
 
 import pytest
 
-from app.agents import AssessmentRunner
+from app.agents import AssessmentRunner, create_assessment_runner
 from app.common.schemas import EventCandidate
 from tests.unit.test_llm_adapter import _make_adapter
 
@@ -36,8 +36,6 @@ def _provider_response(severity: str = "HIGH") -> str:
         {
             "recommendedSeverity": severity,
             "rationale": "controlled provider rationale",
-            "summary": "legacy field removed in Slice 2",
-            "actionChecklist": [],
         }
     )
 
@@ -127,3 +125,31 @@ async def test_runner_never_mutates_candidate_and_reuses_instance(tmp_path):
     assert candidate.model_dump(mode="json") == snapshot
     assert first.assessment.severity == "high"
     assert second.assessment.severity == "medium"
+
+
+@pytest.mark.asyncio
+async def test_disabled_provider_has_empty_telemetry_model(tmp_path):
+    runner = create_assessment_runner(
+        output_dir=str(tmp_path),
+        llm_enabled=False,
+    )
+
+    outcome = await runner.assess(_candidate())
+
+    assert outcome.status == "fallback"
+    assert outcome.assessment.model_name == "deterministic-fallback"
+    assert outcome.telemetry.model_name == ""
+    assert outcome.telemetry.provider_output_valid is False
+
+
+@pytest.mark.asyncio
+async def test_runner_prompt_omits_non_authoritative_fields(tmp_path):
+    adapter = _make_adapter(responses=[_provider_response()])
+    runner = AssessmentRunner(output_dir=str(tmp_path), llm_adapter=adapter)
+
+    await runner.assess(_candidate())
+
+    sent = "\n".join(str(message.content) for message in adapter._llm.calls[0])
+    assert "summary" not in sent
+    assert "actionChecklist" not in sent
+    assert "artifact" not in sent

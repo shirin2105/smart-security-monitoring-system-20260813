@@ -12,7 +12,8 @@ from __future__ import annotations
 from pathlib import Path
 
 from app.agents._workflow import AssessmentWorkflow
-from app.agents.assessment import AssessmentOutcome, AssessmentTelemetry, build_assessment
+from app.agents.assessment import AssessmentOutcome, AssessmentTelemetry
+from app.agents.policy import build_agent_assessment
 from app.common.schemas import EventCandidate
 from app.llm.adapter import LLMAdapter
 from app.services.assessment_record import AssessmentRecordStore, ProviderOutcome
@@ -27,36 +28,34 @@ class AssessmentRunner:
     ) -> None:
         self.output_dir = Path(output_dir)
         self.record_store = AssessmentRecordStore(str(self.output_dir))
-        adapter = llm_adapter
-        if adapter is None and enabled:
+        provider = llm_adapter
+        if provider is None and enabled:
             from app.llm.adapter import create_llm_adapter
 
-            adapter = create_llm_adapter()
-        self._workflow = AssessmentWorkflow(adapter)
+            provider = create_llm_adapter()
+        self._provider_enabled = provider is not None
+        self._workflow = AssessmentWorkflow(provider)
 
     async def assess(self, candidate: EventCandidate) -> AssessmentOutcome:
-        state = await self._workflow.run(candidate.model_dump(mode="json"))
-        fallback_used = bool(state.get("fallback_used"))
-        raw_telemetry = state.get("telemetry") or {}
-        provider_model = str(raw_telemetry.get("model", ""))
-        telemetry = AssessmentTelemetry(
-            provider_output_valid=bool(raw_telemetry.get("output_valid", False)),
-            fallback_used=fallback_used,
-            latency_ms=float(raw_telemetry.get("latency_ms", 0.0)),
-            model_name=provider_model,
-            provider_error=state.get("error"),
+        state = await self._workflow.run(candidate)
+        provider_result = state["provider_result"]
+        fallback_used = bool(state["fallback_used"])
+        assessment = build_agent_assessment(
+            candidate=candidate,
+            draft=state["draft"],
+            model_name="deterministic-fallback" if fallback_used else provider_result.model_name,
+            prompt_version="assessment-v2",
         )
-        event_type = candidate.eventType.value
-        assessment = build_assessment(
-            incident_id=candidate.candidateId,
-            event_type=event_type,
-            enrichment=state["output"],
-            model="deterministic-fallback" if fallback_used else provider_model,
-            confidence=candidate.confidence,
+        telemetry = AssessmentTelemetry(
+            provider_output_valid=provider_result.draft is not None,
+            fallback_used=fallback_used,
+            latency_ms=provider_result.latency_ms,
+            model_name=provider_result.model_name if self._provider_enabled else "",
+            provider_error=provider_result.error,
         )
         persist_error = self.record_store.save(
             candidate_id=candidate.candidateId,
-            event_type=event_type,
+            event_type=candidate.eventType.value,
             assessment=assessment,
             provider=ProviderOutcome(
                 output_valid=telemetry.provider_output_valid,
