@@ -81,14 +81,41 @@ Output đúng schema `EnrichmentOutput`, telemetry `fallbackUsed:true`, `model:g
 | SPEC §10: action checklist allow-list | ✅ fallback checklist từ allow-list |
 | Không gửi raw video/frame tới LLM | ✅ chỉ metadata; `FrameData.image` excluded |
 
-## 4. Giới hạn (đã disclose)
+## 4. Kết quả LLM thật (bổ sung 2026-08-09)
 
-- **Không chạy LLM thật**: không có `LLM_API_KEY` trong môi trường. Đường LLM (happy path) verified bằng mock adapter trong test; path thật cần key + provider reachable.
-- **p50/p95 latency**: chỉ đo trong test mock (giá trị giả). Cần benchmark thật trên hardware sau khi có key.
+Sau khi cấu hình key, chạy enrichment thật trên **9 candidate persisted** qua OpenRouter (`z-ai/glm-5.2`, temperature 0):
+
+```text
+total:                      9
+schema_valid_rate:          1.0
+fallback_rate:              0.111  (1/9 fail transient, retry pass)
+schema_invalid_but_no_fallback: 0
+severity_counts:            {HIGH: 9}   (đều ZONE_INTRUSION — hợp lý)
+latency_ms:                 p50 3738.57 | p95 18705.27 | mean 7101.25
+models:                     {z-ai/glm-5.2: 9}
+```
+
+Output mẫu (candidate `test-cand-http-3c2fa1d9`):
+
+```text
+fallback_used: False
+severity: HIGH
+rationale: Phát hiện xâm nhập vào khu vực hạn chế (restricted_gate) với độ tin cậy cao (0.95)...
+summary: Sự kiện xâm nhập vùng (ZONE_INTRUSION) tại restricted_gate bởi 1 người...
+checklist: 5 items
+latency_ms: 17767.34
+```
+
+**Cấu hình dùng:** `.env` có sẵn `OPENROUTER_API_KEY/MODEL/BASE_URL`; đã map sang `LLM_BASE_URL/LLM_API_KEY/LLM_MODEL` (đọc bởi `AppConfig`). Key không in ra, `.env` trong gitignore.
+
+## 5. Giới hạn (đã disclose)
+
+- **Latency p95 18.7s vượt timeout mặc định 15s** — nguy cơ timeout thật với provider chậm. Đề xuất nâng `LLM_TIMEOUT_SECONDS` (AppConfig giới hạn 30s) hoặc dùng model nhanh hơn. Cần PM/TL chốt.
+- 1/9 lần gọi fail transient (retry pass) — thiết kế fail-safe hoạt động đúng.
 - `scripts/run_enrichment.py` mặc định ghi `artifacts/enrichment/`, `EnrichmentService` ghi `artifacts/backend_events/` — hai đường output khác nhau, có chủ đích (CLI tách biệt), nhưng nên thống nhất nếu muốn 1 pipeline.
 - Enrichment chạy đồng bộ trong request handler — với candidate volume cao cần chuyển background task/queue (không phải yêu cầu MVP).
 
-## 5. Files thay đổi
+## 6. Files thay đổi
 
 ```
 M  app/api/events.py                              # ingest chạy enrichment sau persist
@@ -100,8 +127,8 @@ A  tests/unit/test_enrichment_evaluation.py       # 4 test
 A  tests/integration/test_enrichment_runtime_api.py # 2 test
 ```
 
-## 6. Next steps (đề xuất)
+## 7. Next steps (đề xuất)
 
-1. Chạy enrichment với LLM key thật trên candidate persisted, ghi telemetry thật.
-2. Benchmark latency p50/p95 end-to-end (SPEC §15).
+1. Chốt `LLM_TIMEOUT_SECONDS` theo latency đo được (p95 18.7s).
+2. Benchmark latency end-to-end với nhiều event type (crowd, abandoned) — hiện chỉ ZONE_INTRUSION.
 3. Chuyển enrichment sang background task nếu volume tăng.

@@ -51,10 +51,21 @@
 - [x] LLM unavailable → fallback output hợp lệ, ingest không fail.
 - [x] `EvaluationReporter.report()` trả metric machine-readable (test).
 - [x] 94/94 test pass, coverage agent scope 96%, ruff sạch file mới.
-- [ ] (chưa làm, ngoài scope) Chạy LLM thật với key → ghi telemetry thật.
+- [x] Chạy LLM thật với key → telemetry thật (bổ sung 2026-08-09, xem §7).
 
 ## 6. Quyết định cần PM/TL
 
 1. **Approve merge** CR này (không có P0/P1 open).
-2. Chốt threshold AI evaluation sau khi có benchmark thật (SPEC §15).
-3. Có cần chuyển enrichment sang background task trước release không, hay giữ đồng bộ trong request (volume MVP).
+2. **Chốt `LLM_TIMEOUT_SECONDS`**: latency thật p95 18.7s vượt timeout mặc định 15s — cần nâng (giới hạn 30s) hoặc đổi model nhanh hơn trước release.
+3. Chốt threshold AI evaluation sau khi benchmark nhiều event type (SPEC §15).
+4. Có cần chuyển enrichment sang background task trước release không, hay giữ đồng bộ trong request (volume MVP).
+
+## 7. Kết quả LLM thật (bổ sung 2026-08-09)
+
+`.env` có `OPENROUTER_*`; đã map sang `LLM_BASE_URL/LLM_API_KEY/LLM_MODEL`. Chạy 9 candidate persisted qua `z-ai/glm-5.2`:
+
+- schema_valid_rate **1.0**, fallback_rate **0.11** (1/9 fail transient, retry pass), không output invalid.
+- severity 9/9 HIGH (đều ZONE_INTRUSION — hợp lý).
+- latency p50 **3.7s**, p95 **18.7s**, mean **7.1s** — p95 vượt timeout 15s.
+
+Cấu hình: `AppConfig.llm_timeout_seconds=15.0` (giới hạn 30s trong `LLMAdapter`). Fail transient 1/9 chứng minh thiết kế fail-safe hoạt động đúng trong production path.
