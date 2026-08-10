@@ -94,3 +94,21 @@ def build_assessment(
         model_name=model,
         created_at=now,
     )
+
+
+AssessmentStatus = Literal["completed", "fallback"]
+
+
+class AssessmentTelemetry(BaseModel):
+    provider_output_valid: bool
+    fallback_used: bool
+    latency_ms: float
+    model_name: str
+    provider_error: str | None = None
+
+
+class AssessmentOutcome(BaseModel):
+    assessment: AgentAssessment
+    status: AssessmentStatus
+    telemetry: AssessmentTelemetry
+    persist_error: str | None = None
