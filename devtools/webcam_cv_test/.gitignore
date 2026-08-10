@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+outputs/runtime/
+outputs/recordings/*
+!outputs/recordings/.gitkeep
