@@ -80,6 +80,8 @@ artifacts/runtime/
 artifacts/phase5-results/
 artifacts/phase7a-results/
 artifacts/phase7a-kernel-log/
+artifacts/phase7b1-results/
+kaggle_pipeline/phase7b_video_dataset/*.avi
 
 # Scratch files
 temp-chat.txt
