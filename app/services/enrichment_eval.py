@@ -55,7 +55,7 @@ class EvaluationReporter:
         except (OSError, json.JSONDecodeError):
             return None
         telemetry = payload.get("telemetry", {})
-        enrichment = payload.get("enrichment", {})
+        assessment = payload.get("assessment", {})
         return EvaluationRecord(
             candidate_id=str(payload.get("candidateId", path.stem)),
             event_type=str(payload.get("eventType", "")),
@@ -63,7 +63,7 @@ class EvaluationReporter:
             output_valid=bool(telemetry.get("outputValid", False)),
             latency_ms=float(telemetry.get("latencyMs", 0.0)),
             model=str(telemetry.get("model", "")),
-            severity=enrichment.get("recommendedSeverity"),
+            severity=assessment.get("severity"),
         )
 
     def report(self) -> dict[str, Any]:

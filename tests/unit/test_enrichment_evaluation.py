@@ -86,7 +86,7 @@ def test_reporter_loads_records_from_directory(tmp_path):
                         "latencyMs": record.latency_ms,
                         "model": record.model,
                     },
-                    "enrichment": {"recommendedSeverity": record.severity},
+                    "assessment": {"severity": record.severity},
                 }
             ),
             encoding="utf-8",
