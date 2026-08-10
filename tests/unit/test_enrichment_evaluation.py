@@ -5,13 +5,14 @@ evaluation output: schema-valid rate, fallback rate, severity caps, and
 latency percentiles.
 """
 
-import json
-
+from app.agents.record import AssessmentRecord, AssessmentRecordStore
 from app.services.enrichment_eval import (
     EvaluationRecord,
     EvaluationReporter,
     summarize_records,
 )
+from tests.unit.test_assessment_record import _outcome
+from tests.unit.test_assessment_runtime import _candidate
 
 
 def _record(
@@ -20,7 +21,7 @@ def _record(
     fallback_used: bool = False,
     output_valid: bool = True,
     latency_ms: float = 100.0,
-    severity: str = "HIGH",
+    severity: str = "high",
 ) -> EvaluationRecord:
     return EvaluationRecord(
         candidate_id=candidate_id,
@@ -63,38 +64,30 @@ def test_latency_percentiles():
 
 def test_severity_counts_and_caps():
     records = [
-        _record("a", severity="HIGH"),
-        _record("b", severity="CRITICAL"),
-        _record("c", severity="HIGH"),
+        _record("a", severity="high"),
+        _record("b", severity="critical"),
+        _record("c", severity="high"),
     ]
     summary = summarize_records(records)
 
-    assert summary["severity_counts"] == {"HIGH": 2, "CRITICAL": 1}
+    assert summary["severity_counts"] == {"high": 2, "critical": 1}
 
 
-def test_reporter_loads_records_from_directory(tmp_path):
-    for i in range(2):
-        record = _record(f"cand-{i}", latency_ms=50.0 + i)
-        (tmp_path / f"enrichment_cand-{i}.json").write_text(
-            json.dumps(
-                {
-                    "candidateId": record.candidate_id,
-                    "eventType": record.event_type,
-                    "telemetry": {
-                        "fallbackUsed": record.fallback_used,
-                        "outputValid": record.output_valid,
-                        "latencyMs": record.latency_ms,
-                        "model": record.model,
-                    },
-                    "assessment": {"severity": record.severity},
-                }
-            ),
-            encoding="utf-8",
-        )
+def test_reporter_loads_records_through_record_store(tmp_path):
+    store = AssessmentRecordStore(tmp_path)
+    first = _candidate().model_copy(update={"candidateId": "cand-1"})
+    second = _candidate().model_copy(update={"candidateId": "cand-2"})
+    assert (
+        store.save(AssessmentRecord.from_outcome(candidate=first, outcome=_outcome(first)))
+        is None
+    )
+    assert (
+        store.save(AssessmentRecord.from_outcome(candidate=second, outcome=_outcome(second)))
+        is None
+    )
 
-    reporter = EvaluationReporter(str(tmp_path))
-    summary = reporter.report()
+    summary = EvaluationReporter(str(tmp_path)).report()
 
     assert summary["total"] == 2
     assert summary["schema_valid_rate"] == 1.0
-    assert summary["severity_counts"]["HIGH"] == 2
+    assert summary["severity_counts"] == {"high": 2}

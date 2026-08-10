@@ -7,14 +7,11 @@ persisted enrichment records.
 
 from __future__ import annotations
 
-import json
 import statistics
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any
 
-ENRICHMENT_PREFIX = "enrichment_"
-ENRICHMENT_SUFFIX = ".json"
+from app.agents.record import AssessmentRecordStore
 
 
 @dataclass
@@ -39,32 +36,19 @@ class EvaluationReporter:
     enrichment_dir: str = "artifacts/backend_events"
 
     def load_records(self) -> list[EvaluationRecord]:
-        records: list[EvaluationRecord] = []
-        directory = Path(self.enrichment_dir)
-        if not directory.exists():
-            return records
-        for path in sorted(directory.glob(f"{ENRICHMENT_PREFIX}*{ENRICHMENT_SUFFIX}")):
-            record = self._parse_file(path)
-            if record is not None:
-                records.append(record)
-        return records
-
-    def _parse_file(self, path: Path) -> EvaluationRecord | None:
-        try:
-            payload = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            return None
-        telemetry = payload.get("telemetry", {})
-        assessment = payload.get("assessment", {})
-        return EvaluationRecord(
-            candidate_id=str(payload.get("candidateId", path.stem)),
-            event_type=str(payload.get("eventType", "")),
-            fallback_used=bool(telemetry.get("fallbackUsed", False)),
-            output_valid=bool(telemetry.get("outputValid", False)),
-            latency_ms=float(telemetry.get("latencyMs", 0.0)),
-            model=str(telemetry.get("model", "")),
-            severity=assessment.get("severity"),
-        )
+        store = AssessmentRecordStore(self.enrichment_dir)
+        return [
+            EvaluationRecord(
+                candidate_id=record.candidate_id,
+                event_type=record.event_type,
+                fallback_used=record.telemetry.fallback_used,
+                output_valid=record.telemetry.provider_output_valid,
+                latency_ms=record.telemetry.latency_ms,
+                model=record.telemetry.model_name,
+                severity=record.assessment.severity,
+            )
+            for record in store.iter_records()
+        ]
 
     def report(self) -> dict[str, Any]:
         return summarize_records(self.load_records())
