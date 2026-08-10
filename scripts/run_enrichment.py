@@ -25,7 +25,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from app.common.schemas import EventCandidate  # noqa: E402
-from app.services.enrichment import EnrichmentService  # noqa: E402
+from app.services.enrichment import create_enrichment_service  # noqa: E402
 
 
 def _load_candidates(paths: list[str]) -> list[dict[str, Any]]:
@@ -83,11 +83,7 @@ def main() -> int:
 
     import asyncio
 
-    from app.llm.adapter import create_llm_adapter
-
-    service = EnrichmentService(
-        output_dir=args.output_dir, llm_adapter=create_llm_adapter()
-    )
+    service = create_enrichment_service(output_dir=args.output_dir)
 
     async def _run() -> int:
         processed = 0
