@@ -16,7 +16,7 @@ def ingest_event_candidate(
     idempotency_key: Optional[str] = Header(default=None, alias="Idempotency-Key"),
 ):
     """
-    Backend boundary endpoint receiving EventCandidate from CV or VLM workers.
+    Backend boundary endpoint receiving EventCandidate from CV workers.
     Enforces idempotency and persists candidates.
     """
     candidate_id = idempotency_key or candidate.candidateId

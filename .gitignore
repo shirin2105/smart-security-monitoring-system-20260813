@@ -10,6 +10,7 @@ build/
 # Virtual environments
 venv/
 .venv/
+.venv-deimv2/
 env/
 
 # Environment variables
@@ -20,6 +21,7 @@ env/
 # IDE
 .vscode/
 .idea/
+.opencode/
 *.swp
 *.swo
 *~
@@ -55,6 +57,8 @@ runs/
 models/_output_.zip
 models/cctv_dataset.zip
 models/cctv_dataset/
+models/
+third_party/
 kaggle_pipeline/dataset/
 kaggle_pipeline/kernel/
 kaggle_pipeline/cctv_dataset/
@@ -68,8 +72,10 @@ datasets/cctv_abandoned_combined/
 datasets/temp_extracted/
 datasets/temp_baggage.zip
 datasets/raw/
+datasets/meva-kf1/
 
 # Generated runtime artifacts
+artifacts/*
 artifacts/backend_events/
 artifacts/events/
 artifacts/evidence/
@@ -81,10 +87,23 @@ artifacts/phase5-results/
 artifacts/phase7a-results/
 artifacts/phase7a-kernel-log/
 artifacts/phase7b1-results/
+artifacts/phase7c-*/
+artifacts/phase8-*/
+artifacts/deimv2-smoke/
+artifacts/kaggle-*/
+artifacts/phase5b-results/
+artifacts/phase6-error-v2/
+artifacts/phase7b-error-v2/
+# Phase 8 validation media remains in the private Kaggle Dataset, not Git.
+phase8_dataset/videos/
+phase8_dataset/source_xml/
+.tmp_phase8_kaggle_upload/
 kaggle_pipeline/phase7b_video_dataset/*.avi
 
 # Scratch files
 temp-chat.txt
+repomix-output.xml
+examples/*.mp4
 
 # Docker
 docker-compose.override.yml

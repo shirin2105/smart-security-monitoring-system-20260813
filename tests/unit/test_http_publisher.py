@@ -28,7 +28,7 @@ def test_fastapi_event_candidate_ingestion_and_idempotency():
         "trackCount": 1,
         "trackIds": [10],
         "observations": {"personCount": 1, "dwellSeconds": 2.5, "insideZone": True},
-        "modelVersion": "yolo-v11n",
+        "modelVersion": "deimv2-phase7a-best",
         "ruleVersion": "intrusion-rule-v1",
         "policyVersion": 1,
         "artifact": {

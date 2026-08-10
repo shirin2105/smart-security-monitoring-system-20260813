@@ -1,6 +1,0 @@
-detector:
-  model_name: "yolo26m.pt"
-  confidence_threshold: 0.35
-  iou_threshold: 0.45
-  target_classes: [0]  # person; abandoned objects come from fixed-camera foreground regions
-  inference_fps: 5.0

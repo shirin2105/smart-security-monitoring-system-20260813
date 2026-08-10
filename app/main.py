@@ -4,8 +4,8 @@ from app.api.debug import router as debug_router
 from app.api.events import router as events_router
 
 app = FastAPI(
-    title="CV/VLM Security Event Detection System",
-    description="Computer Vision CCTV Security Event Candidate Producer & Backend Ingestion",
+    title="Computer Vision Security Event Detection System",
+    description="DEIMv2 and ByteTrack CCTV event candidate producer",
     version="1.0.0",
 )
 
@@ -17,7 +17,7 @@ app.include_router(events_router)
 @app.get("/")
 def root():
     return {
-        "system": "CV/VLM Security Event Detection System",
-        "phase": "Phase 2 - Privacy Redaction Gate & Backend Integration",
+        "system": "Computer Vision Security Event Detection System",
+        "pipeline": "DEIMv2 + ByteTrack + deterministic event rules",
         "status": "OPERATIONAL",
     }

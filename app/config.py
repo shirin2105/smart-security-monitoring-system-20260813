@@ -24,13 +24,4 @@ class AppConfig(BaseSettings):
     def zones(self) -> List[Dict[str, Any]]:
         return self.load_yaml("zones.yaml").get("zones", [])
 
-    @property
-    def event_rules(self) -> Dict[str, Any]:
-        return self.load_yaml("event_rules.yaml")
-
-    @property
-    def models(self) -> Dict[str, Any]:
-        return self.load_yaml("models.yaml")
-
-
 settings = AppConfig()

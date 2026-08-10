@@ -2,39 +2,33 @@
 
 ## 2026-08-10
 
-### Added
-
-- Added the Phase 8.9 `cv-event-v1` next-stage handoff contract for the three locked CV event types. It includes a shared envelope, START/UPDATE/END lifecycle, strict event-specific validation, three builders, JSON/JSONL serialization, schema/examples, deterministic confidence ownership notes, and 17 focused tests. It does not implement Phase 9, LLM/backend behavior, severity, or automatic promotion of Phase 7C candidates.
-- Completed the Phase 7B.1 Kaggle generic-luggage tracking runtime. The 2,189-frame run produced 17 tracks and 5,019 valid JSONL observations at 20.10 FPS; cross-class luggage merge/NMS removed 21,630 of 35,762 raw luggage boxes. The result report explicitly records that zero background anchors were learned and no abandoned-object alarm or MOT-quality claim is made.
-
-## 2026-08-01
-
-### Added
-
-- Class-independent static-region detection with baseline warm-up, persistence, clearing, and re-arming identities.
-- `static_regions` candidate routing through the abandoned-object engine, including owner-absence timing, cached validation, evidence capture, and deduplication.
-- Deterministic UTC video timestamps derived from source epoch, zero-based frame offset, and source FPS.
-- Hugging Face multimodal validator using environment-only `HF_TOKEN`, strict JSON parsing, bounded image/request settings, and explicit unavailable results.
-- Bounded `MultiCameraRunner` supervision for up to six enabled cameras with a shared lock-protected detector and per-camera failure isolation.
-- Canonical PETS real-data generator, annotated video, and JSON summary with source integrity and semantic-validation disclosure.
-- Temporal full-scene validation: proportional 480-pixel sampling at 1 FPS over `T-8s..T+8s`, an 8-second post-roll wait, maximum 17 frames, 12 MB per-camera memory ceiling, and 12 MB aggregate Hugging Face request budget.
-- End-of-stream cleanup that drops incomplete temporal windows without validation or event emission and reports incomplete region IDs.
-
 ### Changed
 
-- Default abandoned-object configuration now selects `candidate_source: static_regions`.
-- Heuristic validation is named and disclosed as non-semantic; compatibility alias `local` remains accepted internally, but the demo CLI exposes `disabled`, `heuristic`, and `huggingface`.
-- Validator unavailability fails open at the event engine; explicit rejection suppresses the candidate.
-- Deferred temporal decisions preserve the original candidate timestamp `T` in emitted events rather than using the later decision time.
-- Production abandoned-object configuration now enables temporal Hugging Face validation by default with `google/gemma-3-4b-it`.
-- Worker construction performs no provider request. With no `HF_TOKEN`, validation returns `unavailable` without network access after the 8-second post-roll wait, and the event engine fails open.
-- The canonical demo static-region threshold is now 6 seconds.
+- Split the previous YOLO and multimodal-validation implementation into the `legacy-yolo` branch.
+- Removed the legacy detector, worker, static-region detector, semantic validator, abandoned-object engine, configs, tests, plans, demo videos, and bundled test clips from the active branch.
+- Removed the `ultralytics` runtime dependency and updated the remaining intrusion/crowd event metadata to identify the Phase 7A DEIMv2 checkpoint.
+- Simplified the FastAPI entrypoint to health, debug, and event-ingestion routes; it no longer exposes the legacy detector demo.
+- Reframed architecture and roadmap documentation around the active DEIMv2, ByteTrack, Phase 7C, Phase 8, and `cv-event-v1` flow.
 
-### Verification notes
+### Added
 
-- The committed authenticated PETS summary records one real Hugging Face decision over 16 ordered full-scene frames. The model identified the region as a person and rejected it at `0.99` confidence, so no alert was emitted.
-- The detector/heuristic PETS comparison processed all 1,510 frames and emitted three alerts; the first occurred at 45.5 seconds and `semantic_vlm_executed` is `false`.
-- The six-camera behavior is contract-tested only. No real six-camera performance benchmark has been completed.
-- The PETS artifact demonstrates execution on real footage; it is not a labeled accuracy benchmark.
+- Added the Phase 8.9 `cv-event-v1` handoff contract for intrusion, crowd, and candidate-only abandoned events, including lifecycle validation and JSONL IO.
+- Added Phase 8 CV-only validation tooling and the CAVIAR validation-set workflow.
+- Added the Phase 8.5 local DEIMv2/ByteTrack webcam test and start/stop launchers.
 
-See [`system-architecture.md`](./system-architecture.md) for the verified command, artifacts, behavior, and limitations.
+## 2026-08-09
+
+- Completed Phase 7B/7B.1 class-wise ByteTrack and generic-luggage tracking output.
+- Completed Phase 7C offline candidate-only abandoned-object reasoning and regression tests.
+
+## 2026-08-08
+
+- Completed Phase 7A person/luggage fine-tuning and evaluation.
+
+## 2026-08-07
+
+- Completed DEIMv2 Phase 5 tiled-inference evaluation and the Phase 6 controlled comparison work.
+
+## 2026-08-06
+
+- Completed custom COCO validation, taxonomy preservation, checkpoint initialization, and DEIMv2 smoke-training preparation.
