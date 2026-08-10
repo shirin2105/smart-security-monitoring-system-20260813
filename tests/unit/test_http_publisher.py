@@ -1,19 +1,24 @@
 import uuid
+
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from app.main import app
-from app.publisher.http_publisher import HttpEventPublisher
-from app.common.schemas import EventCandidate, ObservationData, ArtifactData
-from app.common.enums import EventType, SourceEngine, RedactionStatus
+
+from app.agents import AssessmentRunner
+from app.main import app, create_app
+from app.services.intake import PersistedIntake
 from app.common.time_utils import utc_now_iso
+from tests.unit.test_llm_adapter import _make_adapter
 
 
-def test_fastapi_event_candidate_ingestion_and_idempotency():
-    client = TestClient(app)
+def test_global_app_import_remains_compatible():
+    assert isinstance(app, FastAPI)
+
+
+def _event_payload() -> dict:
     now_iso = utc_now_iso()
     candidate_id = f"test-cand-http-{uuid.uuid4()}"
-
-    payload = {
+    return {
         "candidateId": candidate_id,
         "sourceEngine": "CV",
         "cameraId": "cam_01",
@@ -27,7 +32,11 @@ def test_fastapi_event_candidate_ingestion_and_idempotency():
         "confidence": 0.95,
         "trackCount": 1,
         "trackIds": [10],
-        "observations": {"personCount": 1, "dwellSeconds": 2.5, "insideZone": True},
+        "observations": {
+            "personCount": 1,
+            "dwellSeconds": 2.5,
+            "insideZone": True,
+        },
         "modelVersion": "yolo-v11n",
         "ruleVersion": "intrusion-rule-v1",
         "policyVersion": 1,
@@ -39,14 +48,30 @@ def test_fastapi_event_candidate_ingestion_and_idempotency():
         },
     }
 
-    # 1. First Ingestion -> 201 Created (ACCEPTED)
-    response1 = client.post("/internal/api/v1/event-candidates", json=payload, headers={"Idempotency-Key": candidate_id})
-    assert response1.status_code == 201
-    res_data1 = response1.json()
-    assert res_data1["status"] == "ACCEPTED"
 
-    # 2. Duplicate Ingestion -> Idempotent DUPLICATE_IGNORED
-    response2 = client.post("/internal/api/v1/event-candidates", json=payload, headers={"Idempotency-Key": candidate_id})
-    assert response2.status_code == 201
-    res_data2 = response2.json()
-    assert res_data2["status"] == "DUPLICATE_IGNORED"
+def test_fastapi_event_candidate_ingestion_and_idempotency(tmp_path):
+    application = create_app(
+        intake=PersistedIntake(storage_dir=str(tmp_path / "intake")),
+        assessment_runner=AssessmentRunner(
+            output_dir=str(tmp_path / "assessment"),
+            llm_adapter=_make_adapter(available=False),
+        ),
+    )
+    client = TestClient(application)
+    payload = _event_payload()
+
+    first = client.post(
+        "/internal/api/v1/event-candidates",
+        json=payload,
+        headers={"Idempotency-Key": payload["candidateId"]},
+    )
+    second = client.post(
+        "/internal/api/v1/event-candidates",
+        json=payload,
+        headers={"Idempotency-Key": payload["candidateId"]},
+    )
+
+    assert first.status_code == 201
+    assert first.json()["status"] == "ACCEPTED"
+    assert second.status_code == 201
+    assert second.json()["status"] == "DUPLICATE_IGNORED"

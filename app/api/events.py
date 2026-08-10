@@ -1,36 +1,29 @@
+from typing import Annotated
 
-from fastapi import APIRouter, BackgroundTasks, Header, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Request, status
 
-from app.agents import create_assessment_runner
+from app.agents.handoff import AssessmentHandoff
 from app.common.schemas import EventCandidate
 from app.services.intake import PersistedIntake
 
 router = APIRouter(prefix="/internal/api/v1", tags=["Events Ingestion"])
 
-BACKEND_EVENT_DIR = "artifacts/backend_events"
 
-intake = PersistedIntake(storage_dir=BACKEND_EVENT_DIR)
-assessment_runner = create_assessment_runner(output_dir=BACKEND_EVENT_DIR)
+def get_intake(request: Request) -> PersistedIntake:
+    return request.app.state.intake
 
 
-async def _assess_in_background(candidate: EventCandidate) -> None:
-    """Run agent assessment after the ingest response is sent.
-
-    Advisory and best-effort (FR-AI-07): any failure is resolved by the
-    runner's fallback; it never affects the persisted candidate. The silent
-    catch is intentionally short-lived and is removed by Slice 4.
-    """
-    try:
-        await assessment_runner.assess(candidate)
-    except Exception:
-        pass
+def get_assessment_handoff(request: Request) -> AssessmentHandoff:
+    return request.app.state.assessment_handoff
 
 
 @router.post("/event-candidates", status_code=status.HTTP_201_CREATED)
 def ingest_event_candidate(
     candidate: EventCandidate,
     background_tasks: BackgroundTasks,
-    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+    intake: Annotated[PersistedIntake, Depends(get_intake)],
+    handoff: Annotated[AssessmentHandoff, Depends(get_assessment_handoff)],
+    idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
 ):
     """Backend boundary receiving EventCandidate from CV or VLM workers.
 
@@ -46,5 +39,5 @@ def ingest_event_candidate(
         )
     if outcome.status == "ACCEPTED":
         canonical = intake.canonical_candidate(candidate, header_id=idempotency_key)
-        background_tasks.add_task(_assess_in_background, canonical)
+        background_tasks.add_task(handoff.run, canonical)
     return outcome.as_response()
