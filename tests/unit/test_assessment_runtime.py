@@ -153,3 +153,20 @@ async def test_runner_prompt_omits_non_authoritative_fields(tmp_path):
     assert "summary" not in sent
     assert "actionChecklist" not in sent
     assert "artifact" not in sent
+
+
+@pytest.mark.asyncio
+async def test_record_failure_is_separate_from_provider_outcome(tmp_path):
+    blocked = tmp_path / "not-a-directory"
+    blocked.write_text("blocks mkdir", encoding="utf-8")
+    runner = AssessmentRunner(
+        output_dir=str(blocked),
+        llm_adapter=_make_adapter(responses=[_provider_response()]),
+    )
+
+    outcome = await runner.assess(_candidate())
+
+    assert outcome.status == "completed"
+    assert outcome.telemetry.provider_output_valid is True
+    assert outcome.telemetry.fallback_used is False
+    assert outcome.persist_error == "enrichment_persist_failed:FileExistsError"

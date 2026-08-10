@@ -14,9 +14,9 @@ from pathlib import Path
 from app.agents._workflow import AssessmentWorkflow
 from app.agents.assessment import AssessmentOutcome, AssessmentTelemetry
 from app.agents.policy import build_agent_assessment
+from app.agents.record import AssessmentRecord, AssessmentRecordStore
 from app.common.schemas import EventCandidate
 from app.llm.adapter import LLMAdapter
-from app.services.assessment_record import AssessmentRecordStore, ProviderOutcome
 
 
 class AssessmentRunner:
@@ -53,24 +53,16 @@ class AssessmentRunner:
             model_name=provider_result.model_name if self._provider_enabled else "",
             provider_error=provider_result.error,
         )
-        persist_error = self.record_store.save(
-            candidate_id=candidate.candidateId,
-            event_type=candidate.eventType.value,
-            assessment=assessment,
-            provider=ProviderOutcome(
-                output_valid=telemetry.provider_output_valid,
-                fallback_used=telemetry.fallback_used,
-                latency_ms=telemetry.latency_ms,
-                model=telemetry.model_name,
-                error=telemetry.provider_error,
-            ),
-        )
-        return AssessmentOutcome(
+        outcome = AssessmentOutcome(
             assessment=assessment,
             status="fallback" if fallback_used else "completed",
             telemetry=telemetry,
-            persist_error=persist_error,
         )
+
+        persist_error = self.record_store.save(
+            AssessmentRecord.from_outcome(candidate=candidate, outcome=outcome)
+        )
+        return outcome.model_copy(update={"persist_error": persist_error})
 
 
 def create_assessment_runner(
