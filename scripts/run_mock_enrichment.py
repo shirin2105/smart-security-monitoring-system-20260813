@@ -1,11 +1,15 @@
 """Mock EventCandidate dataset for agent enrichment testing with a real LLM.
 
-Candidates live in datasets/mock_enrichment_candidates.json: 13 entries
-across the five event types, varying confidence, track count, dwell,
-owner-absence, and zone so severity distribution can be observed.
+Two datasets:
+- datasets/mock_enrichment_candidates.json: minimal entries (13 across the
+  five event types).
+- datasets/mock_cv_output_candidates.json: full EventCandidate records as
+  the CV worker persists them via the backend (sourceEngine, trackIds,
+  modelVersion, ruleVersion, artifact) — the realistic agent input.
 
 Usage:
     python scripts/run_mock_enrichment.py
+    python scripts/run_mock_enrichment.py --dataset datasets/mock_cv_output_candidates.json
     python scripts/run_mock_enrichment.py --output-dir artifacts/mock-enrichment
 """
 
@@ -26,32 +30,20 @@ from app.services.enrichment import create_enrichment_service  # noqa: E402
 from app.services.enrichment_eval import EvaluationReporter  # noqa: E402
 
 DEFAULT_DATASET = ROOT / "datasets" / "mock_enrichment_candidates.json"
+CV_DATASET = ROOT / "datasets" / "mock_cv_output_candidates.json"
 
 
 def load_candidates(path: Path = DEFAULT_DATASET) -> list[EventCandidate]:
+    """Load candidates; full CV records validate through EventCandidate,
+    exactly like the backend ingest boundary."""
     with open(path, encoding="utf-8") as f:
         payloads = json.load(f)
-    return [
-        EventCandidate(
-            candidateId=entry["candidateId"],
-            eventType=entry["eventType"],
-            cameraId="cam_mock",
-            zoneId=entry.get("zoneId"),
-            sourceType="SIMULATED",
-            detectedAt="2026-08-10T09:00:00Z",
-            firstSeenAt="2026-08-10T08:59:55Z",
-            lastSeenAt="2026-08-10T09:00:00Z",
-            confidence=entry["confidence"],
-            trackCount=entry["trackCount"],
-            observations=entry["observations"],
-        )
-        for entry in payloads
-    ]
+    return [EventCandidate.model_validate(entry) for entry in payloads]
 
 
-async def main(output_dir: str) -> int:
+async def main(output_dir: str, dataset: Path) -> int:
     service = create_enrichment_service(output_dir=output_dir)
-    for candidate in load_candidates():
+    for candidate in load_candidates(dataset):
         result = await service.enrich(candidate)
         assessment = result.assessment
         print(
@@ -69,9 +61,15 @@ async def main(output_dir: str) -> int:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
+        "--dataset",
+        type=Path,
+        default=DEFAULT_DATASET,
+        help="Candidate JSON dataset (default: mock_enrichment_candidates.json)",
+    )
+    parser.add_argument(
         "--output-dir",
         default=tempfile.mkdtemp(prefix="mock-enrichment-"),
         help="Where assessment records are written (default: fresh temp dir)",
     )
     args = parser.parse_args()
-    raise SystemExit(asyncio.run(main(args.output_dir)))
+    raise SystemExit(asyncio.run(main(args.output_dir, args.dataset)))
