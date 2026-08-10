@@ -236,11 +236,24 @@ Policy invariants:
 
 The provider path and fallback path cross the same policy seam before producing `AgentAssessment`.
 
+Deterministic fallback severity is fixed by event type:
+
+| Event type | Fallback provider severity | Final assessment severity |
+|---|---|---|
+| `ZONE_INTRUSION` | `HIGH` | `high` |
+| `CROWD_THRESHOLD` | `WARNING` | `medium` |
+| `ABANDONED_OBJECT` | `HIGH` | `high` |
+| `SUSPECTED_FALL` | `WARNING` | `medium` |
+| `COVERAGE_DEGRADED` | `INFO` | `low` |
+
+`EventCandidate` validation rejects event types outside this table. Every fallback reason identifies the deterministic policy path and the candidate event type; it never infers identity, intent, or criminality.
+
 ## 11. Provenance
 
 - Provider success records the configured provider model name.
 - Deterministic fallback uses `model_name="deterministic-fallback"` in `AgentAssessment`.
 - Provider telemetry retains the attempted provider model name when a provider attempt fails.
+- `AssessmentTelemetry.model_name` is the configured provider model when a provider was attempted and an empty string when provider execution was disabled before an attempt.
 - Because the provider output contract changes, the prompt version advances from `assessment-v1` to `assessment-v2`.
 - The existing `model_version` field remains present and uses the configured/default value already supported by the project.
 - Every assessment receives a new assessment ID and UTC timestamp.
