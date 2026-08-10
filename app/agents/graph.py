@@ -60,7 +60,7 @@ def build_enrichment_graph(llm: LLMAdapter | None = None):
             return {"error": "llm_unavailable", "fallback_used": True}
         prompt = state.get("llm_prompt", "")
         system = state.get("llm_system_prompt", SYSTEM_PROMPT)
-        output, telemetry = adapter.enrich(prompt=prompt, system_prompt=system)
+        output, telemetry = await adapter.enrich_async(prompt=prompt, system_prompt=system)
         if output is None:
             return {
                 "error": telemetry.get("error", "llm_failed"),

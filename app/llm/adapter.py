@@ -8,6 +8,7 @@ raw or blurred media is never sent to the provider (PRD §12.1).
 
 from __future__ import annotations
 
+import asyncio
 import json
 import time
 from typing import Any
@@ -59,6 +60,18 @@ class LLMAdapter:
     @property
     def available(self) -> bool:
         return self._llm is not None
+
+    async def enrich_async(
+        self,
+        prompt: str,
+        system_prompt: str,
+    ) -> tuple[EnrichmentOutput | None, dict[str, Any] | None]:
+        """Async variant: runs the blocking provider call off the event loop.
+
+        The synchronous ``invoke`` is moved to a worker thread so a slow
+        provider (measured p95 ~18.7s) never stalls the ingest event loop.
+        """
+        return await asyncio.to_thread(self.enrich, prompt, system_prompt)
 
     def enrich(
         self,

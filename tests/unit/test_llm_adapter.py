@@ -2,6 +2,8 @@
 
 import json
 
+import pytest
+
 from app.common.schemas import EnrichmentOutput
 from app.llm.adapter import LLMAdapter, create_llm_adapter
 
@@ -41,6 +43,49 @@ def _make_adapter(responses=None, available=True):
         timeout_seconds=1.0,
         temperature=0.0,
     )
+
+
+@pytest.mark.asyncio
+async def test_enrich_async_does_not_block_event_loop():
+    """C4: a slow provider call must not stall the event loop.
+
+    The blocking invoke runs in a worker thread, so a concurrent timer
+    keeps firing while the provider call is in flight.
+    """
+    import asyncio
+    import time
+
+    class _SlowLLM:
+        def invoke(self, messages):
+            time.sleep(0.3)
+            return _FakeResponse(
+                '{"recommendedSeverity":"HIGH","rationale":"r","summary":"s","actionChecklist":[]}'
+            )
+
+    adapter = LLMAdapter(
+        model="m",
+        api_key="k",
+        base_url="https://x.invalid",
+        timeout_seconds=1.0,
+        temperature=0.0,
+        llm=_SlowLLM(),
+    )
+
+    loop = asyncio.get_running_loop()
+    ticks = []
+
+    async def _ticker():
+        deadline = loop.time() + 0.5
+        while loop.time() < deadline:
+            ticks.append(1)
+            await asyncio.sleep(0.02)
+
+    ticker = asyncio.create_task(_ticker())
+    output, _ = await adapter.enrich_async(prompt="p", system_prompt="s")
+    await ticker
+
+    assert output is not None
+    assert len(ticks) >= 5, f"event loop stalled, only {len(ticks)} ticks in 500ms"
 
 
 def test_available_without_api_key_is_false():
