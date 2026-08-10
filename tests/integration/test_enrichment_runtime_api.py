@@ -19,7 +19,7 @@ from app.agents import AssessmentRunner
 from app.agents.handoff import AssessmentHandoff
 from app.api.events import ingest_event_candidate
 from app.common.schemas import EventCandidate
-from app.main import app, create_app
+from app.main import create_app
 from app.services.intake import PersistedIntake
 from tests.integration.test_enrichment_pipeline import INTRUSION_EVENT
 from tests.unit.test_assessment_record import _outcome

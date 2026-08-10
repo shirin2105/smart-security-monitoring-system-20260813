@@ -39,9 +39,7 @@ def test_record_store_round_trip_preserves_current_json_shape(tmp_path):
     loaded = store.load(candidate.candidateId)
 
     assert loaded == record
-    payload = json.loads(
-        (tmp_path / f"enrichment_{candidate.candidateId}.json").read_text(encoding="utf-8")
-    )
+    payload = json.loads((tmp_path / f"enrichment_{candidate.candidateId}.json").read_text(encoding="utf-8"))
     assert set(payload) == {"candidateId", "eventType", "assessment", "telemetry"}
     assert set(payload["telemetry"]) == {
         "latencyMs",
@@ -71,9 +69,7 @@ def test_record_store_reads_current_legacy_fixture(tmp_path):
             "persistError": None,
         },
     }
-    (tmp_path / "enrichment_legacy-1.json").write_text(
-        json.dumps(fixture), encoding="utf-8"
-    )
+    (tmp_path / "enrichment_legacy-1.json").write_text(json.dumps(fixture), encoding="utf-8")
 
     loaded = AssessmentRecordStore(tmp_path).load("legacy-1")
 

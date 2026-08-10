@@ -5,7 +5,6 @@ from app.agents.assessment import AgentAssessment
 from app.agents.provider import ProviderDraft
 from app.common.schemas import EventCandidate
 
-
 SEVERITY_MAP = {
     "INFO": "low",
     "WARNING": "medium",

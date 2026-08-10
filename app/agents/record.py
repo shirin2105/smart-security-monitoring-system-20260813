@@ -46,9 +46,7 @@ class AssessmentRecord(BaseModel):
     telemetry: RecordTelemetry
 
     @classmethod
-    def from_outcome(
-        cls, *, candidate: EventCandidate, outcome: AssessmentOutcome
-    ) -> "AssessmentRecord":
+    def from_outcome(cls, *, candidate: EventCandidate, outcome: AssessmentOutcome) -> AssessmentRecord:
         return cls(
             candidateId=candidate.candidateId,
             eventType=candidate.eventType.value,
@@ -73,9 +71,7 @@ class AssessmentRecordStore:
     def save(self, record: AssessmentRecord) -> str | None:
         try:
             self.output_dir.mkdir(parents=True, exist_ok=True)
-            target = self.output_dir / (
-                f"{ENRICHMENT_PREFIX}{record.candidate_id}{ENRICHMENT_SUFFIX}"
-            )
+            target = self.output_dir / (f"{ENRICHMENT_PREFIX}{record.candidate_id}{ENRICHMENT_SUFFIX}")
             target.write_text(
                 json.dumps(
                     record.model_dump(mode="json", by_alias=True),
@@ -89,9 +85,7 @@ class AssessmentRecordStore:
             return f"enrichment_persist_failed:{type(exc).__name__}"
 
     def load(self, candidate_id: str) -> AssessmentRecord | None:
-        target = self.output_dir / (
-            f"{ENRICHMENT_PREFIX}{candidate_id}{ENRICHMENT_SUFFIX}"
-        )
+        target = self.output_dir / (f"{ENRICHMENT_PREFIX}{candidate_id}{ENRICHMENT_SUFFIX}")
         if not target.exists():
             return None
         return self._read(target)
@@ -99,9 +93,7 @@ class AssessmentRecordStore:
     def iter_records(self) -> Iterator[AssessmentRecord]:
         if not self.output_dir.exists():
             return
-        for path in sorted(
-            self.output_dir.glob(f"{ENRICHMENT_PREFIX}*{ENRICHMENT_SUFFIX}")
-        ):
+        for path in sorted(self.output_dir.glob(f"{ENRICHMENT_PREFIX}*{ENRICHMENT_SUFFIX}")):
             record = self._read(path)
             if record is not None:
                 yield record

@@ -2,7 +2,6 @@ from typing import Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field
 
-
 ProviderSeverity = Literal["INFO", "WARNING", "HIGH", "CRITICAL"]
 
 

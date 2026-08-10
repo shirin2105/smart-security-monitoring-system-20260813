@@ -59,9 +59,7 @@ class AssessmentRunner:
             telemetry=telemetry,
         )
 
-        persist_error = self.record_store.save(
-            AssessmentRecord.from_outcome(candidate=candidate, outcome=outcome)
-        )
+        persist_error = self.record_store.save(AssessmentRecord.from_outcome(candidate=candidate, outcome=outcome))
         return outcome.model_copy(update={"persist_error": persist_error})
 
 

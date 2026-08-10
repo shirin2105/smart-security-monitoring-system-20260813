@@ -15,9 +15,7 @@ from tests.unit.test_assessment_runtime import _candidate
         ("CRITICAL", "critical", "request_manager_review"),
     ],
 )
-def test_policy_maps_severity_and_action(
-    provider_severity, expected_severity, expected_action
-):
+def test_policy_maps_severity_and_action(provider_severity, expected_severity, expected_action):
     assessment = build_agent_assessment(
         candidate=_candidate(),
         draft=ProviderDraft(

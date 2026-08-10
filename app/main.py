@@ -21,9 +21,7 @@ def create_app(
         version="1.0.0",
     )
     resolved_intake = intake or PersistedIntake(storage_dir=BACKEND_EVENT_DIR)
-    resolved_runner = assessment_runner or create_assessment_runner(
-        output_dir=BACKEND_EVENT_DIR
-    )
+    resolved_runner = assessment_runner or create_assessment_runner(output_dir=BACKEND_EVENT_DIR)
     application.state.intake = resolved_intake
     application.state.assessment_handoff = AssessmentHandoff(resolved_runner)
     application.include_router(health_router)

@@ -84,9 +84,7 @@ class LLMAdapter:
                 error="adapter_unavailable",
             )
         try:
-            response = self._llm.invoke(
-                [SystemMessage(content=system_prompt), HumanMessage(content=prompt)]
-            )
+            response = self._llm.invoke([SystemMessage(content=system_prompt), HumanMessage(content=prompt)])
             elapsed = round((time.perf_counter() - started) * 1000.0, 2)
             raw = response.content
             if not isinstance(raw, str) or not raw.strip():
