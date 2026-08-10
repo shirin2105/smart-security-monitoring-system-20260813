@@ -1,10 +1,15 @@
 """Run LLM enrichment on a persisted EventCandidate JSON.
 
+Thin adapter over ``EnrichmentService``: it loads candidate files, hands
+each to the service, and prints the outcome. All graph/prompt/telemetry/
+persistence coordination lives inside the service (architecture review
+candidate 3: LangGraph stays private to the assessment module).
+
 Usage:
     python scripts/run_enrichment.py artifacts/backend_events/candidate_*.json
-    python scripts/run_enrichment.py --input artifacts/backend_events/candidate_cam_01.json
+    python scripts/run_enrichment.py --input-dir artifacts/backend_events
 
-With no credential configured (LLM_API_KEY empty), the graph applies the
+With no credential configured (LLM_API_KEY empty), the service applies the
 deterministic fallback; no provider request is made (FR-AI-06, Journey C).
 """
 
@@ -19,10 +24,8 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from app.agents.graph import build_enrichment_graph  # noqa: E402
-from app.common.schemas import EnrichmentOutput, EnrichmentTelemetry
-from app.config import settings
-from app.llm.adapter import create_llm_adapter
+from app.common.schemas import EventCandidate  # noqa: E402
+from app.services.enrichment import EnrichmentService  # noqa: E402
 
 
 def _load_candidates(paths: list[str]) -> list[dict[str, Any]]:
@@ -41,34 +44,12 @@ def _load_candidates(paths: list[str]) -> list[dict[str, Any]]:
     return candidates
 
 
-async def _run(candidates: list[dict[str, Any]], out: Path) -> None:
-    adapter = create_llm_adapter()
-    graph = build_enrichment_graph(llm=adapter)
-    out.mkdir(parents=True, exist_ok=True)
-
-    for event in candidates:
-        result = await graph.ainvoke({"event": event})
-        output: EnrichmentOutput = result["output"]
-        telemetry = EnrichmentTelemetry(
-            eventType=str(event.get("eventType", "")),
-            candidateId=str(event.get("candidateId", "")),
-            latencyMs=result.get("telemetry", {}).get("latency_ms", 0.0),
-            model=result.get("telemetry", {}).get("model", settings.llm_model),
-            fallbackUsed=bool(result.get("fallback_used")),
-            outputValid=True,
-            error=result.get("error"),
-        )
-        record = {
-            "candidateId": event.get("candidateId"),
-            "eventType": event.get("eventType"),
-            "enrichment": output.model_dump(mode="json"),
-            "telemetry": telemetry.model_dump(mode="json"),
-        }
-        target = out / f"enrichment_{event.get('candidateId', 'unknown')}.json"
-        with open(target, "w", encoding="utf-8") as f:
-            json.dump(record, f, indent=2, ensure_ascii=False)
-        status = "fallback" if telemetry.fallbackUsed else "llm"
-        print(f"[run_enrichment] {event.get('candidateId')} -> {status} -> {target}")
+def _parse_candidate(payload: dict[str, Any]) -> EventCandidate | None:
+    try:
+        return EventCandidate.model_validate(payload)
+    except Exception as exc:
+        print(f"[run_enrichment] SKIP invalid candidate: {type(exc).__name__}", file=sys.stderr)
+        return None
 
 
 def main() -> int:
@@ -85,25 +66,45 @@ def main() -> int:
     )
     parser.add_argument(
         "--output-dir",
-        default="artifacts/enrichment",
-        help="Where enrichment records are written",
+        default="artifacts/backend_events",
+        help="Where enrichment records are written (service default)",
     )
     args = parser.parse_args()
 
     if args.inputs:
-        candidates = _load_candidates(args.inputs)
+        payloads = _load_candidates(args.inputs)
     else:
         globbed = sorted(Path(args.input_dir).glob("candidate_*.json"))
-        candidates = _load_candidates([str(p) for p in globbed])
+        payloads = _load_candidates([str(p) for p in globbed])
 
-    if not candidates:
+    if not payloads:
         print("[run_enrichment] No candidates found.", file=sys.stderr)
         return 1
 
     import asyncio
 
-    asyncio.run(_run(candidates, Path(args.output_dir)))
-    return 0
+    from app.llm.adapter import create_llm_adapter
+
+    service = EnrichmentService(
+        output_dir=args.output_dir, llm_adapter=create_llm_adapter()
+    )
+
+    async def _run() -> int:
+        processed = 0
+        for payload in payloads:
+            candidate = _parse_candidate(payload)
+            if candidate is None:
+                continue
+            result = await service.enrich(candidate)
+            status = "fallback" if result.fallback_used else "llm"
+            print(
+                f"[run_enrichment] {candidate.candidateId} -> {status} "
+                f"-> {Path(args.output_dir) / f'enrichment_{candidate.candidateId}.json'}"
+            )
+            processed += 1
+        return 0 if processed else 1
+
+    return asyncio.run(_run())
 
 
 if __name__ == "__main__":

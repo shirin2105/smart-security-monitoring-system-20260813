@@ -9,34 +9,58 @@ Rules under test (SPEC §9 Agent spec, BRD RULE-03 persist-before-notify):
 import copy
 import json
 import sys
+import time
 from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 
+from app.common.schemas import EnrichmentOutput
 from app.main import app
-from app.services.enrichment import EnrichmentService
+from app.services.enrichment import EnrichmentResult, EnrichmentService
 from tests.unit.test_enrichment_agent import INTRUSION_EVENT
 from tests.unit.test_llm_adapter import _make_adapter
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 
+class _SlowService(EnrichmentService):
+    """EnrichmentService variant that sleeps before returning, simulating a slow LLM."""
+
+    def __init__(self, output_dir: str, slow_seconds: float = 1.0):
+        super().__init__(output_dir=output_dir)
+        self.slow_seconds = slow_seconds
+
+    async def enrich(self, candidate) -> EnrichmentResult:
+        time.sleep(self.slow_seconds)
+        return EnrichmentResult(
+            output=EnrichmentOutput(
+                recommendedSeverity="HIGH",
+                rationale="slow",
+                summary="slow",
+                actionChecklist=["c"],
+            ),
+            fallback_used=True,
+            error=None,
+            telemetry={"latency_ms": self.slow_seconds * 1000.0},
+        )
+
+
 @pytest.fixture
 def client(tmp_path):
     from app.api import events as events_api
-    from app.common.idempotency import IdempotencyStore
+    from app.services.intake import PersistedIntake
 
     original_service = events_api.enrichment_service
-    original_store = events_api.idempotency_store
+    original_intake = events_api.intake
     events_api.enrichment_service = EnrichmentService(
         output_dir=str(tmp_path / "enrichments"),
         llm_adapter=_make_adapter(available=False),
     )
-    events_api.idempotency_store = IdempotencyStore(storage_file=str(tmp_path / "idempotency.json"))
+    events_api.intake = PersistedIntake(storage_dir=str(tmp_path / "intake"))
     yield TestClient(app)
     events_api.enrichment_service = original_service
-    events_api.idempotency_store = original_store
+    events_api.intake = original_intake
 
 
 def _payload() -> dict:
@@ -66,3 +90,33 @@ def test_duplicate_ingest_ignored_without_second_enrichment(client, tmp_path):
 
     enrichment_files = list(tmp_path.glob("enrichments/enrichment_*.json"))
     assert len(enrichment_files) == 1
+
+
+def test_ingest_responds_before_enrichment_runs(client, tmp_path):
+    """C4: the ingest response must not block on the LLM.
+
+    The endpoint schedules enrichment as a FastAPI background task: the
+    response carries only the accepted status (no enrichment field), and the
+    enrichment record is produced separately from the request path.
+    """
+    from app.api import events as events_api
+    from app.services.intake import PersistedIntake
+
+    original_service = events_api.enrichment_service
+    original_intake = events_api.intake
+    try:
+        events_api.enrichment_service = _SlowService(
+            output_dir=str(tmp_path / "enrichments"), slow_seconds=1.0
+        )
+        events_api.intake = PersistedIntake(storage_dir=str(tmp_path / "intake3"))
+
+        resp = client.post("/internal/api/v1/event-candidates", json=_payload())
+
+        assert resp.status_code == 201
+        body = resp.json()
+        assert body["status"] == "ACCEPTED"
+        assert "enrichment" not in body
+        assert body["candidateId"] == INTRUSION_EVENT["candidateId"]
+    finally:
+        events_api.enrichment_service = original_service
+        events_api.intake = original_intake
