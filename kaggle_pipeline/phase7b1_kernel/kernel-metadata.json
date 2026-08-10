@@ -1,0 +1,18 @@
+{
+  "id": "shirin21st/deimv2-phase-7b-1-generic-luggage",
+  "title": "DEIMv2 Phase 7B.1 Generic Luggage",
+  "code_file": "phase7b1_kaggle_v4_generic_luggage.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": "true",
+  "enable_gpu": "true",
+  "machine_shape": "NvidiaTeslaT4",
+  "enable_internet": "true",
+  "dataset_sources": [
+    "shirin21st/phase7b-aboda-tracking-video"
+  ],
+  "competition_sources": [],
+  "kernel_sources": [
+    "shirin21st/deimv2-phase-7a-person-luggage"
+  ]
+}

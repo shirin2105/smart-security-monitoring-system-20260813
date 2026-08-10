@@ -11,6 +11,7 @@
 | Six-camera bounded supervisor | Complete | Shared-detector and failure-isolation unit test |
 | Canonical PETS real-data demo | Complete | Video plus machine-readable summary artifact |
 | Authenticated PETS temporal VLM demo | Complete | 16-frame Gemma request rejected one false-person candidate at 0.99; no alert |
+| DEIMv2 generic-luggage tracking runtime | Complete, visual review pending | Phase 7B.1 Kaggle run completed over 2,189 frames at 20.10 FPS, produced 17 tracks and 5,019 valid JSONL observations, and removed 60.48% of duplicate luggage-class boxes. Zero background anchors were learned, so suppression quality remains unverified. See [`reports/deimv2_phase7b1_generic_luggage_report.md`](../reports/deimv2_phase7b1_generic_luggage_report.md). |
 | Real six-camera performance benchmark | Not started | No benchmark or production camera result exists |
 | Static-region quality evaluation | Not started | Demo output is not a labeled accuracy evaluation |
 
