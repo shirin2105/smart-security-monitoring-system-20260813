@@ -12,6 +12,7 @@
 | Canonical PETS real-data demo | Complete | Video plus machine-readable summary artifact |
 | Authenticated PETS temporal VLM demo | Complete | 16-frame Gemma request rejected one false-person candidate at 0.99; no alert |
 | DEIMv2 generic-luggage tracking runtime | Complete, visual review pending | Phase 7B.1 Kaggle run completed over 2,189 frames at 20.10 FPS, produced 17 tracks and 5,019 valid JSONL observations, and removed 60.48% of duplicate luggage-class boxes. Zero background anchors were learned, so suppression quality remains unverified. See [`reports/deimv2_phase7b1_generic_luggage_report.md`](../reports/deimv2_phase7b1_generic_luggage_report.md). |
+| Phase 8.9 CV handoff contract | Complete | Locked `cv-event-v1` for intrusion, crowd, and abandoned events with START/UPDATE/END lifecycle, stable caller-owned IDs, event-specific validation, builders, JSON/JSONL IO, examples, and 17 focused tests. No Phase 9 loop, LLM, backend, or candidate promotion was added. |
 | Real six-camera performance benchmark | Not started | No benchmark or production camera result exists |
 | Static-region quality evaluation | Not started | Demo output is not a labeled accuracy evaluation |
 

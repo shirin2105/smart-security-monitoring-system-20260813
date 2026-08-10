@@ -4,6 +4,7 @@
 
 ### Added
 
+- Added the Phase 8.9 `cv-event-v1` next-stage handoff contract for the three locked CV event types. It includes a shared envelope, START/UPDATE/END lifecycle, strict event-specific validation, three builders, JSON/JSONL serialization, schema/examples, deterministic confidence ownership notes, and 17 focused tests. It does not implement Phase 9, LLM/backend behavior, severity, or automatic promotion of Phase 7C candidates.
 - Completed the Phase 7B.1 Kaggle generic-luggage tracking runtime. The 2,189-frame run produced 17 tracks and 5,019 valid JSONL observations at 20.10 FPS; cross-class luggage merge/NMS removed 21,630 of 35,762 raw luggage boxes. The result report explicitly records that zero background anchors were learned and no abandoned-object alarm or MOT-quality claim is made.
 
 ## 2026-08-01
