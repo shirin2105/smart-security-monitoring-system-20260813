@@ -4,6 +4,7 @@
 
 ### Added
 
+- **2026-08-10 — Agent architecture deepening:** delivered the private LangGraph assessment runner, authoritative advisory policy, typed legacy-compatible assessment records, and observable best-effort handoff in four vertical TDD slices. `EventCandidate`, ingest behavior, and persisted record shape remain compatible; crash recovery is not claimed.
 - Completed the Phase 7B.1 Kaggle generic-luggage tracking runtime. The 2,189-frame run produced 17 tracks and 5,019 valid JSONL observations at 20.10 FPS; cross-class luggage merge/NMS removed 21,630 of 35,762 raw luggage boxes. The result report explicitly records that zero background anchors were learned and no abandoned-object alarm or MOT-quality claim is made.
 
 ## 2026-08-01

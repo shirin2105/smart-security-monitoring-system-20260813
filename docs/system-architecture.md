@@ -76,6 +76,14 @@ python scripts/generate_static_abandoned_demo.py --validation huggingface
 
 Provider availability and model access are external dependencies. Always inspect `semantic_vlm_executed` and `validation_disclosure` in the generated summary before claiming semantic inference occurred.
 
+## Agent assessment
+
+`AssessmentRunner.assess(EventCandidate)` is the Agent module interface. It owns a private once-compiled LangGraph workflow, the OpenAI-compatible provider adapter, deterministic fallback, advisory policy, and typed assessment-record persistence. Callers and behavioral tests do not access graph state.
+
+The candidate-ingest route persists and canonicalizes an accepted candidate before scheduling `AssessmentHandoff`. The handoff is best-effort: provider and schema failures produce deterministic fallback records, while unexpected defects are logged with candidate/event identity and remain isolated from the `201` ingest response. A process crash after `201` can still lose an assessment job; the system does not claim durable background execution.
+
+Assessment records retain the `enrichment_<candidateId>.json` filename and the existing `candidateId`, `eventType`, `assessment`, and `telemetry` JSON shape. Evaluation loads records through the same typed record implementation.
+
 ## References
 
 - [`development-roadmap.md`](./development-roadmap.md)
