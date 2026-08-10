@@ -88,6 +88,30 @@ async def test_runner_falls_back_for_malformed_provider_output(tmp_path):
     assert outcome.telemetry.provider_error is not None
 
 
+@pytest.mark.parametrize(
+    ("event_type", "provider_severity", "expected_severity"),
+    [
+        ("ZONE_INTRUSION", "HIGH", "high"),
+        ("CROWD_THRESHOLD", "WARNING", "medium"),
+        ("ABANDONED_OBJECT", "HIGH", "high"),
+        ("SUSPECTED_FALL", "WARNING", "medium"),
+        ("COVERAGE_DEGRADED", "INFO", "low"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_runner_covers_all_event_types(
+    tmp_path, event_type, provider_severity, expected_severity
+):
+    runner = AssessmentRunner(
+        output_dir=str(tmp_path),
+        llm_adapter=_make_adapter(responses=[_provider_response(provider_severity)]),
+    )
+
+    outcome = await runner.assess(_candidate(event_type))
+
+    assert outcome.assessment.severity == expected_severity
+
+
 @pytest.mark.asyncio
 async def test_runner_never_mutates_candidate_and_reuses_instance(tmp_path):
     runner = AssessmentRunner(

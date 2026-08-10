@@ -8,7 +8,7 @@ filesystem ordering directly.
 
 from app.common.schemas import EventCandidate
 from app.services.intake import PersistedIntake
-from tests.unit.test_enrichment_agent import INTRUSION_EVENT
+from tests.integration.test_enrichment_pipeline import INTRUSION_EVENT
 
 
 def _candidate(candidate_id: str = "cand-intake-1", **overrides) -> EventCandidate:

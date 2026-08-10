@@ -25,8 +25,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from app.agents import create_assessment_runner  # noqa: E402
 from app.common.schemas import EventCandidate  # noqa: E402
-from app.services.enrichment import create_enrichment_service  # noqa: E402
 from app.services.enrichment_eval import EvaluationReporter  # noqa: E402
 
 DEFAULT_DATASET = ROOT / "datasets" / "mock_enrichment_candidates.json"
@@ -42,14 +42,14 @@ def load_candidates(path: Path = DEFAULT_DATASET) -> list[EventCandidate]:
 
 
 async def main(output_dir: str, dataset: Path) -> int:
-    service = create_enrichment_service(output_dir=output_dir)
+    runner = create_assessment_runner(output_dir=output_dir)
     for candidate in load_candidates(dataset):
-        result = await service.enrich(candidate)
-        assessment = result.assessment
+        outcome = await runner.assess(candidate)
+        assessment = outcome.assessment
         print(
             f"{candidate.eventType.value:18s} conf={candidate.confidence:<4} "
             f"sev={assessment.severity:8s} action={assessment.recommended_action:28s} "
-            f"fb={str(result.fallback_used):5s}",
+            f"fb={str(outcome.telemetry.fallback_used):5s}",
             flush=True,
         )
     print()

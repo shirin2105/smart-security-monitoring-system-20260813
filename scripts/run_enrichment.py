@@ -1,15 +1,15 @@
 """Run LLM enrichment on a persisted EventCandidate JSON.
 
-Thin adapter over ``EnrichmentService``: it loads candidate files, hands
-each to the service, and prints the outcome. All graph/prompt/telemetry/
-persistence coordination lives inside the service (architecture review
-candidate 3: LangGraph stays private to the assessment module).
+Thin adapter over ``AssessmentRunner``: it loads candidate files, hands
+each to the runner, and prints the outcome. All graph/prompt/telemetry/
+persistence coordination lives inside the assessment module (architecture
+review candidate 3: LangGraph stays private to the assessment module).
 
 Usage:
     python scripts/run_enrichment.py artifacts/backend_events/candidate_*.json
     python scripts/run_enrichment.py --input-dir artifacts/backend_events
 
-With no credential configured (LLM_API_KEY empty), the service applies the
+With no credential configured (LLM_API_KEY empty), the runner applies the
 deterministic fallback; no provider request is made (FR-AI-06, Journey C).
 """
 
@@ -24,8 +24,8 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from app.agents import create_assessment_runner  # noqa: E402
 from app.common.schemas import EventCandidate  # noqa: E402
-from app.services.enrichment import create_enrichment_service  # noqa: E402
 
 
 def _load_candidates(paths: list[str]) -> list[dict[str, Any]]:
@@ -83,7 +83,7 @@ def main() -> int:
 
     import asyncio
 
-    service = create_enrichment_service(output_dir=args.output_dir)
+    runner = create_assessment_runner(output_dir=args.output_dir)
 
     async def _run() -> int:
         processed = 0
@@ -91,8 +91,8 @@ def main() -> int:
             candidate = _parse_candidate(payload)
             if candidate is None:
                 continue
-            result = await service.enrich(candidate)
-            status = "fallback" if result.fallback_used else "llm"
+            outcome = await runner.assess(candidate)
+            status = "fallback" if outcome.status == "fallback" else "llm"
             print(
                 f"[run_enrichment] {candidate.candidateId} -> {status} "
                 f"-> {Path(args.output_dir) / f'enrichment_{candidate.candidateId}.json'}"

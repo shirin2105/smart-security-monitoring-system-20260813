@@ -1,13 +1,30 @@
-"""Integration: persisted candidate JSON → enrichment graph → valid output or fallback."""
+"""Integration: persisted candidate JSON → assessment runner → valid output or fallback."""
 
 import json
 
 import pytest
 
-from app.agents.graph import build_enrichment_graph
-from app.common.schemas import EnrichmentOutput, EventCandidate
-from tests.unit.test_enrichment_agent import INTRUSION_EVENT
+from app.agents import AssessmentRunner
+from app.common.schemas import EventCandidate
 from tests.unit.test_llm_adapter import _make_adapter
+
+INTRUSION_EVENT = {
+    "candidateId": "cam_01-ZONE_INTRUSION-restricted_gate-1",
+    "eventType": "ZONE_INTRUSION",
+    "cameraId": "cam_01",
+    "zoneId": "restricted_gate",
+    "sourceType": "SIMULATED",
+    "confidence": 0.88,
+    "trackCount": 1,
+    "observations": {"personCount": 1, "dwellSeconds": 2.5, "insideZone": True},
+    "detectedAt": "2026-07-29T10:15:30Z",
+    "firstSeenAt": "2026-07-29T10:15:25Z",
+    "lastSeenAt": "2026-07-29T10:15:30Z",
+    "modelVersion": "yolo-v11n",
+    "ruleVersion": "intrusion-rule-v1",
+    "policyVersion": 1,
+    "artifact": {"available": True, "redactionStatus": "COMPLETE"},
+}
 
 VALID_LLM_RESPONSE = json.dumps({
     "recommendedSeverity": "HIGH",
@@ -17,23 +34,13 @@ VALID_LLM_RESPONSE = json.dumps({
 })
 
 
+def _persisted_candidate_payload() -> dict:
+    return EventCandidate.model_validate(INTRUSION_EVENT).model_dump(mode="json")
+
+
 def test_candidate_dump_roundtrip_matches_backend_ingest(tmp_path):
     """Backend persists EventCandidate as JSON; the agent consumes that JSON."""
-    candidate = EventCandidate(
-        candidateId=INTRUSION_EVENT["candidateId"],
-        eventType="ZONE_INTRUSION",
-        cameraId="cam_01",
-        zoneId="restricted_gate",
-        sourceType="SIMULATED",
-        detectedAt=INTRUSION_EVENT["detectedAt"],
-        firstSeenAt=INTRUSION_EVENT["firstSeenAt"],
-        lastSeenAt=INTRUSION_EVENT["lastSeenAt"],
-        confidence=0.88,
-        trackCount=1,
-        observations={"personCount": 1, "dwellSeconds": 2.5, "insideZone": True},
-    )
-    # Mirrors app/api/events.py: candidate.model_dump(mode="json") persisted to disk
-    persisted = candidate.model_dump(mode="json")
+    persisted = _persisted_candidate_payload()
     file_path = tmp_path / "candidate.json"
     file_path.write_text(json.dumps(persisted, ensure_ascii=False), encoding="utf-8")
 
@@ -45,53 +52,29 @@ def test_candidate_dump_roundtrip_matches_backend_ingest(tmp_path):
 
 @pytest.mark.asyncio
 async def test_enrichment_from_persisted_json_with_llm(tmp_path):
-    candidate = EventCandidate(
-        candidateId=INTRUSION_EVENT["candidateId"],
-        eventType="ZONE_INTRUSION",
-        cameraId="cam_01",
-        zoneId="restricted_gate",
-        sourceType="SIMULATED",
-        detectedAt=INTRUSION_EVENT["detectedAt"],
-        firstSeenAt=INTRUSION_EVENT["firstSeenAt"],
-        lastSeenAt=INTRUSION_EVENT["lastSeenAt"],
-        confidence=0.88,
-        trackCount=1,
-        observations={"personCount": 1, "dwellSeconds": 2.5, "insideZone": True},
+    candidate = EventCandidate.model_validate(_persisted_candidate_payload())
+    runner = AssessmentRunner(
+        output_dir=str(tmp_path),
+        llm_adapter=_make_adapter(responses=[VALID_LLM_RESPONSE]),
     )
-    persisted = candidate.model_dump(mode="json")
 
-    adapter = _make_adapter(responses=[VALID_LLM_RESPONSE])
-    graph = build_enrichment_graph(llm=adapter)
-    result = await graph.ainvoke({"event": persisted})
+    outcome = await runner.assess(candidate)
 
-    assert isinstance(result["output"], EnrichmentOutput)
-    assert result["output"].recommendedSeverity == "HIGH"
-    assert result["fallback_used"] is False
+    assert outcome.status == "completed"
+    assert outcome.assessment.severity == "high"
+    assert outcome.telemetry.provider_output_valid is True
 
 
 @pytest.mark.asyncio
 async def test_enrichment_fallback_when_llm_outage(tmp_path):
-    """LLM outage must never block enrichment; deterministic fallback applies."""
-    candidate = EventCandidate(
-        candidateId=INTRUSION_EVENT["candidateId"],
-        eventType="ZONE_INTRUSION",
-        cameraId="cam_01",
-        zoneId="restricted_gate",
-        sourceType="SIMULATED",
-        detectedAt=INTRUSION_EVENT["detectedAt"],
-        firstSeenAt=INTRUSION_EVENT["firstSeenAt"],
-        lastSeenAt=INTRUSION_EVENT["lastSeenAt"],
-        confidence=0.88,
-        trackCount=1,
-        observations={"personCount": 1, "dwellSeconds": 2.5, "insideZone": True},
+    candidate = EventCandidate.model_validate(_persisted_candidate_payload())
+    runner = AssessmentRunner(
+        output_dir=str(tmp_path),
+        llm_adapter=_make_adapter(available=False),
     )
-    persisted = candidate.model_dump(mode="json")
 
-    adapter = _make_adapter(available=False)
-    graph = build_enrichment_graph(llm=adapter)
-    result = await graph.ainvoke({"event": persisted})
+    outcome = await runner.assess(candidate)
 
-    assert isinstance(result["output"], EnrichmentOutput)
-    assert result["fallback_used"] is True
-    assert result["output"].recommendedSeverity == "HIGH"
-    assert "camera cam_01" in result["output"].summary
+    assert outcome.status == "fallback"
+    assert outcome.assessment.severity == "high"
+    assert outcome.telemetry.provider_output_valid is False

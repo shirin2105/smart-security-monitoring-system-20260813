@@ -1,8 +1,8 @@
 
 from fastapi import APIRouter, BackgroundTasks, Header, HTTPException, status
 
+from app.agents import create_assessment_runner
 from app.common.schemas import EventCandidate
-from app.services.enrichment import create_enrichment_service
 from app.services.intake import PersistedIntake
 
 router = APIRouter(prefix="/internal/api/v1", tags=["Events Ingestion"])
@@ -10,17 +10,18 @@ router = APIRouter(prefix="/internal/api/v1", tags=["Events Ingestion"])
 BACKEND_EVENT_DIR = "artifacts/backend_events"
 
 intake = PersistedIntake(storage_dir=BACKEND_EVENT_DIR)
-enrichment_service = create_enrichment_service(output_dir=BACKEND_EVENT_DIR)
+assessment_runner = create_assessment_runner(output_dir=BACKEND_EVENT_DIR)
 
 
-async def _enrich_in_background(candidate: EventCandidate) -> None:
-    """Run agent enrichment after the ingest response is sent.
+async def _assess_in_background(candidate: EventCandidate) -> None:
+    """Run agent assessment after the ingest response is sent.
 
     Advisory and best-effort (FR-AI-07): any failure is resolved by the
-    service's fallback; it never affects the persisted candidate.
+    runner's fallback; it never affects the persisted candidate. The silent
+    catch is intentionally short-lived and is removed by Slice 4.
     """
     try:
-        await enrichment_service.enrich(candidate)
+        await assessment_runner.assess(candidate)
     except Exception:
         pass
 
@@ -45,5 +46,5 @@ def ingest_event_candidate(
         )
     if outcome.status == "ACCEPTED":
         canonical = intake.canonical_candidate(candidate, header_id=idempotency_key)
-        background_tasks.add_task(_enrich_in_background, canonical)
+        background_tasks.add_task(_assess_in_background, canonical)
     return outcome.as_response()
