@@ -5,6 +5,8 @@ evaluation output: schema-valid rate, fallback rate, severity caps, and
 latency percentiles.
 """
 
+import json
+
 from app.agents.record import AssessmentRecord, AssessmentRecordStore
 from app.services.enrichment_eval import (
     EvaluationRecord,
@@ -91,3 +93,34 @@ def test_reporter_loads_records_through_record_store(tmp_path):
     assert summary["total"] == 2
     assert summary["schema_valid_rate"] == 1.0
     assert summary["severity_counts"] == {"high": 2}
+
+
+def test_reporter_skips_legacy_uppercase_severity(tmp_path):
+    """Legacy records with uppercase severity fail the typed schema and are
+    skipped. The old verbatim pass-through reporter would have counted them
+    (severity_counts {"HIGH": 1}); only the typed record path yields 0."""
+    legacy = {
+        "candidateId": "legacy-1",
+        "eventType": "ZONE_INTRUSION",
+        "assessment": {
+            **_outcome().assessment.model_dump(mode="json"),
+            "severity": "HIGH",
+            "incident_id": "legacy-1",
+            "prompt_version": "assessment-v1",
+        },
+        "telemetry": {
+            "latencyMs": 20.0,
+            "model": "legacy-model",
+            "fallbackUsed": False,
+            "outputValid": True,
+            "error": None,
+            "persistError": None,
+        },
+    }
+    (tmp_path / "enrichment_legacy-1.json").write_text(
+        json.dumps(legacy), encoding="utf-8"
+    )
+
+    summary = EvaluationReporter(str(tmp_path)).report()
+
+    assert summary["total"] == 0
