@@ -77,8 +77,27 @@ def test_ingest_persists_candidate_and_enrichment(client, tmp_path):
     assert len(enrichment_files) == 1
     record = json.loads(enrichment_files[0].read_text(encoding="utf-8"))
     assert record["candidateId"] == INTRUSION_EVENT["candidateId"]
-    assert record["enrichment"]["recommendedSeverity"] == "HIGH"
+    assert record["assessment"]["severity"] == "high"
+    assert record["assessment"]["recommended_action"] == "request_guard_verification"
     assert record["telemetry"]["fallbackUsed"] is True
+
+
+def test_header_identity_flows_to_enrichment_file(client, tmp_path):
+    """C2: canonical (header) identity must own the assessment handoff."""
+    resp = client.post(
+        "/internal/api/v1/event-candidates",
+        json=_payload(),
+        headers={"Idempotency-Key": "canonical-header-id"},
+    )
+    assert resp.status_code == 201
+    assert resp.json()["candidateId"] == "canonical-header-id"
+
+    files = list(tmp_path.glob("enrichments/enrichment_*.json"))
+    assert len(files) == 1
+    assert files[0].name == "enrichment_canonical-header-id.json"
+    record = json.loads(files[0].read_text(encoding="utf-8"))
+    assert record["candidateId"] == "canonical-header-id"
+    assert record["assessment"]["incident_id"] == "canonical-header-id"
 
 
 def test_duplicate_ingest_ignored_without_second_enrichment(client, tmp_path):

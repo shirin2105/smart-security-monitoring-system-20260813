@@ -8,25 +8,46 @@ of raising, so the ingest boundary is never blocked by the agent.
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from app.agents.assessment import AgentAssessment, build_assessment
 from app.agents.fallback import build_fallback_output
 from app.agents.graph import build_enrichment_graph
 from app.common.schemas import EnrichmentOutput
 from app.llm.adapter import LLMAdapter
-
-ENRICHMENT_SUFFIX = "enrichment_{candidate_id}.json"
+from app.services.assessment_record import AssessmentRecordStore, ProviderOutcome
 
 
 @dataclass
 class EnrichmentResult:
-    output: EnrichmentOutput
+    assessment: AgentAssessment
     fallback_used: bool
     error: str | None
     telemetry: dict[str, Any] | None
+
+
+def create_enrichment_service(
+    output_dir: str = "artifacts/backend_events",
+    llm_adapter: LLMAdapter | None = None,
+    llm_enabled: bool | None = None,
+) -> EnrichmentService:
+    """Composition root: build the service from validated config (C5).
+
+    Both the ingest route and the CLI construct their runtime through this
+    factory, so config (``settings.llm_enabled``), adapters, and storage are
+    assembled once. Tests inject an adapter directly.
+    """
+    from app.config import settings
+
+    if llm_enabled is None:
+        llm_enabled = settings.llm_enabled
+    return EnrichmentService(
+        output_dir=output_dir,
+        llm_adapter=llm_adapter,
+        enabled=llm_enabled,
+    )
 
 
 class EnrichmentService:
@@ -41,6 +62,7 @@ class EnrichmentService:
         self.output_dir = Path(output_dir)
         self.llm_adapter = llm_adapter
         self.enabled = enabled
+        self.record_store = AssessmentRecordStore(str(self.output_dir))
 
     def _adapter(self) -> LLMAdapter | None:
         if self.llm_adapter is not None:
@@ -54,8 +76,9 @@ class EnrichmentService:
     async def enrich(self, candidate: Any) -> EnrichmentResult:
         """Run the enrichment graph on one candidate and persist the result.
 
-        Never raises: provider failure, missing credentials, and persist
-        errors all resolve to a deterministic fallback output (FR-AI-06).
+        Returns the validated AgentAssessment (SPEC §3.6) as the canonical
+        domain result. Never raises: provider failure, missing credentials,
+        and persist errors all resolve to a deterministic fallback (FR-AI-06).
         """
         event = candidate.model_dump(mode="json")
         adapter = self._adapter()
@@ -66,48 +89,42 @@ class EnrichmentService:
         fallback_used = bool(result.get("fallback_used"))
         error = result.get("error")
         telemetry = result.get("telemetry")
+        model = (telemetry or {}).get("model", "")
+        output_valid = bool((telemetry or {}).get("output_valid", fallback_used))
 
-        persist_error = self._persist(candidate, output, telemetry, fallback_used, error)
+        event_type = getattr(candidate, "eventType", "")
+        event_type_value = event_type.value if hasattr(event_type, "value") else str(event_type)
+
+        assessment = build_assessment(
+            incident_id=str(getattr(candidate, "candidateId", "unknown")),
+            event_type=event_type_value,
+            enrichment=output,
+            model=model,
+            confidence=float(getattr(candidate, "confidence", 0.0) or 0.0),
+        )
+
+        provider = ProviderOutcome(
+            output_valid=output_valid,
+            fallback_used=fallback_used,
+            latency_ms=(telemetry or {}).get("latency_ms", 0.0),
+            model=model,
+            error=error,
+        )
+        persist_error = self.record_store.save(
+            candidate_id=str(getattr(candidate, "candidateId", "unknown")),
+            event_type=event_type_value,
+            assessment=assessment,
+            provider=provider,
+        )
         if persist_error is not None:
-            fallback_used = True
             error = persist_error
 
         return EnrichmentResult(
-            output=output,
+            assessment=assessment,
             fallback_used=fallback_used,
             error=error,
             telemetry=telemetry,
         )
-
-    def _persist(
-        self,
-        candidate: Any,
-        output: EnrichmentOutput,
-        telemetry: dict[str, Any] | None,
-        fallback_used: bool,
-        error: str | None,
-    ) -> str | None:
-        candidate_id = str(getattr(candidate, "candidateId", "unknown"))
-        try:
-            self.output_dir.mkdir(parents=True, exist_ok=True)
-            record = {
-                "candidateId": candidate_id,
-                "eventType": getattr(candidate, "eventType", None),
-                "enrichment": output.model_dump(mode="json"),
-                "telemetry": {
-                    "latencyMs": (telemetry or {}).get("latency_ms", 0.0),
-                    "model": (telemetry or {}).get("model", ""),
-                    "fallbackUsed": fallback_used,
-                    "outputValid": True,
-                    "error": error,
-                },
-            }
-            target = self.output_dir / ENRICHMENT_SUFFIX.format(candidate_id=candidate_id)
-            with open(target, "w", encoding="utf-8") as f:
-                json.dump(record, f, indent=2, ensure_ascii=False)
-            return None
-        except OSError as exc:
-            return f"enrichment_persist_failed:{type(exc).__name__}"
 
 
 def fallback_for_test(event: dict) -> EnrichmentOutput:

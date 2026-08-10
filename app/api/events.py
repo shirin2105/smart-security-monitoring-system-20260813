@@ -2,7 +2,7 @@
 from fastapi import APIRouter, BackgroundTasks, Header, HTTPException, status
 
 from app.common.schemas import EventCandidate
-from app.services.enrichment import EnrichmentService
+from app.services.enrichment import create_enrichment_service
 from app.services.intake import PersistedIntake
 
 router = APIRouter(prefix="/internal/api/v1", tags=["Events Ingestion"])
@@ -10,7 +10,7 @@ router = APIRouter(prefix="/internal/api/v1", tags=["Events Ingestion"])
 BACKEND_EVENT_DIR = "artifacts/backend_events"
 
 intake = PersistedIntake(storage_dir=BACKEND_EVENT_DIR)
-enrichment_service = EnrichmentService(output_dir=BACKEND_EVENT_DIR)
+enrichment_service = create_enrichment_service(output_dir=BACKEND_EVENT_DIR)
 
 
 async def _enrich_in_background(candidate: EventCandidate) -> None:
@@ -44,5 +44,6 @@ def ingest_event_candidate(
             detail=outcome.error or "Failed to persist event candidate",
         )
     if outcome.status == "ACCEPTED":
-        background_tasks.add_task(_enrich_in_background, candidate)
+        canonical = intake.canonical_candidate(candidate, header_id=idempotency_key)
+        background_tasks.add_task(_enrich_in_background, canonical)
     return outcome.as_response()

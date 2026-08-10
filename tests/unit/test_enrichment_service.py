@@ -9,8 +9,9 @@ import json
 
 import pytest
 
+from app.agents.assessment import AgentAssessment
 from app.agents.fallback import build_fallback_output
-from app.common.schemas import EnrichmentOutput, EventCandidate
+from app.common.schemas import EventCandidate
 from app.services.enrichment import EnrichmentService
 from tests.unit.test_llm_adapter import _make_adapter
 
@@ -67,8 +68,10 @@ async def test_enrich_returns_valid_output_with_llm(tmp_path):
     )
     result = await service.enrich(_candidate())
 
-    assert isinstance(result.output, EnrichmentOutput)
-    assert result.output.recommendedSeverity == "HIGH"
+    assert isinstance(result.assessment, AgentAssessment)
+    assert result.assessment.severity == "high"
+    assert result.assessment.recommended_action == "request_guard_verification"
+    assert result.assessment.event_type == "ZONE_INTRUSION"
     assert result.fallback_used is False
     assert result.error is None
 
@@ -78,10 +81,10 @@ async def test_enrich_falls_back_without_llm(tmp_path):
     service = EnrichmentService(output_dir=str(tmp_path), llm_adapter=_make_adapter(available=False))
     result = await service.enrich(_candidate())
 
-    assert isinstance(result.output, EnrichmentOutput)
+    assert isinstance(result.assessment, AgentAssessment)
     assert result.fallback_used is True
     assert result.error is not None
-    assert result.output.recommendedSeverity == "HIGH"
+    assert result.assessment.severity == "high"
 
 
 @pytest.mark.asyncio
@@ -95,9 +98,9 @@ async def test_enrich_persists_result_json(tmp_path):
     assert target.exists()
     persisted = json.loads(target.read_text(encoding="utf-8"))
     assert persisted["candidateId"] == INTRUSION_EVENT["candidateId"]
-    assert persisted["enrichment"]["recommendedSeverity"] == "HIGH"
+    assert persisted["assessment"]["severity"] == "high"
     assert persisted["telemetry"]["fallbackUsed"] is False
-    assert persisted["telemetry"]["outputValid"] is True
+    assert persisted["assessment"]["recommended_action"] == "request_guard_verification"
 
 
 @pytest.mark.asyncio
@@ -109,7 +112,29 @@ async def test_enrich_persists_fallback_result(tmp_path):
     assert target.exists()
     persisted = json.loads(target.read_text(encoding="utf-8"))
     assert persisted["telemetry"]["fallbackUsed"] is True
-    assert persisted["enrichment"]["rationale"].startswith("Fallback")
+    assert persisted["assessment"]["reason"].startswith("Fallback")
+
+
+@pytest.mark.asyncio
+async def test_enrich_provider_invalid_reports_output_valid_false(tmp_path):
+    """C3: an invalid provider result must not be reported as valid.
+
+    The graph routes malformed provider output to the fallback; the record
+    must surface output_valid=False plus the fallback reason, so the eval
+    projection never inflates schema_valid_rate.
+    """
+    service = EnrichmentService(
+        output_dir=str(tmp_path), llm_adapter=_make_adapter(responses=["not json at all"])
+    )
+    result = await service.enrich(_candidate())
+
+    assert result.fallback_used is True
+    assert isinstance(result.assessment, AgentAssessment)
+    persisted = json.loads(
+        (tmp_path / f"enrichment_{INTRUSION_EVENT['candidateId']}.json").read_text(encoding="utf-8")
+    )
+    assert persisted["telemetry"]["fallbackUsed"] is True
+    assert persisted["telemetry"]["error"] is not None
 
 
 @pytest.mark.asyncio
@@ -133,9 +158,10 @@ async def test_enrich_persist_failure_does_not_raise(tmp_path):
     candidate = _candidate()
     candidate.candidateId = 'bad"candidate"id'
     result = await service.enrich(candidate)
-    assert isinstance(result.output, EnrichmentOutput)
+    assert isinstance(result.assessment, AgentAssessment)
     assert result.error is not None
-    assert result.fallback_used is True
+    # C3: a persist failure is its own outcome; it must not flip fallbackUsed.
+    assert result.fallback_used is False
 
 
 def test_fallback_output_caps_abandoned_object_at_high():
@@ -202,13 +228,19 @@ async def test_enrich_all_event_types_with_mock_llm(tmp_path, event_type, track_
     result = await service.enrich(candidate)
 
     assert result.fallback_used is False
-    assert result.output.recommendedSeverity == expected_severity
-    assert len(result.output.actionChecklist) <= 5
+    expected_lower = {"INFO": "low", "WARNING": "medium", "HIGH": "high", "CRITICAL": "critical"}[expected_severity]
+    assert result.assessment.severity == expected_lower
+    assert len(result.assessment.reason) > 0
     persisted = json.loads(
         (tmp_path / f"enrichment_mock-{event_type}-1.json").read_text(encoding="utf-8")
     )
     assert persisted["telemetry"]["fallbackUsed"] is False
-    assert persisted["telemetry"]["outputValid"] is True
+    assert persisted["assessment"]["recommended_action"] == {
+        "low": "log_only",
+        "medium": "notify_guard",
+        "high": "request_guard_verification",
+        "critical": "request_manager_review",
+    }[expected_lower]
 
 
 @pytest.mark.parametrize(
@@ -237,8 +269,8 @@ async def test_enrich_all_event_types_fallback(tmp_path, event_type):
     assert result.fallback_used is True
     assert result.error is not None
     if event_type == "ABANDONED_OBJECT":
-        assert result.output.recommendedSeverity != "CRITICAL"
-    assert len(result.output.actionChecklist) <= 5
+        assert result.assessment.severity != "critical"
+    assert len(result.assessment.reason) > 0
     persisted = json.loads(
         (tmp_path / f"enrichment_mock-fb-{event_type}-1.json").read_text(encoding="utf-8")
     )

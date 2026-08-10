@@ -60,6 +60,22 @@ class PersistedIntake:
             idempotency_file = str(self.storage_dir / "idempotency.json")
         self.store = IdempotencyStore(storage_file=idempotency_file)
 
+    def canonical_candidate(
+        self,
+        candidate: EventCandidate,
+        header_id: str | None = None,
+    ) -> EventCandidate:
+        """Return a copy of the candidate carrying the canonical identity.
+
+        ``header_id`` (Idempotency-Key) wins over the body ``candidateId``.
+        Callers pass this copy to downstream seams (assessment handoff) so
+        one identity drives persistence, dedupe, and enrichment.
+        """
+        canonical = header_id or candidate.candidateId
+        if canonical == candidate.candidateId:
+            return candidate
+        return candidate.model_copy(update={"candidateId": canonical})
+
     def accept(
         self,
         candidate: EventCandidate,
