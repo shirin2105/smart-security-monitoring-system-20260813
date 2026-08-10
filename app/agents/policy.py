@@ -29,7 +29,7 @@ FALLBACK_SEVERITY = {
 def fallback_draft(candidate: EventCandidate, *, reason: str) -> ProviderDraft:
     event_type = candidate.eventType.value
     return ProviderDraft(
-        recommendedSeverity=FALLBACK_SEVERITY[event_type],
+        recommendedSeverity=FALLBACK_SEVERITY.get(event_type, "INFO"),
         rationale=f"Fallback rule-based cho {event_type}: {reason}.",
     )
 

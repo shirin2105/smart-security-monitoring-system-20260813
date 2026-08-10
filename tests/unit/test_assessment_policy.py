@@ -1,3 +1,5 @@
+from enum import StrEnum
+
 import pytest
 from pydantic import ValidationError
 
@@ -88,6 +90,18 @@ def test_fallback_severity_is_fixed_by_event_type(event_type, expected):
     draft = fallback_draft(_candidate(event_type), reason="llm_unavailable")
     assert draft.recommended_severity == expected
     assert event_type in draft.rationale
+
+
+def test_fallback_severity_defaults_to_info_for_unknown_event_type():
+    class _UnknownEventType(StrEnum):
+        NEW_EVENT = "NEW_EVENT"
+
+    candidate = _candidate()
+    candidate.eventType = _UnknownEventType.NEW_EVENT
+
+    draft = fallback_draft(candidate, reason="llm_unavailable")
+    assert draft.recommended_severity == "INFO"
+    assert "NEW_EVENT" in draft.rationale
 
 
 def test_provider_draft_rejects_removed_fields():

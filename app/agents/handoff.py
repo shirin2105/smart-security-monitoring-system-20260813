@@ -39,5 +39,6 @@ class AssessmentHandoff:
                 "fallback_used": outcome.telemetry.fallback_used,
                 "persist_error": outcome.persist_error,
             },
+            exc_info=outcome.persist_error is not None,
         )
         return outcome
