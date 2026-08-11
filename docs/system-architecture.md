@@ -1,5 +1,33 @@
 # System Architecture
 
+## Computer vision runtime
+
+This is the active production CV runtime. YOLO/Ultralytics is not imported or configured by production code; the superseded implementation is retained only on the `legacy-yolo` branch.
+
+One lock-protected DEIMv2 Phase 7A detector is shared by camera workers. Its four raw
+labels are normalized to `person` and `luggage`, then two camera-local ByteTrack
+instances are updated once per processed frame. Disjoint ID namespaces prevent class
+and camera state collisions.
+
+DEIMv2 source is provisioned at `third_party/deimv2`. The Phase 7A checkpoint and
+DINOv3 backbone are external, read-only release artifacts at the repository-relative
+paths in `configs/models.yaml`. Mandatory SHA-256 values verify exact artifacts before loading.
+Deployments can select another YAML directory with `CONFIG_DIR` or override individual
+assets with `DEIMV2_SOURCE_PATH`, `DEIMV2_CONFIG_PATH`, `DEIMV2_CHECKPOINT_PATH`, and
+`DEIMV2_BACKBONE_PATH`; no adjacent-worktree path is assumed. Missing files, digest
+mismatches, incompatible weights, or unavailable explicit CUDA stop shared-runner
+construction or a direct worker before its source reads begin. Frame inference errors fail that camera under the supervisor; there is
+no empty-result or legacy detector fallback. Rollback restores runtime code, pinned
+dependencies, config, image, and matching artifacts atomically; persisted contracts
+need no migration.
+
+`DEIMV2_BACKBONE_PATH` and `DINOv3STAs.weights_path` inside the YAML selected by
+`DEIMV2_CONFIG_PATH` are one paired deployment contract and must resolve to the same
+file. A custom backbone therefore requires a matching YAML change; startup rejects a
+mismatched pair instead of rewriting deployment configuration at runtime.
+
+The executable owners are `app/cv/detector.py`, `app/cv/tracker.py`, `app/cv/worker.py`, and `app/cv/multi_camera_runner.py`; deployment defaults live in `configs/models.yaml` and `configs/deimv2-phase7a-runtime.yaml`. The final verification passed compile, 25 focused runtime tests, 6 affected legacy integrations, and the full suite (205 passed, 4 skipped, 8 passing subtests). A real checkpoint/backbone CPU smoke also passed without global `PYTHONPATH`. Coverage tooling was unavailable, so these results make no coverage claim.
+
 ## Abandoned-object pipeline
 
 The current abandoned-object path can use class-independent static regions instead of relying on detector labels such as `backpack`, `handbag`, or `suitcase`.
@@ -45,6 +73,8 @@ At end-of-stream, `finalize()` drops incomplete temporal windows without calling
 ## Multi-camera supervisor
 
 `MultiCameraRunner` runs at most six enabled camera configurations in a thread pool. Workers share one `LockedDetector`, which serializes detector calls. Each camera returns an independent `completed` or `failed` result, so one camera exception does not terminate its peers.
+
+DEIMv2 production startup is fail-closed: the checkpoint and DINOv3 backbone must match pinned 64-hex SHA-256 values before the checkpoint's pickle-bearing payload is deserialized. Detector startup remains inside the worker cleanup boundary, so source release and abandoned-object finalization also run when model construction fails. ByteTrack first-seen metadata is retained through its configured lost-track window and pruned after continuity can no longer be restored.
 
 This is bounded supervision, not evidence of six-camera production throughput. The repository has a unit test for the six-camera cap, shared detector, and failure isolation, but no real six-camera benchmark, load test, latency target, or hardware capacity result.
 

@@ -9,9 +9,10 @@
 | Production Hugging Face multimodal validation | Complete | Enabled by default with Gemma 3 4B; environment-only token, no-startup-network, missing-token, request/response, and malformed-response tests |
 | Temporal full-scene VLM validation | Complete | Default 1 FPS `T-8s..T+8s` buffering, +8-second deferred decision, fail-open unavailable result, original timestamp, memory/request bounds, and EOS tests |
 | Six-camera bounded supervisor | Complete | Shared-detector and failure-isolation unit test |
+| DEIMv2 Phase 7A production runtime | Complete | Active shared detector, class-isolated ByteTrack, mandatory artifact hashes, full test suite, and real-asset CPU smoke |
 | Canonical PETS real-data demo | Complete | Video plus machine-readable summary artifact |
 | Authenticated PETS temporal VLM demo | Complete | 16-frame Gemma request rejected one false-person candidate at 0.99; no alert |
-| DEIMv2 generic-luggage tracking runtime | Complete, visual review pending | Phase 7B.1 Kaggle run completed over 2,189 frames at 20.10 FPS, produced 17 tracks and 5,019 valid JSONL observations, and removed 60.48% of duplicate luggage-class boxes. Zero background anchors were learned, so suppression quality remains unverified. See [`reports/deimv2_phase7b1_generic_luggage_report.md`](../reports/deimv2_phase7b1_generic_luggage_report.md). |
+| DEIMv2 generic-luggage evaluation runtime | Complete, visual review pending | Phase 7B.1 Kaggle run completed over 2,189 frames at 20.10 FPS, produced 17 tracks and 5,019 valid JSONL observations, and removed 60.48% of duplicate luggage-class boxes. Zero background anchors were learned, so suppression quality remains unverified. See [`reports/deimv2_phase7b1_generic_luggage_report.md`](../reports/deimv2_phase7b1_generic_luggage_report.md). |
 | Real six-camera performance benchmark | Not started | No benchmark or production camera result exists |
 | Static-region quality evaluation | Not started | Demo output is not a labeled accuracy evaluation |
 
@@ -24,4 +25,4 @@
 
 ## Acceptance evidence
 
-The completed milestone is supported by focused tests under `tests/unit/`, `tests/integration/test_static_abandoned_pipeline.py`, and `tests/integration/test_temporal_full_frame_vlm_pipeline.py`, plus the reproducible command and artifacts documented in [`system-architecture.md`](./system-architecture.md). The authenticated PETS run rejected one false-person candidate using 16 full-scene frames and emitted no alert; the detector/heuristic comparison emitted three alerts, first at 45.5 seconds. Completion means the implemented contracts work; it does not establish production accuracy, scale, or six-camera performance.
+The completed milestones are supported by focused tests under `tests/unit/` and `tests/integration/`, plus the reproducible commands and artifacts documented in [`system-architecture.md`](./system-architecture.md). The DEIMv2 final gate passed 205 tests with 4 skips and 8 passing subtests; a real Phase 7A checkpoint and DINOv3 backbone also completed a CPU inference smoke. Coverage was unavailable and is not claimed. The authenticated PETS run rejected one false-person candidate using 16 full-scene frames and emitted no alert; the detector/heuristic comparison emitted three alerts, first at 45.5 seconds. Completion means the implemented contracts work; it does not establish production accuracy, scale, or six-camera performance.
