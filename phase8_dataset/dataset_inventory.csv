@@ -1,0 +1,21 @@
+clip_id,original_filename,event_target,positive_negative,source,duration_s,fps,width,height,notes
+LeftBag,LeftBag.mpg,ABANDONED_OBJECT,positive,https://groups.inf.ed.ac.uk/vision/DATASETS/CAVIAR/CAVIARDATA1/LeftBag/LeftBag.mpg,57.6,25.0,384,288,Original MPEG; XML frames=1439; events=1
+LeftBag_AtChair,LeftBag_AtChair.mpg,ABANDONED_OBJECT,positive,https://groups.inf.ed.ac.uk/vision/DATASETS/CAVIAR/CAVIARDATA1/LeftBag_AtChair/LeftBag_AtChair.mpg,44.64,25.0,384,288,Original MPEG; XML frames=1115; events=1
+LeftBag_BehindChair,LeftBag_BehindChair.mpg,ABANDONED_OBJECT,positive,https://groups.inf.ed.ac.uk/vision/DATASETS/CAVIAR/CAVIARDATA1/LeftBag_BehindChair/LeftBag_BehindChair.mpg,42.72,25.0,384,288,Original MPEG; XML frames=1067; events=1
+LeftBox,LeftBox.mpg,ABANDONED_OBJECT,positive,https://groups.inf.ed.ac.uk/vision/DATASETS/CAVIAR/CAVIARDATA1/LeftBox/LeftBox.mpg,34.56,25.0,384,288,Original MPEG; XML frames=863; events=1
+LeftBag_PickedUp,LeftBag_PickedUp.mpg,ABANDONED_OBJECT,positive,https://groups.inf.ed.ac.uk/vision/DATASETS/CAVIAR/CAVIARDATA1/LeftBag_PickedUp/LeftBag_PickedUp.mpg,54.24,25.0,384,288,Original MPEG; XML frames=1355; events=1
+Meet_Crowd,Meet_Crowd.mpg,CROWD_THRESHOLD,positive,https://groups.inf.ed.ac.uk/vision/DATASETS/CAVIAR/CAVIARDATA1/Meet_Crowd/Meet_Crowd.mpg,19.68,25.0,384,288,Original MPEG; XML frames=491; events=1
+Meet_WalkTogether1,Meet_WalkTogether1.mpg,CROWD_THRESHOLD,positive,https://groups.inf.ed.ac.uk/vision/DATASETS/CAVIAR/CAVIARDATA1/Meet_WalkTogether1/Meet_WalkTogether1.mpg,28.32,25.0,384,288,Original MPEG; XML frames=707; events=1
+Meet_WalkTogether2,Meet_WalkTogether2.mpg,CROWD_THRESHOLD,positive,https://groups.inf.ed.ac.uk/vision/DATASETS/CAVIAR/CAVIARDATA1/Meet_WalkTogether2/Meet_WalkTogether2.mpg,33.12,25.0,384,288,Original MPEG; XML frames=827; events=1
+Meet_WalkSplit,Meet_WalkSplit.mpg,CROWD_THRESHOLD,positive,https://groups.inf.ed.ac.uk/vision/DATASETS/CAVIAR/CAVIARDATA1/Meet_WalkSplit/Meet_WalkSplit.mpg,24.96,25.0,384,288,Original MPEG; XML frames=623; events=1
+Meet_Split_3rdGuy,Meet_Split_3rdGuy.mpg,CROWD_THRESHOLD,positive,https://groups.inf.ed.ac.uk/vision/DATASETS/CAVIAR/CAVIARDATA1/Meet_Split_3rdGuy/Meet_Split_3rdGuy.mpg,36.96,25.0,384,288,Original MPEG; XML frames=923; events=1
+Walk1,Walk1.mpg,ZONE_INTRUSION,positive,https://groups.inf.ed.ac.uk/vision/DATASETS/CAVIAR/CAVIARDATA1/Walk1/Walk1.mpg,24.48,25.0,384,288,Original MPEG; XML frames=611; events=2
+Walk2,Walk2.mpg,ZONE_INTRUSION,positive,https://groups.inf.ed.ac.uk/vision/DATASETS/CAVIAR/CAVIARDATA1/Walk2/Walk2.mpg,42.24,25.0,384,288,Original MPEG; XML frames=1055; events=5
+Walk3,Walk3.mpg,ZONE_INTRUSION,positive,https://groups.inf.ed.ac.uk/vision/DATASETS/CAVIAR/CAVIARDATA1/Walk3/Walk3.mpg,55.2,25.0,384,288,Original MPEG; XML frames=1379; events=4
+WalkByShop1cor,WalkByShop1cor.mpg,ZONE_INTRUSION,positive,https://groups.inf.ed.ac.uk/vision/DATASETS/CAVIAR/CAVIARDATA2/WalkByShop1cor/WalkByShop1cor.mpg,94.4,25.0,384,288,Original MPEG; XML frames=2360; events=19
+WalkByShop1front,WalkByShop1front.mpg,ZONE_INTRUSION,positive,https://groups.inf.ed.ac.uk/vision/DATASETS/CAVIAR/CAVIARDATA2/WalkByShop1front/WalkByShop1front.mpg,94.4,25.0,384,288,Original MPEG; XML frames=2360; events=5
+Browse1,Browse1.mpg,MIXED_NEGATIVE,negative,https://groups.inf.ed.ac.uk/vision/DATASETS/CAVIAR/CAVIARDATA1/Browse1/Browse1.mpg,41.76,25.0,384,288,Original MPEG; XML frames=1043; events=0
+Browse2,Browse2.mpg,MIXED_NEGATIVE,negative,https://groups.inf.ed.ac.uk/vision/DATASETS/CAVIAR/CAVIARDATA1/Browse2/Browse2.mpg,35.04,25.0,384,288,Original MPEG; XML frames=875; events=0
+Browse3,Browse3.mpg,MIXED_NEGATIVE,negative,https://groups.inf.ed.ac.uk/vision/DATASETS/CAVIAR/CAVIARDATA1/Browse3/Browse3.mpg,36.48,25.0,384,288,Original MPEG; XML frames=911; events=0
+Browse4,Browse4.mpg,MIXED_NEGATIVE,negative,https://groups.inf.ed.ac.uk/vision/DATASETS/CAVIAR/CAVIARDATA1/Browse4/Browse4.mpg,45.6,25.0,384,288,Original MPEG; XML frames=1139; events=0
+Rest_InChair,Rest_InChair.mpg,MIXED_NEGATIVE,negative,https://groups.inf.ed.ac.uk/vision/DATASETS/CAVIAR/CAVIARDATA1/Rest_InChair/Rest_InChair.mpg,40.32,25.0,384,288,Original MPEG; XML frames=1007; events=0

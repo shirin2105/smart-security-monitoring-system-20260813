@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "note": "Smoke-only example. Production Phase 8 validator requires 20-30 labeled clips.",
+  "clips": [
+    {
+      "clip_id": "AO_POS_001",
+      "video_path": "videos/AO_POS_001.mp4",
+      "camera_id": "CAM_01",
+      "camera_config_path": "../../configs/phase8_camera.example.json",
+      "scenario_tags": ["abandoned_positive", "high_angle", "small_object"],
+      "expected_duration_s": 75.0
+    },
+    {
+      "clip_id": "AO_NEG_OWNER_STAYS_001",
+      "video_path": "videos/AO_NEG_OWNER_STAYS_001.mp4",
+      "camera_id": "CAM_01",
+      "camera_config_path": "../../configs/phase8_camera.example.json",
+      "scenario_tags": ["abandoned_negative", "owner_stays"],
+      "expected_duration_s": 60.0
+    }
+  ]
+}

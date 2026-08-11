@@ -1,0 +1,2 @@
+clip_id,event_type,status,gt_event_id,pred_event_id,error_category,root_cause_notes,component_to_change,retest_required
+AO_POS_001,ABANDONED_OBJECT,FN,GT_AO_001,,UNKNOWN,,,yes

@@ -1,0 +1,14 @@
+{
+  "camera_id": "WEBCAM_01",
+  "camera_index": 0,
+  "intrusion": {"enabled": true, "zone": "RIGHT_HALF", "hold_s": 1.0},
+  "crowd": {"enabled": true, "threshold": 2, "hold_s": 2.0, "recovery_s": 1.0},
+  "abandoned": {
+    "enabled": true,
+    "stationary_hold_s": 3.0,
+    "owner_away_hold_s": 5.0,
+    "reuse_phase7c_logic": true
+  },
+  "web": {"host": "127.0.0.1", "port": 5000, "production_ui": false},
+  "record_test_video": false
+}
