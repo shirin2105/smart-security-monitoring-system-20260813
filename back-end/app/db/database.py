@@ -1,9 +1,11 @@
-import os
 import logging
+import os
+
 import bcrypt
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from app.db.models import Base, User, Camera, Incident
+
+from app.db.models import Base, Camera, User
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -80,29 +82,17 @@ def init_db_and_seed():
         # Seed cameras if empty
         if db.query(Camera).count() == 0:
             cameras_seed = [
-                Camera(id=1, name="Camera Cổng Chính", location="Cổng A - Tầng 1", stream_url="https://images.unsplash.com/photo-1557597774-9d273605dfa9?w=600&auto=format&fit=crop", status="online"),
-                Camera(id=2, name="Camera Sảnh Chờ", location="Sảnh Tòa Nhà - Tầng 1", stream_url="https://images.unsplash.com/photo-1541888946425-d0fbb186a5b7?w=600&auto=format&fit=crop", status="online"),
-                Camera(id=3, name="Camera Hàng Rào Tây", location="Khu Vực Hàng Rào - Phía Tây", stream_url="https://images.unsplash.com/photo-1508873696983-2df515122519?w=600&auto=format&fit=crop", status="warning"),
-                Camera(id=4, name="Camera Phòng Server", location="Khai Thác Kỹ Thuật - Tầng Hầm", stream_url="https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=600&auto=format&fit=crop", status="online"),
-                Camera(id=5, name="Camera Bãi Xe B1", location="Bãi Xe Ô Tô - Tầng B1", stream_url="https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=600&auto=format&fit=crop", status="online"),
-                Camera(id=6, name="Camera Hành Lang T4", location="Hành Lang Văn Phòng - Tầng 4", stream_url="https://images.unsplash.com/photo-1517502884422-41eaead166d4?w=600&auto=format&fit=crop", status="online"),
+                Camera(id=1, name="Camera Cổng Chính", location="Cổng A - Tầng 1", stream_url="/media/walking_people.mp4", status="online", source="CV"),
+                Camera(id=2, name="Camera Sảnh Chờ", location="Sảnh Tòa Nhà - Tầng 1", stream_url="/media/people_detection.mp4", status="online", source="CV"),
+                Camera(id=3, name="Camera Hàng Rào Tây", location="Khu Vực Hàng Rào - Phía Tây", stream_url="/media/pets2006_3.mp4", status="warning", source="SIMULATOR"),
+                Camera(id=4, name="Camera Phòng Server", location="Khai Thác Kỹ Thuật - Tầng Hầm", stream_url="/media/aban3.mp4", status="online", source="SIMULATOR"),
+                Camera(id=5, name="Camera Bãi Xe B1", location="Bãi Xe Ô Tô - Tầng B1", stream_url="/media/store-aisle-detection.mp4", status="online", source="SIMULATOR"),
+                Camera(id=6, name="Camera Hành Lang T4", location="Hành Lang Văn Phòng - Tầng 4", stream_url="/media/store-aisle-detection.mp4", status="online", source="SIMULATOR"),
             ]
             db.add_all(cameras_seed)
             db.commit()
             logger.info("6 Default cameras seeded into database")
 
-        # Seed initial sample incident if none
-        if db.query(Incident).count() == 0:
-            sample_incident = Incident(
-                camera_id=3,
-                event_type="xam_nhap",
-                severity="critical",
-                description="Phát hiện đối tượng xâm nhập hàng rào khu vực Phía Tây",
-                status="pending"
-            )
-            db.add(sample_incident)
-            db.commit()
-            logger.info("Initial sample incident seeded")
 
     except Exception as e:
         logger.error(f"Error seeding database: {e}")

@@ -76,6 +76,7 @@ async def ingest_event_candidate(payload: dict) -> dict:
             severity=severity,
             description=description,
             status="pending",
+            source="CV",
             created_at=datetime.now(UTC),
         )
         db.add(incident)
@@ -92,6 +93,7 @@ async def ingest_event_candidate(payload: dict) -> dict:
                 "severity": incident.severity,
                 "description": incident.description,
                 "status": incident.status,
+                "source": "CV",
                 "created_at": incident.created_at.isoformat(),
                 "bbox": payload.get("bbox"),
             },

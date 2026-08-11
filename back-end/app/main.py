@@ -1,33 +1,24 @@
-import asyncio
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.api import alerts, auth, cameras, events_ingest
 from app.db.database import init_db_and_seed
-from app.services.simulator import background_event_simulator
 from app.services.websocket import manager
 
 logger = logging.getLogger("uvicorn.error")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Initialize DB & Seed Data
+    # Initialize DB & Seed Data (users + cameras; incidents chỉ từ CV pipeline)
     logger.info("Initializing Database & Seed Data...")
     init_db_and_seed()
-
-    # Start Background Simulation Task
-    sim_task = asyncio.create_task(background_event_simulator(interval_seconds=30))
     logger.info("Application setup complete.")
     yield
-    # Cleanup background task on shutdown
-    sim_task.cancel()
-    try:
-        await sim_task
-    except asyncio.CancelledError:
-        pass
     logger.info("Application shutdown completed.")
 
 app = FastAPI(
@@ -59,6 +50,11 @@ app.include_router(auth.router)
 app.include_router(cameras.router)
 app.include_router(alerts.router)
 app.include_router(events_ingest.router)
+
+# Serve video clips làm nguồn camera giả lập cho MVP
+media_dir = Path(__file__).resolve().parent.parent.parent / "tests" / "clips"
+if media_dir.exists():
+    app.mount("/media", StaticFiles(directory=str(media_dir)), name="media")
 
 @app.get("/health")
 def health_check():

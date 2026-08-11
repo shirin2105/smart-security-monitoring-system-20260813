@@ -89,6 +89,8 @@ export interface SecurityEvent {
   state: EventState;
   escalation: EscalationState;
   description: string;
+  /** Nguồn phát hiện: CV pipeline thật hay simulator (PRD §8.1). */
+  sourceType: SourceType;
   /** Mô tả do LLM sinh — UI phải gắn nhãn AI-generated (FR-AI-03). */
   aiGenerated: boolean;
   detectedAt: string;

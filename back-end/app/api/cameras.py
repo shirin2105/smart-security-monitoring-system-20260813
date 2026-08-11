@@ -16,6 +16,7 @@ class CameraResponse(BaseModel):
     location: str
     stream_url: str
     status: str
+    source: str = "SIMULATOR"
 
 @router.get("", response_model=List[CameraResponse])
 def get_cameras(db: Session = Depends(get_db)):

@@ -4,7 +4,7 @@ import { VideoOff, X } from 'lucide-react';
 
 import { Camera, SecurityEvent } from '../../domain/types';
 import { EmptyState } from '../common/States';
-import { HealthDot, SeverityBadge, SimulatedBadge, StateBadge } from '../common/Badges';
+import { HealthDot, SeverityBadge, SourceBadge, StateBadge } from '../common/Badges';
 
 interface CameraDetailModalProps {
   camera: Camera;
@@ -38,7 +38,7 @@ export function CameraDetailModal({ camera, events, onClose }: CameraDetailModal
             <div className="mt-1 flex flex-wrap items-center gap-2">
               <span className="text-xs font-medium text-gray-600 dark:text-gray-400">{camera.location}</span>
               <HealthDot health={camera.health} />
-              <SimulatedBadge />
+              <SourceBadge sourceType={camera.sourceType} />
             </div>
           </div>
           <button
@@ -56,6 +56,15 @@ export function CameraDetailModal({ camera, events, onClose }: CameraDetailModal
               <VideoOff className="h-10 w-10" aria-hidden />
               <span className="font-mono text-xs font-semibold">CAMERA MẤT KẾT NỐI</span>
             </div>
+          ) : camera.previewUrl.match(/\.(mp4|webm|avi)(\?.*)?$/i) ? (
+            <video
+              src={camera.previewUrl}
+              autoPlay
+              muted
+              loop
+              playsInline
+              className="h-full w-full object-cover"
+            />
           ) : (
             <img src={camera.previewUrl} alt="" className="h-full w-full object-cover" />
           )}

@@ -37,13 +37,15 @@ def test_get_cameras():
     assert cameras[0]["name"] == "Camera Cổng Chính"
 
 def test_alerts_and_acknowledge():
-    # Get alerts
-    res_alerts = client.get("/api/v1/alerts")
-    assert res_alerts.status_code == 200
-    incidents = res_alerts.json()
-    assert len(incidents) > 0
-
-    first_incident_id = incidents[0]["id"]
+    # Tạo incident qua ingest (không còn seed incident mẫu)
+    res_ingest = client.post("/api/v1/events/ingest", json={
+        "candidateId": "evt-ack-001",
+        "cameraId": "cam_01",
+        "eventType": "ZONE_INTRUSION",
+        "severity": "warning",
+    })
+    assert res_ingest.status_code == 201
+    first_incident_id = res_ingest.json()["incident"]["id"]
 
     # Login as guard to get token
     res_login = client.post("/api/v1/auth/login", json={"username": "guard", "password": "guard123"})

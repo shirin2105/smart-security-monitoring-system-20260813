@@ -54,6 +54,7 @@ async def create_simulated_incident(event_data: dict = None):
             severity=event_data["severity"],
             description=event_data["description"],
             status="pending",
+            source="SIMULATOR",
             created_at=datetime.now(timezone.utc)
         )
         db.add(incident)
