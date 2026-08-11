@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1048679059945",
+    "project_id": "smart-city-a0984",
+    "storage_bucket": "smart-city-a0984.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1048679059945:android:9b0fc88e257903ad69bb78",
+        "android_client_info": {
+          "package_name": "vn.t176.patrol.mock"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCtBoIvzxS0CUX8fv43tuelwTn8LwObaV0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

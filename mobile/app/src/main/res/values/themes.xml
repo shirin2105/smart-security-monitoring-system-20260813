@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Theme XML chỉ lo phần trước khi Compose vẽ: nền cửa sổ và thanh trạng thái.
+      Toàn bộ màu sắc thật do Compose Material3 quyết định trong ui/theme.
+      Dùng theme của framework nên không phải kéo thêm thư viện Material XML.
+    -->
+    <style name="Theme.Patrol" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/surface_dark</item>
+        <item name="android:statusBarColor">@color/surface_dark</item>
+        <item name="android:navigationBarColor">@color/surface_dark</item>
+    </style>
+</resources>

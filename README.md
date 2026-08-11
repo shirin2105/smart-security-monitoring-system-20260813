@@ -1,202 +1,160 @@
-# 🤖 AI20K Agent Template
+# Smart Security Monitoring System MVP (Hệ Thống Giám Sát An Ninh Thông Minh)
 
-Template chính thức cho học viên **VinUni AI20K Build Phase** — cung cấp sẵn cấu trúc dự án, code mẫu, và hướng dẫn kỹ thuật chi tiết để xây dựng AI Agent đạt điểm cao (35+/50).
+Mô tả: Hệ thống giám sát an ninh thông minh (Web Application) cung cấp giao diện quản lý camera, theo dõi sự cố an ninh và nhận cảnh báo thời gian thực (Real-time Alerts qua WebSockets).
 
-> 📖 **Technical Guidebook:** [phoenix.note.transformerlabs.ai/technical-book](https://phoenix.note.transformerlabs.ai/technical-book)
+---
 
-## 🎯 Template này dùng để làm gì?
+## 🛠️ Công Nghệ Sử Dụng (Tech Stack)
 
-Khi tham gia AI20K Build Phase, mỗi đội cần xây dựng một AI Agent hoàn chỉnh — từ kiến trúc, code, test, đến deploy. Thay vì bắt đầu từ con số không, template này cung cấp:
+### 1. Front-End
+- **Core Framework**: [React 18](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/)
+- **Build Tool**: [Vite](https://vitejs.dev/)
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/) + PostCSS + Autoprefixer
+- **UI Components & Icons**: [Lucide React](https://lucide.dev/)
+- **Web Server (Production/Docker)**: [Nginx](https://www.nginx.com/)
 
-- **Cấu trúc thư mục chuẩn** — đã được thiết kế theo best practices (separation of concerns)
-- **Code mẫu** cho các phần cốt lõi: LangGraph agent, FastAPI API, config, schemas
-- **Docker + CI/CD sẵn** — Dockerfile multi-stage, GitHub Actions workflow
-- **Hướng dẫn kỹ thuật 10 chương** — từ clone template đến nộp bài Demo Day
-- **Checklist 10 deliverables** — đảm bảo không bỏ sót yêu cầu BTC
-- **AI Usage Logging tự động** — Pre-configured hooks cho Claude Code, Cursor, Codex, Gemini CLI, Antigravity, và GitHub Copilot
+### 2. Back-End
+- **Language & Runtime**: Python 3.11+
+- **Framework**: [FastAPI](https://fastapi.tiangolo.com/)
+- **ASGI Server**: [Uvicorn](https://www.uvicorn.org/)
+- **Database ORM**: [SQLAlchemy 2.0](https://www.sqlalchemy.org/)
+- **Database Driver**: Psycopg2 (PostgreSQL)
+- **Validation & Settings**: [Pydantic v2](https://docs.pydantic.dev/) & Pydantic-Settings
+- **Authentication & Security**: PyJWT, Passlib (Bcrypt)
+- **Real-time Communication**: WebSockets
 
-## ⚡ Quick Start
+### 3. Cơ Sở Dữ Liệu & Hạ Tầng (Database & Infrastructure)
+- **Database**: PostgreSQL 15 (Alpine)
+- **Containerization & Orchestration**: Docker & Docker Compose
 
-### Bước 1: Fork hoặc Clone
+> *Lưu ý: Các phân hệ Computer Vision (CV) và Large Language Model (LLM) do đội ngũ khác phụ trách và phát triển riêng.*
 
-```bash
-# Clone template
-git clone https://github.com/AI20K-Build-Cohort-2/starter-code-template.git team-YOUR_TEAM_NAME
-cd team-YOUR_TEAM_NAME
+---
 
-# Xóa git history cũ và khởi tạo lại
-rm -rf .git
-git init
-git add .
-git commit -m "feat: khởi tạo dự án từ template"
+## 📁 Cấu Trúc Thư Mục Dự Án (Project Structure)
+
+```text
+.
+├── back-end/               # FastAPI Backend Service
+│   ├── app/                # Mã nguồn backend (API, DB models, Services, WebSockets)
+│   ├── Dockerfile          # Dockerfile build backend container
+│   └── pyproject.toml      # Khai báo thư viện dependencies backend
+├── front-end/              # React TypeScript Frontend Service
+│   ├── src/                # Mã nguồn frontend (Components, Pages, Hooks...)
+│   ├── Dockerfile          # Multi-stage Dockerfile (Node.js build -> Nginx serving)
+│   └── package.json        # Khai báo thư viện dependencies frontend
+├── docker-compose.yml      # Cấu hình container orchestration (PostgreSQL + Backend + Frontend)
+├── .env.example            # File mẫu cấu hình biến môi trường
+└── README.md               # Tài liệu hướng dẫn dự án
 ```
 
-### Bước 2: Setup môi trường
+---
 
+## 🐳 Hướng Dẫn Chạy Dự Án Bằng Docker (Docker Setup Guide)
+
+Yêu cầu tiền đề (Prerequisites):
+- Máy tính đã cài đặt **Docker** và **Docker Compose**.
+
+---
+
+### 1. Dành cho người dùng Windows
+
+#### Bước 1: Yêu cầu chuẩn bị
+- Cài đặt **Docker Desktop cho Windows** (Khuyến nghị sử dụng WSL 2 Backend).
+- Đảm bảo ứng dụng **Docker Desktop** đang chạy (biểu tượng cá voi hiển thị dưới khay hệ thống).
+
+#### Bước 2: Clone dự án & Cấu hình môi trường
+Mở **PowerShell**, **Command Prompt (CMD)** hoặc **Git Bash**:
+```powershell
+# 1. Di chuyển tới thư mục dự án (nếu đã clone)
+cd P-176
+
+# 2. Tạo file cấu hình môi trường từ file mẫu
+copy .env.example .env
+```
+
+#### Bước 3: Build và khởi chạy hệ thống
+Chạy lệnh sau để Docker Compose tự động build image và khởi chạy toàn bộ 3 services (PostgreSQL, Backend, Frontend):
+```powershell
+docker compose up --build -d
+```
+*(Đối với các bản Docker Desktop cũ hơn, sử dụng lệnh: `docker-compose up --build -d`)*
+
+#### Bước 4: Kiểm tra trạng thái và xem log
+- **Kiểm tra các container đang chạy**:
+  ```powershell
+  docker compose ps
+  ```
+- **Xem log toàn bộ hệ thống theo thời gian thực**:
+  ```powershell
+  docker compose logs -f
+  ```
+- **Xem log riêng biệt của Backend hoặc Frontend**:
+  ```powershell
+  docker compose logs -f backend
+  docker compose logs -f frontend
+  ```
+
+#### Bước 5: Dừng hệ thống
+Để dừng các container đang chạy:
+```powershell
+docker compose down
+```
+*(Nếu muốn xóa toàn bộ dữ liệu PostgreSQL trong volume, thêm cờ `-v`: `docker compose down -v`)*
+
+---
+
+### 2. Dành cho người dùng Linux (Ubuntu / Debian / Fedora...)
+
+#### Bước 1: Yêu cầu chuẩn bị
+- Cài đặt **Docker Engine** và **Docker Compose plugin** (`docker-compose-plugin`).
+- (Khuyến nghị) Thêm user hiện tại vào group `docker` để chạy lệnh không cần `sudo`:
+  ```bash
+  sudo usermod -aG docker $USER
+  ```
+  *(Sau đó đăng xuất và đăng nhập lại hoặc chạy `newgrp docker` để áp dụng).*
+
+#### Bước 2: Clone dự án & Cấu hình môi trường
+Mở Terminal:
 ```bash
-# Tạo virtual environment
-python3.11 -m venv .venv
-source .venv/bin/activate
+# 1. Di chuyển tới thư mục dự án
+cd P-176
 
-# Cài dependencies
-pip install -e ".[dev]"
-
-# Cấu hình API keys
+# 2. Tạo file cấu hình môi trường từ file mẫu
 cp .env.example .env
-# Mở .env và thêm OPENAI_API_KEY của bạn
-# Đồng thời cập nhật AI_LOG_API_KEY bằng key riêng từ link mời của BTC
-# (giá trị trong .env.example chỉ là placeholder)
 ```
 
-### Bước 3: Cài AI Logging Hooks
-
+#### Bước 3: Build và khởi chạy hệ thống
 ```bash
-# Linux / macOS / Git Bash
-bash scripts/setup_hooks.sh
-
-# Windows PowerShell
-# powershell -ExecutionPolicy Bypass -File scripts\setup_hooks.ps1
+docker compose up --build -d
 ```
+*(Nếu chưa phân quyền user group docker, chạy với `sudo`: `sudo docker compose up --build -d`)*
 
-Hooks tự động log mọi AI prompt khi dùng Claude Code, Cursor, Codex, Gemini CLI, Antigravity, hoặc GitHub Copilot. Không cần thao tác thủ công.
+#### Bước 4: Kiểm tra trạng thái và xem log
+- **Kiểm tra danh sách container**:
+  ```bash
+  docker compose ps
+  ```
+- **Xem log hệ thống**:
+  ```bash
+  docker compose logs -f
+  ```
 
-### Bước 4: Chạy server
-
+#### Bước 5: Dừng hệ thống
 ```bash
-# Chạy FastAPI backend
-uvicorn src.main:app --reload --port 8000
-
-# Mở Swagger UI
-# http://localhost:8000/docs
+docker compose down
 ```
 
-### Bước 5: Đọc hướng dẫn
+---
 
-📖 Mở **[Technical Guidebook](https://phoenix.note.transformerlabs.ai/technical-book)** và làm theo từng chương.
+## 🌐 Các Đường Dẫn Truy Cập (Access URLs)
 
-## 📁 Cấu trúc dự án
+Sau khi chạy thành công `docker compose up --build -d`, các dịch vụ sẽ sẵn sàng tại các đường dẫn sau:
 
-```
-├── src/
-│   ├── agents/           # 🧠 LangGraph Agent
-│   │   ├── graph.py      #    State graph (nodes + edges)
-│   │   ├── state.py      #    State schema (TypedDict)
-│   │   ├── nodes/        #    Node functions
-│   │   └── tools/        #    Agent tools (@tool)
-│   ├── api/              # 🌐 FastAPI Backend
-│   │   └── routes.py     #    API endpoints
-│   ├── models/           # 📋 Pydantic schemas
-│   ├── services/         # 🔧 Business logic (LLM, etc.)
-│   ├── config.py         # ⚙️ Pydantic Settings
-│   └── main.py           # 🚀 App entry point
-├── tests/                # 🧪 pytest suite
-│   ├── test_agents/      #    Agent/graph tests
-│   └── test_api/         #    API endpoint tests
-├── scripts/              # 🔌 AI Logging Hooks
-│   ├── log_hook.py       #    Auto-log cho Claude/Cursor/Codex/Gemini/Copilot
-│   ├── log_antigravity.py#    Antigravity IDE prompt scanner
-│   ├── log_manual.py     #    Manual log cho ChatGPT / web tools
-│   ├── submit_log.py     #    Submit logs on git push
-│   └── setup_hooks.sh    #    One-time hook installer
-├── .claude/ .codex/ .cursor/ .gemini/  # Per-tool hook configs
-├── .agents/              # Antigravity rules + workflows
-├── .ai-log/              # 📊 AI usage logs (auto-generated)
-├── docs/
-│   ├── guide/            # 📖 Technical Guidebook (10 chapters)
-│   └── architecture_diagram.md
-├── eval/                 # 📊 Evaluation results
-├── presentation/         # 🎤 Demo Day slides
-├── .github/workflows/    # ⚡ CI/CD (GitHub Actions)
-├── .github/hooks/        # 🪝 Copilot hook config
-├── Dockerfile            # 🐳 Multi-stage build
-├── docker-compose.yml    # 🐙 Full stack orchestration
-└── README_boilerplate.md # 📝 README template cho đội của bạn
-```
-
-## 📚 Technical Guidebook — 10 Chương
-
-| Chương | Nội dung                                                    | Thời gian |
-| -------- | ------------------------------------------------------------ | ---------- |
-| 1        | Lời mở đầu — Mục tiêu, cách sử dụng                | 15 phút   |
-| 2        | Khởi tạo dự án — Clone, setup, git workflow             | 4 giờ     |
-| 3        | Thiết kế kiến trúc — 3-tier, diagrams, ADR              | 6 giờ     |
-| 4        | **LangGraph Agent** — State, nodes, edges, tools, RAG | 8 giờ     |
-| 5        | FastAPI — Routes, validation, error handling, streaming     | 6 giờ     |
-| 6        | Giao diện — Next.js + Streamlit quickstart                 | 6 giờ     |
-| 7        | DevOps — Docker, CI/CD, deploy, logging                     | 6 giờ     |
-| 8        | Kiểm thử — Unit test, integration test, RAGAS             | 4 giờ     |
-| 9        | Demo Day — 10 deliverables, checklist, tips                 | 2 giờ     |
-| 10       | Tài nguyên — Khóa học, docs, BMAD method                | tham khảo |
-
-📖 **Đọc online:** [phoenix.note.transformerlabs.ai/technical-book](https://phoenix.note.transformerlabs.ai/technical-book)
-
-## 📋 10 Deliverables cho Demo Day
-
-| #  | Deliverable          | File vị trí                                          | Template có sẵn |
-| -- | -------------------- | ------------------------------------------------------ | :---------------: |
-| 1  | Source Code          | `src/`                                               |        ✅        |
-| 2  | README.md            | `README_boilerplate.md` → copy thành `README.md` |        ✅        |
-| 3  | Architecture Diagram | `docs/architecture_diagram.md`                       |        ✅        |
-| 4  | AI Logs              | LangSmith (3 env vars) + Auto AI Usage Logging         |        ✅        |
-| 5  | Live URL             | Deploy lên Render/Vercel                              |   ⚡ CI/CD sẵn   |
-| 6  | Video Demo           | `presentation/`                                      |        📝        |
-| 7  | Pitch Deck           | `presentation/`                                      |        📝        |
-| 8  | Development Journal  | `JOURNAL.md`                                         |        ✅        |
-| 9  | Worklog              | `WORKLOG.md`                                         |        ✅        |
-| 10 | Evaluation Evidence  | `eval/`                                              |        📝        |
-
-## 🛠 Tech Stack
-
-| Layer    | Technology                       | Version     |
-| -------- | -------------------------------- | ----------- |
-| AI Agent | LangGraph + LangChain            | Latest      |
-| Backend  | FastAPI + Uvicorn                | 0.100+      |
-| LLM      | OpenAI GPT-4o-mini               | API         |
-| Frontend | Next.js / Streamlit              | 14+ / 1.30+ |
-| Database | SQLite (dev) / PostgreSQL (prod) | —          |
-| DevOps   | Docker + GitHub Actions          | —          |
-| Testing  | pytest + pytest-asyncio          | 8+          |
-
-## 📊 AI Usage Logging
-
-Template đã tích hợp sẵn auto-logging hooks cho 6 AI tools:
-
-| Tool             | Cơ chế                        | Config                       |
-| ---------------- | ------------------------------- | ---------------------------- |
-| Claude Code      | `.claude/settings.json` hooks | Tự động                   |
-| Cursor           | `.cursor/hooks.json`          | Tự động                   |
-| OpenAI Codex CLI | `.codex/hooks.json`           | Tự động                   |
-| Gemini CLI       | `.gemini/settings.json`       | Tự động                   |
-| GitHub Copilot   | `.github/hooks/hooks.json`    | Tự động                   |
-| Antigravity IDE  | Pre-push scan transcript        | Tự động trên`git push` |
-
-Tất cả prompts và tool calls được log vào `.ai-log/session.jsonl` và tự động submit lên grading server mỗi khi `git push`.
-
-**ChatGPT / web tools khác** — log thủ công:
-
-```bash
-bash scripts/_pyrun.sh scripts/log_manual.py --tool chatgpt --prompt "What you asked"
-```
-
-> ⚠️ Chạy `bash scripts/setup_hooks.sh` một lần sau khi clone để cài pre-push hook.
-
-## 📖 Đọc Technical Guidebook
-
-**Online (khuyến nghị):** [phoenix.note.transformerlabs.ai/technical-book](https://phoenix.note.transformerlabs.ai/technical-book)
-
-Đăng nhập bằng GitHub (cùng account đã được BTC mời vào org `AI20K-Build-Cohort-2`)
-→ chọn tab **Technical Book** ở sidebar trái → đọc 10 chương + topic sections,
-có table of contents bên phải, hỗ trợ light/dark/cyberpunk theme.
-
-**Offline:** mọi chương đều ở thư mục `docs/guide/` trong template này — mở bằng
-bất kỳ markdown viewer/editor nào (VS Code, Obsidian, GitHub UI, …).
-
-## 🔗 Liên kết
-
-- 📖 **Technical Guidebook:** [phoenix.note.transformerlabs.ai/technical-book](https://phoenix.note.transformerlabs.ai/technical-book)
-- 🏫 **AI20K Program:** VinUni AI20K Build Phase
-- 👨‍🏫 **Mentor:** Đặng Hải Lộc
-
-## 📄 License
-
-MIT — Sử dụng tự do cho mục đích giáo dục.
+| Dịch vụ | Địa chỉ / URL | Mô tả |
+|---|---|---|
+| **Front-End (Web Application)** | [http://localhost:5173](http://localhost:5173) | Giao diện quản lý giám sát an ninh (Nginx) |
+| **Back-End REST API** | [http://localhost:8000](http://localhost:8000) | FastAPI Server |
+| **Swagger API Documentation** | [http://localhost:8000/docs](http://localhost:8000/docs) | Tài liệu API tương tác tự động |
+| **ReDoc API Documentation** | [http://localhost:8000/redoc](http://localhost:8000/redoc) | Giao diện xem tài liệu API ReDoc |
+| **PostgreSQL Database** | `localhost:5432` | DB: `security_db` \| User: `postgres` \| Pass: `postgres` |

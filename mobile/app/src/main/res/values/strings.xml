@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">T176 An ninh</string>
+
+    <string name="channel_security_alert_name">Cảnh báo an ninh</string>
+    <string name="channel_security_alert_desc">Sự cố mức nghiêm trọng và khẩn cấp cần bạn xử lý</string>
+
+    <string name="channel_dispatch_name">Điều phối</string>
+    <string name="channel_dispatch_desc">Tin nhắn điều phối từ bảo vệ trực ca</string>
+</resources>

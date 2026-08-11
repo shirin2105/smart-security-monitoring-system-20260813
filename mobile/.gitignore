@@ -1,0 +1,24 @@
+*.iml
+.gradle/
+local.properties
+.idea/
+.DS_Store
+build/
+captures/
+.externalNativeBuild
+.cxx
+
+# Cấu hình Firebase chứa khóa dự án — mỗi máy tự tải về từ Firebase Console.
+app/google-services.json
+
+# Service account key: khóa bí mật cho phép gửi thông báo thay mặt cả project.
+# Lộ file này là người ngoài gửi được cảnh báo giả tới mọi máy đã cài app.
+*firebase-adminsdk*.json
+service-account*.json
+
+# .gitignore ở gốc repo có dòng "data/" nhằm chặn thư mục dữ liệu lớn, nhưng nó
+# khớp với MỌI thư mục tên "data" ở mọi độ sâu — kể cả tầng data của app. Không
+# có dòng dưới đây thì toàn bộ repository và store bị bỏ khỏi commit một cách
+# âm thầm, và project sẽ không build được trên máy người khác.
+!app/src/main/java/vn/t176/patrol/data/
+!app/src/test/java/vn/t176/patrol/data/
