@@ -22,6 +22,7 @@ class IncidentResponse(BaseModel):
     severity: str
     description: str
     status: str
+    source: str = "SIMULATOR"
     created_at: datetime
 
 class AuditLogResponse(BaseModel):
@@ -46,6 +47,7 @@ def get_incidents(db: Session = Depends(get_db)):
             "severity": inc.severity,
             "description": inc.description,
             "status": inc.status,
+            "source": inc.source,
             "created_at": inc.created_at
         })
     return results

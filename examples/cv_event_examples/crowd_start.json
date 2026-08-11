@@ -1,0 +1,15 @@
+{
+  "schema_version": "cv-event-v1",
+  "event_id": "CAM01_CR_000001",
+  "event_type": "CROWD_THRESHOLD",
+  "event_state": "START",
+  "camera_id": "CAM01",
+  "event_time": "2026-08-10T16:31:00+07:00",
+  "event_time_s": 53.0,
+  "cv_confidence": 0.89,
+  "objects": {"person_count": 5, "person_track_ids": [1001, 1002, 1003, 1004, 1005]},
+  "evidence": {"person_count": 5, "threshold": 4, "above_threshold_duration_s": 3.2},
+  "spatial": {"zone_id": "LOBBY"},
+  "media": {},
+  "diagnostics": {}
+}

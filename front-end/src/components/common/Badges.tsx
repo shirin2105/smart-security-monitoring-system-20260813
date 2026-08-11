@@ -99,6 +99,21 @@ export function SimulatedBadge() {
   );
 }
 
+/** Nguồn phát hiện: CV pipeline thật (LIVE) hay simulator. */
+export function SourceBadge({ sourceType }: { sourceType: 'LIVE' | 'SIMULATED' }) {
+  if (sourceType === 'LIVE') {
+    return (
+      <span
+        className={`${BASE} border-emerald-300 dark:border-emerald-500/40 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300`}
+        title="Sự kiện từ CV pipeline thật"
+      >
+        CV thật
+      </span>
+    );
+  }
+  return <SimulatedBadge />;
+}
+
 /** FR-AI-03: nội dung do LLM sinh phải được gắn nhãn rõ ràng. */
 export function AiGeneratedBadge() {
   return (

@@ -1,0 +1,15 @@
+{
+  "schema_version": "cv-event-v1",
+  "event_id": "CAM01_IN_000001",
+  "event_type": "ZONE_INTRUSION",
+  "event_state": "START",
+  "camera_id": "CAM01",
+  "event_time": "2026-08-10T16:30:25.125+07:00",
+  "event_time_s": 18.42,
+  "cv_confidence": 0.95,
+  "objects": {"persons": [{"track_id": 1000012, "bbox_xyxy": [420, 120, 490, 350]}]},
+  "evidence": {"zone_id": "RESTRICTED_01", "inside_duration_s": 1.2},
+  "spatial": {"zone_id": "RESTRICTED_01"},
+  "media": {},
+  "diagnostics": {"pipeline_fps": 18.7}
+}

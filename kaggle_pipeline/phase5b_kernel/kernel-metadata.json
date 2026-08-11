@@ -1,0 +1,17 @@
+{
+  "id": "shirin21st/deimv2-phase-5b-tiling-sweep",
+  "title": "DEIMv2 Phase 5B Tiling Sweep",
+  "code_file": "deimv2_phase5b_tiling_sweep.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": "true",
+  "enable_gpu": "true",
+  "machine_shape": "NvidiaTeslaT4",
+  "enable_internet": "true",
+  "dataset_sources": [
+    "duwipurnamasidik/visdrone-2019-coco-format",
+    "shirin21st/deimv2-s-visdrone-phase4-best"
+  ],
+  "competition_sources": [],
+  "kernel_sources": []
+}

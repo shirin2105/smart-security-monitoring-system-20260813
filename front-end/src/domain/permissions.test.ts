@@ -27,6 +27,7 @@ function makeEvent(
     escalation,
     description: 'test',
     aiGenerated: false,
+    sourceType: 'SIMULATED',
     detectedAt: new Date().toISOString(),
     version: 1,
     actions: [],

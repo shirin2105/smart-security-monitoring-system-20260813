@@ -202,6 +202,7 @@ export const mockTransport: ApiTransport = {
       escalation: 'NONE',
       description: template.description,
       aiGenerated: true,
+      sourceType: 'SIMULATED',
       detectedAt: new Date().toISOString(),
       version: 1,
       bbox: template.bbox,

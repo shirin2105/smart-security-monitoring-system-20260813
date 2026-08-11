@@ -1,0 +1,80 @@
+{
+  "total_tracks": 17,
+  "background_anchor_count": 0,
+  "background_track_ids": 0,
+  "by_class": {
+    "person": {
+      "tracks": 11,
+      "mean_duration_s": 11.144477811144474,
+      "median_duration_s": 5.472138805472138,
+      "max_duration_s": 44.344344344344336,
+      "short_track_ratio_lt_1s": 0.0,
+      "mean_track_confidence": 0.7922114250358067
+    },
+    "luggage": {
+      "tracks": 6,
+      "mean_duration_s": 7.85229674118563,
+      "median_duration_s": 3.8038038038038033,
+      "max_duration_s": 25.625625625625624,
+      "short_track_ratio_lt_1s": 0.16666666666666666,
+      "mean_track_confidence": 0.37338307146692373
+    }
+  },
+  "phase": "7B.1_generic_luggage",
+  "video_path": "/kaggle/input/datasets/shirin21st/phase7b-aboda-tracking-video/aboda-video1.avi",
+  "checkpoint": "/kaggle/input/notebooks/shirin21st/deimv2-phase-7a-person-luggage/outputs/phase7a_deimv2_s_person_luggage/best.pth",
+  "video_width": 640,
+  "video_height": 480,
+  "source_fps": 29.97,
+  "processed_frames": 2189,
+  "processed_video_seconds": 73.0397063730397,
+  "wall_seconds": 108.90689295499999,
+  "pipeline_fps": 20.099737864200097,
+  "inference_mode": "full640",
+  "average_tiles_per_frame": 1.0,
+  "raw_original_detections": {
+    "person": 17214,
+    "backpack": 13365,
+    "handbag": 14607,
+    "suitcase": 7790
+  },
+  "runtime_detections_after_merge_nms": {
+    "person": 15031,
+    "luggage": 14132
+  },
+  "runtime_confirmed_observations": {
+    "person": 3615,
+    "luggage": 1404
+  },
+  "status_observations": {
+    "TRACK_ONLY": 540,
+    "ELIGIBLE": 4479
+  },
+  "merge_totals": {
+    "raw_person": 17214,
+    "raw_backpack": 13365,
+    "raw_handbag": 14607,
+    "raw_suitcase": 7790,
+    "raw_luggage_total": 35762,
+    "merged_person": 15031,
+    "merged_luggage": 14132,
+    "luggage_duplicates_removed": 21630
+  },
+  "luggage_duplicate_reduction_ratio": 0.6048319445221184,
+  "config": {
+    "person_nms_iou": 0.6,
+    "luggage_cross_class_nms_iou": 0.5,
+    "warmup_seconds": 8.0,
+    "luggage_event_min_age_s": 1.5,
+    "luggage_event_high_conf": 0.35,
+    "luggage_event_min_high_hits": 3,
+    "track_activation_threshold": 0.25,
+    "high_conf_det_threshold": 0.6
+  },
+  "notes": [
+    "This phase produces event-eligible track candidates, NOT abandoned-object alarms.",
+    "Backpack/handbag/suitcase are merged to generic luggage before tracking.",
+    "Background suppression assumes the startup warmup window contains no true abandoned-object event.",
+    "No MOT ground truth: do not claim IDF1/HOTA/MOTA."
+  ]
+}

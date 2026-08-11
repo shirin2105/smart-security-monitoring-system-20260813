@@ -26,6 +26,7 @@ class Camera(Base):
     location = Column(String(150), nullable=False)
     stream_url = Column(String(255), nullable=False)
     status = Column(String(20), nullable=False, default="online")  # "online", "warning", "offline"
+    source = Column(String(20), nullable=False, default="SIMULATOR")  # "CV", "SIMULATOR"
 
     incidents = relationship("Incident", back_populates="camera")
 
@@ -38,6 +39,7 @@ class Incident(Base):
     severity = Column(String(20), nullable=False, default="warning")  # "warning", "critical"
     description = Column(Text, nullable=False)
     status = Column(String(20), nullable=False, default="pending")  # "pending", "acknowledged", "escalated"
+    source = Column(String(20), nullable=False, default="SIMULATOR")  # "CV", "SIMULATOR"
     created_at = Column(DateTime, default=utc_now, nullable=False)
 
     camera = relationship("Camera", back_populates="incidents")

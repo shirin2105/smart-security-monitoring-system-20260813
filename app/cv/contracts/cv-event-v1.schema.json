@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "cv-event-v1.schema.json",
+  "title": "CVEvent v1",
+  "type": "object",
+  "required": ["schema_version", "event_id", "event_type", "event_state", "camera_id", "event_time", "event_time_s", "cv_confidence", "objects", "evidence", "spatial", "media", "diagnostics"],
+  "properties": {
+    "schema_version": {"const": "cv-event-v1"},
+    "event_id": {"type": "string", "minLength": 1},
+    "event_type": {"type": "string", "enum": ["ZONE_INTRUSION", "CROWD_THRESHOLD", "ABANDONED_OBJECT"]},
+    "event_state": {"type": "string", "enum": ["START", "UPDATE", "END"]},
+    "camera_id": {"type": "string", "minLength": 1},
+    "event_time": {"type": "string", "format": "date-time"},
+    "event_time_s": {"type": "number", "minimum": 0},
+    "cv_confidence": {"type": "number", "minimum": 0, "maximum": 1},
+    "objects": {"type": "object"},
+    "evidence": {"type": "object"},
+    "spatial": {"type": "object"},
+    "media": {"type": "object"},
+    "diagnostics": {"type": "object"}
+  },
+  "additionalProperties": false
+}
