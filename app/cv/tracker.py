@@ -1,88 +1,98 @@
+from __future__ import annotations
+
+from typing import Any, Callable
+import zlib
+
+import numpy as np
 
 from app.common.schemas import DetectionResult, FrameData, TrackResult
 
-try:
-    import ultralytics  # noqa: F401  (availability flag for optional integration)
-
-    ULTRALYTICS_AVAILABLE = True
-except ImportError:
-    ULTRALYTICS_AVAILABLE = False
+ID_NAMESPACE = 100_000
+CLASS_IDS = {"person": 0, "luggage": 1}
 
 
-def compute_iou(box1: list[float], box2: list[float]) -> float:
-    x1 = max(box1[0], box2[0])
-    y1 = max(box1[1], box2[1])
-    x2 = min(box1[2], box2[2])
-    y2 = min(box1[3], box2[3])
+def _default_tracker_factory(frame_rate: float, **config):
+    from trackers import ByteTrackTracker
 
-    intersection = max(0.0, x2 - x1) * max(0.0, y2 - y1)
-    area1 = (box1[2] - box1[0]) * (box1[3] - box1[1])
-    area2 = (box2[2] - box2[0]) * (box2[3] - box2[1])
-
-    union = area1 + area2 - intersection
-    if union <= 0:
-        return 0.0
-    return intersection / union
+    return ByteTrackTracker(frame_rate=max(float(frame_rate), 1e-6), **config)
 
 
-class MultiObjectTracker:
-    def __init__(self, camera_id: str, max_missed_frames: int = 10):
+def _detections(xyxy, confidence, class_id):
+    import supervision as sv
+
+    if len(xyxy) == 0:
+        return sv.Detections.empty()
+    return sv.Detections(xyxy=xyxy, confidence=confidence, class_id=class_id)
+
+
+class ByteTrackMultiObjectTracker:
+    """Camera-local ByteTrack state with strict class isolation."""
+
+    def __init__(self, camera_id: str, frame_rate: float = 5.0,
+                 tracker_factory: Callable[..., Any] | None = None,
+                 detections_factory: Callable[..., Any] | None = None,
+                 **config):
         self.camera_id = camera_id
-        self.next_track_id: int = 1
-        self.active_tracks: dict[int, list[float]] = {}  # track_id -> bbox
-        self.track_first_seen: dict[int, str] = {}
-        self.max_missed_frames = max_missed_frames
-        self._missed_frames: dict[int, int] = {}
+        self._camera_namespace = zlib.crc32(camera_id.encode("utf-8"))
+        factory = tracker_factory or _default_tracker_factory
+        defaults = {
+            "lost_track_buffer": 30,
+            "track_activation_threshold": 0.25,
+            "minimum_consecutive_frames": 2,
+            "minimum_iou_threshold": 0.10,
+            "high_conf_det_threshold": 0.60,
+        }
+        defaults.update(config)
+        self._lost_track_buffer = max(0, int(defaults["lost_track_buffer"]))
+        self._trackers = {cid: factory(frame_rate, **defaults) for cid in CLASS_IDS.values()}
+        self._make_detections = detections_factory or _detections
+        self._first_seen: dict[int, str] = {}
+        self._last_returned_frame: dict[int, int] = {}
+        self._frame_index = 0
 
     def track(self, detections: list[DetectionResult], frame_data: FrameData) -> list[TrackResult]:
-        timestamp = frame_data.captured_at
-        results: list[TrackResult] = []
-        updated_tracks: dict[int, list[float]] = {}
+        self._frame_index += 1
+        for detection in detections:
+            self._validate(detection)
+        results = []
+        for name, cid in CLASS_IDS.items():
+            selected = [d for d in detections if d.class_name == name]
+            xyxy = np.asarray([d.bbox for d in selected], dtype=np.float32).reshape(-1, 4)
+            scores = np.asarray([d.confidence for d in selected], dtype=np.float32)
+            class_ids = np.full(len(selected), cid, dtype=np.int32)
+            tracked = self._trackers[cid].update(self._make_detections(xyxy, scores, class_ids))
+            if getattr(tracked, "tracker_id", None) is None:
+                continue
+            for box, score, returned_cid, local_id in zip(
+                    tracked.xyxy, tracked.confidence, tracked.class_id, tracked.tracker_id):
+                if int(returned_cid) != cid:
+                    raise RuntimeError(f"class contamination: tracker={cid}, output={returned_cid}")
+                if int(local_id) < 0:
+                    continue
+                if int(local_id) >= ID_NAMESPACE:
+                    raise RuntimeError("local tracker ID exhausted its public namespace")
+                global_id = (self._camera_namespace * 2 + cid) * ID_NAMESPACE + int(local_id)
+                first_seen = self._first_seen.setdefault(global_id, frame_data.captured_at)
+                self._last_returned_frame[global_id] = self._frame_index
+                results.append(TrackResult(track_id=global_id, class_name=name,
+                                           bbox=[float(v) for v in box], confidence=float(score),
+                                           first_seen_at=first_seen,
+                                           last_seen_at=frame_data.captured_at))
+        # ByteTrack may revive a lost ID for lost_track_buffer updates. Expire
+        # metadata only after that continuity window has elapsed.
+        expired = [track_id for track_id, last_frame in self._last_returned_frame.items()
+                   if self._frame_index - last_frame > self._lost_track_buffer]
+        for track_id in expired:
+            self._last_returned_frame.pop(track_id, None)
+            self._first_seen.pop(track_id, None)
+        return sorted(results, key=lambda item: item.track_id)
 
-        for det in detections:
-            best_iou = 0.0
-            best_id = None
-
-            # Simple IOU matching against tracks seen in previous frames
-            for track_id, last_bbox in self.active_tracks.items():
-                iou = compute_iou(det.bbox, last_bbox)
-                if iou > 0.3 and iou > best_iou:
-                    best_iou = iou
-                    best_id = track_id
-
-            if best_id is None:
-                assigned_id = self.next_track_id
-                self.next_track_id += 1
-                self.track_first_seen[assigned_id] = timestamp
-            else:
-                assigned_id = best_id
-
-            updated_tracks[assigned_id] = det.bbox
-
-            results.append(
-                TrackResult(
-                    track_id=assigned_id,
-                    class_name=det.class_name,
-                    bbox=det.bbox,
-                    confidence=det.confidence,
-                    first_seen_at=self.track_first_seen.get(assigned_id, timestamp),
-                    last_seen_at=timestamp,
-                )
-            )
-
-        # Track IDs persist across frames: tracks not matched this frame are
-        # kept so the same object keeps its ID (dwell/temporal state depends
-        # on stable IDs). Stale tracks are dropped after MAX_MISSED_FRAMES.
-        for track_id, last_bbox in self.active_tracks.items():
-            if track_id not in updated_tracks:
-                missed = self._missed_frames.get(track_id, 0) + 1
-                if missed <= self.max_missed_frames:
-                    self._missed_frames[track_id] = missed
-                    updated_tracks[track_id] = last_bbox
-
-        # Clear missed counters for tracks matched this frame
-        for track_id in updated_tracks:
-            self._missed_frames.pop(track_id, None)
-
-        self.active_tracks = updated_tracks
-        return results
+    @staticmethod
+    def _validate(detection: DetectionResult):
+        if detection.class_name not in CLASS_IDS:
+            raise ValueError(f"unsupported detection class: {detection.class_name}")
+        box = np.asarray(detection.bbox, dtype=float)
+        if box.shape != (4,) or not np.isfinite(box).all() or box[2] <= box[0] or box[3] <= box[1]:
+            raise ValueError("detection bbox must be finite ordered xyxy")
+        if not np.isfinite(detection.confidence) or not 0 <= detection.confidence <= 1:
+            raise ValueError("detection confidence must be finite within [0, 1]")

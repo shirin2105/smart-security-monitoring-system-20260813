@@ -267,7 +267,7 @@ Repository thực tế gồm ba mảng đã tích hợp:
 
 | Mảng | Vị trí | Vai trò |
 |---|---|---|
-| CV pipeline | `app/` | Video → YOLO detection → tracking → event engine → `EventCandidate` |
+| CV pipeline | `app/` | Video → DEIMv2 Phase 7A detection → class-isolated ByteTrack → event engine → `EventCandidate` |
 | Back-end API | `back-end/` | Auth, incidents, audit, WebSocket, ingest endpoint |
 | Frontend | `front-end/` | React/PWA dashboard (Vite) |
 
@@ -277,7 +277,6 @@ Repository thực tế gồm ba mảng đã tích hợp:
 # Root venv chứa cả app/ và back-end/ deps
 python -m venv .venv
 .venv/Scripts/pip install -r requirements.txt
-.venv/Scripts/pip install ultralytics   # YOLO model (tự tải yolo26m.pt lần đầu)
 
 cd front-end && npm install && cd ..
 ```
@@ -307,7 +306,7 @@ Hoặc script gộp: `powershell -File scripts/run_mvp.ps1` (back-end + frontend
 
 - `configs/cameras.yaml` trỏ clip `./tests/clips/intrusion_positive.mp4` — file này **không tồn tại**; dùng `--source-uri` hoặc sửa config nếu muốn.
 - DB mặc định SQLite (`security_monitoring.db`) khi không có Postgres; `docker-compose.yml` bật Postgres + cả ba service.
-- `yolo26m.pt` tải tự động lần đầu (42MB).
+- DEIMv2 source, Phase 7A checkpoint, and DINOv3 backbone are external read-only assets; provision the paths and mandatory hashes declared in `configs/models.yaml` before starting the CV pipeline. See [`system-architecture.md`](./system-architecture.md).
 
 ## 13. Nguồn chuẩn
 

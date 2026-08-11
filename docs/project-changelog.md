@@ -1,5 +1,19 @@
 # Project Changelog
 
+## 2026-08-11
+
+### Changed
+
+- Replaced the active YOLO/Ultralytics detector and greedy tracker with the frozen DEIMv2 Phase 7A runtime and two class-isolated ByteTrack instances. Production code, configuration, dependencies, and Docker contain no YOLO/Ultralytics runtime reference; the prior implementation remains available only on the `legacy-yolo` branch.
+- Made DEIMv2 source, checkpoint, and DINOv3 backbone externally provisioned, read-only deployment inputs. Startup requires pinned SHA-256 values before checkpoint deserialization and fails fast for missing or mismatched assets, incompatible weights, or unavailable explicit CUDA. There is no detector fallback.
+- Added `CONFIG_DIR` and `DEIMV2_SOURCE_PATH`, `DEIMV2_CONFIG_PATH`, `DEIMV2_CHECKPOINT_PATH`, and `DEIMV2_BACKBONE_PATH` overrides. A backbone override must remain paired with the selected runtime YAML.
+
+### Verification notes
+
+- Final gate: compile passed; targeted runtime tests passed 25/25; modified legacy integrations passed 6/6; full suite passed 205 tests with 4 skips and 8 passing subtests.
+- A real-asset CPU smoke loaded the pinned Phase 7A checkpoint and DINOv3 backbone without global `PYTHONPATH`, then returned one finite `luggage` detection from a 320x512 zero frame.
+- Coverage tooling was unavailable, so no coverage result is claimed. See [`system-architecture.md`](./system-architecture.md) for runtime ownership and deployment constraints.
+
 ## 2026-08-10
 
 ### Added

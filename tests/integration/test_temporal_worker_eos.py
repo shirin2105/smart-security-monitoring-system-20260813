@@ -27,8 +27,8 @@ class FinalizeSpy:
 
 
 @pytest.mark.parametrize("error", [None, RuntimeError("stream failed")])
-def test_worker_finalizes_temporal_state_on_eos_and_stream_error(error):
-    worker = CVWorker(camera_id="cam_01")
+def test_worker_finalizes_temporal_state_on_eos_and_stream_error(error, empty_detector):
+    worker = CVWorker(camera_id="cam_01", detector=empty_detector)
     source = EmptySource(error)
     finalizer = FinalizeSpy()
     worker.source = source

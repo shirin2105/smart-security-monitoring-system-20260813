@@ -14,6 +14,7 @@ WORKDIR /app
 # Copy installed packages from builder
 COPY --from=builder /root/.local /root/.local
 ENV PATH=/root/.local/bin:$PATH
+VOLUME ["/app/third_party/deimv2", "/app/artifacts/phase7a-results"]
 
 # Security: run as non-root user
 RUN useradd -m appuser

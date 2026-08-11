@@ -1,10 +1,13 @@
+from collections.abc import Callable
+from typing import Any
+
 from app.common.schemas import EventCandidate
 from app.config import settings
-from app.cv.detector import YOLODetector
+from app.cv.detector import DEIMv2Detector
 from app.cv.frame_sampler import FrameSampler
 from app.cv.static_region_detector import StaticRegionDetector
 from app.cv.track_store import TrackStore
-from app.cv.tracker import MultiObjectTracker
+from app.cv.tracker import ByteTrackMultiObjectTracker
 from app.events.abandoned_object import AbandonedObjectEngine
 from app.events.crowd import CrowdEventEngine
 from app.events.intrusion import IntrusionEventEngine
@@ -17,7 +20,8 @@ from app.vlm.region_validator import create_region_validator
 
 class CVWorker:
     def __init__(self, camera_id: str, source_uri: str | None = None, publisher: EventPublisher | None = None,
-                 detector: YOLODetector | None = None):
+                 detector: DEIMv2Detector | None = None, tracker: Any | None = None,
+                 detector_factory: Callable[[], DEIMv2Detector] | None = None):
         self.camera_id = camera_id
 
         # Load configs
@@ -42,14 +46,12 @@ class CVWorker:
         self.health_monitor = CameraHealthMonitor(camera_id=camera_id)
         self.frame_sampler = FrameSampler(inference_fps=cam_info.get("inference_fps", 5.0))
 
-        models_cfg = settings.models.get("detector", {})
-        self.detector = detector or YOLODetector(
-            model_path=models_cfg.get("model_name", "yolo11n.pt"),
-            confidence_threshold=models_cfg.get("confidence_threshold", 0.4),
-            iou_threshold=models_cfg.get("iou_threshold", 0.45),
-            target_classes=models_cfg.get("target_classes", [0, 24, 26, 28]),
+        models_cfg = settings.detector_config
+        self.detector = detector
+        self.detector_factory = detector_factory or (lambda: DEIMv2Detector(**models_cfg))
+        self.tracker = tracker or ByteTrackMultiObjectTracker(
+            camera_id=camera_id, frame_rate=cam_info.get("inference_fps", 5.0)
         )
-        self.tracker = MultiObjectTracker(camera_id=camera_id)
         self.track_store = TrackStore(camera_id=camera_id)
         abandoned_rules = settings.event_rules.get("abandoned_object", {})
         self.static_region_detector = StaticRegionDetector(camera_id, abandoned_rules.get("static_region", {}))
@@ -87,6 +89,10 @@ class CVWorker:
         processed_count = 0
 
         try:
+            # Resolve before reading frames, but inside the cleanup boundary so a
+            # startup failure still releases source and pending engine resources.
+            if self.detector is None:
+                self.detector = self.detector_factory()
             for frame_data in self.source.read_frames():
                 self.health_monitor.update_frame_time(frame_data.captured_at)
 

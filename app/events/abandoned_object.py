@@ -459,7 +459,7 @@ class AbandonedObjectEngine(BaseEventEngine):
                             stationarySeconds=round(stat_dur, 2),
                             ownerAbsentSeconds=round(absent_dur, 2),
                         ),
-                        modelVersion="yolo-v26m",
+                        modelVersion="deimv2-phase7a",
                         ruleVersion="abandoned-object-v1",
                         policyVersion=1,
                         artifact=artifact,
