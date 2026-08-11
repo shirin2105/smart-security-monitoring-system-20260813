@@ -1,0 +1,106 @@
+[
+  {
+    "candidateId": "mock-real-intrusion-high",
+    "eventType": "ZONE_INTRUSION",
+    "zoneId": "restricted_gate",
+    "confidence": 0.97,
+    "trackCount": 1,
+    "observations": {"personCount": 1, "dwellSeconds": 9.8, "insideZone": true}
+  },
+  {
+    "candidateId": "mock-real-intrusion-low",
+    "eventType": "ZONE_INTRUSION",
+    "zoneId": "restricted_gate",
+    "confidence": 0.55,
+    "trackCount": 1,
+    "observations": {"personCount": 1, "dwellSeconds": 1.1, "insideZone": true}
+  },
+  {
+    "candidateId": "mock-real-intrusion-multi",
+    "eventType": "ZONE_INTRUSION",
+    "zoneId": "restricted_gate",
+    "confidence": 0.91,
+    "trackCount": 3,
+    "observations": {"personCount": 3, "dwellSeconds": 4.2, "insideZone": true}
+  },
+  {
+    "candidateId": "mock-real-crowd-thresh",
+    "eventType": "CROWD_THRESHOLD",
+    "zoneId": "plaza",
+    "confidence": 0.83,
+    "trackCount": 12,
+    "observations": {"personCount": 12, "dwellSeconds": null, "insideZone": true}
+  },
+  {
+    "candidateId": "mock-real-crowd-large",
+    "eventType": "CROWD_THRESHOLD",
+    "zoneId": "plaza",
+    "confidence": 0.92,
+    "trackCount": 45,
+    "observations": {"personCount": 45, "dwellSeconds": null, "insideZone": true}
+  },
+  {
+    "candidateId": "mock-real-crowd-small",
+    "eventType": "CROWD_THRESHOLD",
+    "zoneId": "gate_area",
+    "confidence": 0.66,
+    "trackCount": 4,
+    "observations": {"personCount": 4, "dwellSeconds": null, "insideZone": true}
+  },
+  {
+    "candidateId": "mock-real-abandon-bag",
+    "eventType": "ABANDONED_OBJECT",
+    "zoneId": "lobby",
+    "confidence": 0.74,
+    "trackCount": 1,
+    "observations": {"personCount": 1, "stationarySeconds": 12.0, "ownerAbsentSeconds": 10.0, "insideZone": false}
+  },
+  {
+    "candidateId": "mock-real-abandon-owner",
+    "eventType": "ABANDONED_OBJECT",
+    "zoneId": "corridor",
+    "confidence": 0.61,
+    "trackCount": 2,
+    "observations": {"personCount": 2, "stationarySeconds": 6.0, "ownerAbsentSeconds": 1.0, "insideZone": false}
+  },
+  {
+    "candidateId": "mock-real-abandon-short",
+    "eventType": "ABANDONED_OBJECT",
+    "zoneId": "entrance",
+    "confidence": 0.58,
+    "trackCount": 1,
+    "observations": {"personCount": 1, "stationarySeconds": 3.5, "ownerAbsentSeconds": 2.0, "insideZone": false}
+  },
+  {
+    "candidateId": "mock-real-fall-unattended",
+    "eventType": "SUSPECTED_FALL",
+    "zoneId": "stairwell",
+    "confidence": 0.82,
+    "trackCount": 1,
+    "observations": {"personCount": 1, "insideZone": false}
+  },
+  {
+    "candidateId": "mock-real-fall-low",
+    "eventType": "SUSPECTED_FALL",
+    "zoneId": "corridor",
+    "confidence": 0.52,
+    "trackCount": 1,
+    "observations": {"personCount": 1, "insideZone": false}
+  },
+  {
+    "candidateId": "mock-real-coverage-blur",
+    "eventType": "COVERAGE_DEGRADED",
+    "zoneId": null,
+    "confidence": 0.48,
+    "trackCount": 0,
+    "observations": {"personCount": 0, "insideZone": false}
+  },
+  {
+    "candidateId": "mock-real-coverage-offline",
+    "eventType": "COVERAGE_DEGRADED",
+    "zoneId": null,
+    "confidence": 0.9,
+    "trackCount": 0,
+    "observations": {"personCount": 0, "insideZone": false}
+  }
+]

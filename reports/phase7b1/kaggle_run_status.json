@@ -1,0 +1,8 @@
+{
+  "kernel": "shirin21st/deimv2-phase-7b-1-generic-luggage",
+  "status": "COMPLETE",
+  "verified_at": "2026-08-10T09:00:00+07:00",
+  "output_root": "artifacts/phase7b1-results",
+  "traceback_found": false,
+  "final_summary_found": true
+}

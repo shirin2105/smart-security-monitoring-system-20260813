@@ -1,0 +1,6 @@
+{
+  "kernel": "shirin21st/deimv2-phase-7a-person-luggage",
+  "status": "KernelWorkerStatus.COMPLETE",
+  "verified_at": "2026-08-08T21:08:11.4431808+07:00",
+  "verification_command": "kaggle kernels status shirin21st/deimv2-phase-7a-person-luggage"
+}

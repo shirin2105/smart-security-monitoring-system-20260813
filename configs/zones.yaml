@@ -1,0 +1,20 @@
+zones:
+  - zone_id: restricted_gate
+    camera_id: cam_01
+    name: Khu vực hạn chế
+    polygon:
+      - [120, 300]
+      - [540, 300]
+      - [620, 700]
+      - [80, 700]
+    enabled: true
+
+  - zone_id: lobby_area
+    camera_id: cam_02
+    name: Khu vực sảnh
+    polygon:
+      - [50, 100]
+      - [1200, 100]
+      - [1200, 700]
+      - [50, 700]
+    enabled: true
