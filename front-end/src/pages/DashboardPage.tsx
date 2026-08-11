@@ -10,11 +10,8 @@ export function DashboardPage() {
   const { events, loading, error, reload } = useEvents();
   const cameras = useAsync(() => api.getCameras(), []);
 
-  // Dưới lg bố cục xếp dọc và để cả trang cuộn. Chỉ từ lg mới khóa chiều cao
-  // để hai pane tự cuộn riêng — nếu khóa ở mọi breakpoint thì trên tablet
-  // sidebar sẽ bị cắt và không cuộn tới được.
   return (
-    <div className="flex flex-1 flex-col gap-6 p-4 md:p-6 lg:min-h-0 lg:flex-row lg:overflow-hidden">
+    <div className="flex flex-1 flex-col gap-6 lg:min-h-0 lg:flex-row lg:overflow-hidden">
       {cameras.loading ? (
         <LoadingState label="Đang tải danh sách camera…" />
       ) : cameras.error != null ? (

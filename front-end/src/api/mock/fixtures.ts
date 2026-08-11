@@ -23,7 +23,7 @@ const PREVIEW = (id: number) =>
       '1506521781263-d8422e82f27a',
       '1517502884422-41eaead166d4',
     ][id - 1]
-  }?w=600&auto=format&fit=crop`;
+  }?w=600&h=337&auto=format&fit=crop`;
 
 export const MOCK_CAMERAS: Camera[] = [
   {

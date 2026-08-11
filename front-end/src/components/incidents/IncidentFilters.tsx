@@ -39,9 +39,9 @@ const STATES: EventState[] = [
 ];
 
 const FIELD =
-  'w-full rounded-lg border border-gray-800 bg-gray-950 px-3 py-2 text-xs text-gray-200 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500';
+  'w-full rounded-xl border border-gray-300 dark:border-gray-800 bg-slate-50 dark:bg-gray-950 px-3 py-2 text-xs text-gray-900 dark:text-gray-200 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-sm';
 
-const LABEL = 'mb-1 block font-mono text-[10px] font-medium uppercase text-gray-400';
+const LABEL = 'mb-1 block font-mono text-[10px] font-bold uppercase text-gray-600 dark:text-gray-400';
 
 /** Bộ lọc hoạt động độc lập và kết hợp được — acceptance criteria BAC-54. */
 export function IncidentFilters({
@@ -50,13 +50,12 @@ export function IncidentFilters({
   onChange,
   onReset,
 }: IncidentFiltersProps) {
-  // Mỗi lần đổi filter phải quay về trang 1, nếu không sẽ ra danh sách rỗng.
   const patch = (value: Partial<IncidentQuery>) => onChange({ ...value, page: 1 });
 
   return (
     <section
       aria-label="Bộ lọc sự cố"
-      className="grid grid-cols-2 gap-3 rounded-2xl border border-gray-800 bg-gray-900/60 p-4 md:grid-cols-3 xl:grid-cols-7"
+      className="grid grid-cols-2 gap-3.5 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/60 p-4.5 md:grid-cols-3 xl:grid-cols-7 shadow-sm"
     >
       <div className="col-span-2 md:col-span-3 xl:col-span-2">
         <label htmlFor="filter-search" className={LABEL}>
@@ -64,7 +63,7 @@ export function IncidentFilters({
         </label>
         <div className="relative">
           <Search
-            className="pointer-events-none absolute inset-y-0 left-3 my-auto h-3.5 w-3.5 text-gray-500"
+            className="pointer-events-none absolute inset-y-0 left-3 my-auto h-3.5 w-3.5 text-gray-400 dark:text-gray-500"
             aria-hidden
           />
           <input
@@ -190,7 +189,7 @@ export function IncidentFilters({
       <div className="col-span-2 flex items-end md:col-span-1">
         <button
           onClick={onReset}
-          className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-xs font-medium text-gray-200 transition-colors hover:bg-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-slate-100 dark:bg-gray-800 px-3 py-2 text-xs font-semibold text-gray-700 dark:text-gray-200 transition-colors hover:bg-slate-200 dark:hover:bg-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 shadow-sm"
         >
           <RotateCcw className="h-3.5 w-3.5" aria-hidden />
           <span>Xóa lọc</span>
