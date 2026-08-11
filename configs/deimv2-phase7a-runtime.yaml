@@ -1,0 +1,8 @@
+__include__: ['../third_party/deimv2/configs/deimv2/deimv2_dinov3_s_coco.yml']
+num_classes: 4
+remap_mscoco_category: false
+eval_spatial_size: [640, 640]
+DINOv3STAs:
+  weights_path: 'third_party/deimv2/ckpts/vitt_distill.pt'
+PostProcessor:
+  num_top_queries: 300

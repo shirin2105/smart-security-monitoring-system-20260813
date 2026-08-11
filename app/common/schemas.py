@@ -80,7 +80,7 @@ class EventCandidate(BaseModel):
     trackIds: list[int] = Field(default_factory=list)
 
     observations: ObservationData
-    modelVersion: str = "yolo-v11n"
+    modelVersion: str = "deimv2-phase7a"
     ruleVersion: str = "intrusion-rule-v1"
     policyVersion: int = 1
 

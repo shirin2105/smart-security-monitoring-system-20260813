@@ -8,7 +8,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
 from app.config import settings
-from app.cv.detector import YOLODetector
+from app.cv.detector import DEIMv2Detector
 from app.cv.worker import CVWorker
 
 
@@ -27,13 +27,8 @@ class MultiCameraRunner:
                  detector: Any | None = None, worker_factory: Callable[..., Any] = CVWorker):
         self.camera_configs = list(camera_configs if camera_configs is not None else settings.cameras)
         self.max_workers = max(1, min(int(max_workers), 6))
-        model_cfg = settings.models.get("detector", {})
-        shared = detector or YOLODetector(
-            model_path=model_cfg.get("model_name", "yolo11n.pt"),
-            confidence_threshold=model_cfg.get("confidence_threshold", 0.4),
-            iou_threshold=model_cfg.get("iou_threshold", 0.45),
-            target_classes=model_cfg.get("target_classes", [0]),
-        )
+        model_cfg = settings.detector_config
+        shared = detector if detector is not None else DEIMv2Detector(**model_cfg)
         self.detector = LockedDetector(shared)
         self.worker_factory = worker_factory
 
@@ -43,7 +38,7 @@ class MultiCameraRunner:
 
         def execute(cfg: dict):
             worker = self.worker_factory(camera_id=cfg["camera_id"], source_uri=cfg.get("source_uri"),
-                                         detector=self.detector._detector)
+                                         detector=self.detector)
             return worker.run(max_frames=max_frames)
 
         with ThreadPoolExecutor(max_workers=min(self.max_workers, max(1, len(enabled)))) as pool:

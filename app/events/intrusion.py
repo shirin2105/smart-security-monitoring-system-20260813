@@ -99,7 +99,7 @@ class IntrusionEventEngine(BaseEventEngine):
                                     dwellSeconds=round(dwell_duration, 2),
                                     insideZone=True,
                                 ),
-                                modelVersion="yolo-v11n",
+                                modelVersion="deimv2-phase7a",
                                 ruleVersion="intrusion-rule-v1",
                                 policyVersion=1,
                                 artifact=artifact,

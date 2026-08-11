@@ -149,7 +149,7 @@ class CrowdEventEngine(BaseEventEngine):
                             personCount=current_count,
                             insideZone=True,
                         ),
-                        modelVersion="yolo-v11n",
+                        modelVersion="deimv2-phase7a",
                         ruleVersion="crowd-rule-v1",
                         policyVersion=1,
                         artifact=artifact,

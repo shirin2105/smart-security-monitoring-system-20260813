@@ -91,6 +91,7 @@ kaggle_pipeline/phase7b_video_dataset/*.avi
 
 # Scratch files
 temp-chat.txt
+.qa-tmp/
 
 # Docker
 docker-compose.override.yml
