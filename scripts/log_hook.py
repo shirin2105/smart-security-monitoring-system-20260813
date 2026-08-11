@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Shared AI hook logger — works with Claude Code, Gemini CLI, Codex, Cursor, Copilot.
+Shared AI hook logger — works with Claude Code, Gemini CLI, Codex, Cursor, Copilot, OpenCode.
 Reads JSON from stdin, normalizes to common format, appends to .ai-log/session.jsonl
 """
 import json
@@ -47,6 +47,8 @@ def detect_tool(data: dict) -> str:
             return "copilot"
     if "hook_event_name" in data:
         return "claude"
+    if data.get("tool") in ("opencode", "open-code"):
+        return "opencode"
     return "unknown"
 
 
@@ -140,6 +142,16 @@ def normalize(data: dict, tool: str) -> dict | None:
             "tool_args": data.get("toolArgs"),
         })
 
+    elif tool == "opencode":
+        base.update({
+            "prompt": data.get("prompt", "")[:1000],
+            "session_id": data.get("session_id") or data.get("sessionID", ""),
+            "message_id": data.get("message_id") or data.get("messageID", ""),
+            "tool_name": data.get("tool_name", ""),
+            "tool_input": data.get("tool_input"),
+            "tool_response": str(data.get("tool_response", ""))[:500],
+        })
+
     # Skip only true noise: no prompt AND no tool-specific payload (tool_input,
     # response_summary, tool_response, tool_args, files_context). Previously
     # this only checked `prompt`, which dropped Claude Bash/Edit events (their
@@ -181,7 +193,8 @@ def main():
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
     # Output valid JSON (required by some tools like Gemini)
-    print(json.dumps({"status": "logged"}))
+    if tool != "codex":
+        print(json.dumps({"status": "logged"}))
 
 
 if __name__ == "__main__":

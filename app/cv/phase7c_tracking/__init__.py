@@ -1,6 +1,7 @@
 """Threshold-free motion and ownership contracts for tracked luggage."""
 
 from .jsonl_loader import TrackPoint, load_track_jsonl
+from .event_contract import AbandonedObjectCandidate
 from .owner_association import OwnerAssociation, OwnerAssociationResult, OwnerAssociator
 from .phase7c_types import ObjectMotionState as LuggageMotionState
 from .phase7c_types import OwnerAssociationState
@@ -15,6 +16,7 @@ from .trajectory_loader import load_trajectories
 
 __all__ = [
     "ObjectMotionState",
+    "AbandonedObjectCandidate",
     "OwnerAssociation",
     "OwnerAssociationResult",
     "OwnerAssociator",

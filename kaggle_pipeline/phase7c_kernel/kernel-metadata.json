@@ -1,0 +1,17 @@
+{
+  "id": "shirin21st/deimv2-phase-7c-v1-abandoned-reasoning",
+  "title": "DEIMv2 Phase 7C v1 Abandoned Reasoning",
+  "code_file": "phase7c_kaggle_v1.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": "true",
+  "enable_gpu": "false",
+  "enable_internet": "true",
+  "dataset_sources": [
+    "shirin21st/phase7b-aboda-tracking-video"
+  ],
+  "competition_sources": [],
+  "kernel_sources": [
+    "shirin21st/deimv2-phase-7b-1-generic-luggage"
+  ]
+}
