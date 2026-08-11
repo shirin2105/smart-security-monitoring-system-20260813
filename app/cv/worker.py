@@ -1,27 +1,25 @@
-import time
-from typing import Optional, List
-from app.config import settings
-from app.sources.mp4_source import MP4VideoSource
-from app.sources.camera_health import CameraHealthMonitor
-from app.cv.frame_sampler import FrameSampler
-from app.cv.detector import YOLODetector
-from app.cv.tracker import MultiObjectTracker
-from app.cv.track_store import TrackStore
-from app.cv.static_region_detector import StaticRegionDetector
-from app.events.intrusion import IntrusionEventEngine
-from app.events.crowd import CrowdEventEngine
-from app.events.abandoned_object import AbandonedObjectEngine
-from app.publisher.local_json_publisher import LocalJsonEventPublisher
-from app.publisher.base import EventPublisher
 from app.common.schemas import EventCandidate
+from app.config import settings
+from app.cv.detector import YOLODetector
+from app.cv.frame_sampler import FrameSampler
+from app.cv.static_region_detector import StaticRegionDetector
+from app.cv.track_store import TrackStore
+from app.cv.tracker import MultiObjectTracker
+from app.events.abandoned_object import AbandonedObjectEngine
+from app.events.crowd import CrowdEventEngine
+from app.events.intrusion import IntrusionEventEngine
+from app.publisher.base import EventPublisher
+from app.publisher.http_publisher import HttpEventPublisher
+from app.sources.camera_health import CameraHealthMonitor
+from app.sources.mp4_source import MP4VideoSource
 from app.vlm.region_validator import create_region_validator
 
 
 class CVWorker:
-    def __init__(self, camera_id: str, source_uri: Optional[str] = None, publisher: Optional[EventPublisher] = None,
-                 detector: Optional[YOLODetector] = None):
+    def __init__(self, camera_id: str, source_uri: str | None = None, publisher: EventPublisher | None = None,
+                 detector: YOLODetector | None = None):
         self.camera_id = camera_id
-        
+
         # Load configs
         cameras_cfg = settings.cameras
         cam_info = next((c for c in cameras_cfg if c["camera_id"] == camera_id), None)
@@ -32,9 +30,9 @@ class CVWorker:
                 "source_uri": source_uri or "./tests/clips/intrusion_positive.mp4",
                 "inference_fps": 5.0,
             }
-        
+
         uri = source_uri or cam_info.get("source_uri", "./tests/clips/intrusion_positive.mp4")
-        
+
         self.source = MP4VideoSource(
             camera_id=camera_id,
             source_uri=uri,
@@ -43,7 +41,7 @@ class CVWorker:
         )
         self.health_monitor = CameraHealthMonitor(camera_id=camera_id)
         self.frame_sampler = FrameSampler(inference_fps=cam_info.get("inference_fps", 5.0))
-        
+
         models_cfg = settings.models.get("detector", {})
         self.detector = detector or YOLODetector(
             model_path=models_cfg.get("model_name", "yolo11n.pt"),
@@ -55,7 +53,7 @@ class CVWorker:
         self.track_store = TrackStore(camera_id=camera_id)
         abandoned_rules = settings.event_rules.get("abandoned_object", {})
         self.static_region_detector = StaticRegionDetector(camera_id, abandoned_rules.get("static_region", {}))
-        
+
         # All CV Event Engines Registered
         vlm_cfg = abandoned_rules.get("vlm", {})
         validator = create_region_validator(vlm_cfg.get("mode", "disabled"),
@@ -80,10 +78,12 @@ class CVWorker:
             ),
         ]
         self.abandoned_engine = self.engines[-1]
-        self.publisher = publisher or LocalJsonEventPublisher()
+        if publisher is None:
+            publisher = HttpEventPublisher(endpoint_url=settings.event_ingest_url)
+        self.publisher = publisher
 
-    def run(self, max_frames: Optional[int] = None) -> List[EventCandidate]:
-        generated_candidates: List[EventCandidate] = []
+    def run(self, max_frames: int | None = None) -> list[EventCandidate]:
+        generated_candidates: list[EventCandidate] = []
         processed_count = 0
 
         try:

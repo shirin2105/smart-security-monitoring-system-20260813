@@ -1,14 +1,15 @@
-from typing import List, Dict
-from app.common.schemas import DetectionResult, TrackResult, FrameData
+
+from app.common.schemas import DetectionResult, FrameData, TrackResult
 
 try:
-    from ultralytics import YOLO
+    import ultralytics  # noqa: F401  (availability flag for optional integration)
+
     ULTRALYTICS_AVAILABLE = True
 except ImportError:
     ULTRALYTICS_AVAILABLE = False
 
 
-def compute_iou(box1: List[float], box2: List[float]) -> float:
+def compute_iou(box1: list[float], box2: list[float]) -> float:
     x1 = max(box1[0], box2[0])
     y1 = max(box1[1], box2[1])
     x2 = min(box1[2], box2[2])
@@ -25,22 +26,24 @@ def compute_iou(box1: List[float], box2: List[float]) -> float:
 
 
 class MultiObjectTracker:
-    def __init__(self, camera_id: str):
+    def __init__(self, camera_id: str, max_missed_frames: int = 10):
         self.camera_id = camera_id
         self.next_track_id: int = 1
-        self.active_tracks: Dict[int, List[float]] = {}  # track_id -> bbox
-        self.track_first_seen: Dict[int, str] = {}
+        self.active_tracks: dict[int, list[float]] = {}  # track_id -> bbox
+        self.track_first_seen: dict[int, str] = {}
+        self.max_missed_frames = max_missed_frames
+        self._missed_frames: dict[int, int] = {}
 
-    def track(self, detections: List[DetectionResult], frame_data: FrameData) -> List[TrackResult]:
+    def track(self, detections: list[DetectionResult], frame_data: FrameData) -> list[TrackResult]:
         timestamp = frame_data.captured_at
-        results: List[TrackResult] = []
-        updated_tracks: Dict[int, List[float]] = {}
+        results: list[TrackResult] = []
+        updated_tracks: dict[int, list[float]] = {}
 
         for det in detections:
             best_iou = 0.0
             best_id = None
 
-            # Simple IOU matching across consecutive frames
+            # Simple IOU matching against tracks seen in previous frames
             for track_id, last_bbox in self.active_tracks.items():
                 iou = compute_iou(det.bbox, last_bbox)
                 if iou > 0.3 and iou > best_iou:
@@ -66,6 +69,20 @@ class MultiObjectTracker:
                     last_seen_at=timestamp,
                 )
             )
+
+        # Track IDs persist across frames: tracks not matched this frame are
+        # kept so the same object keeps its ID (dwell/temporal state depends
+        # on stable IDs). Stale tracks are dropped after MAX_MISSED_FRAMES.
+        for track_id, last_bbox in self.active_tracks.items():
+            if track_id not in updated_tracks:
+                missed = self._missed_frames.get(track_id, 0) + 1
+                if missed <= self.max_missed_frames:
+                    self._missed_frames[track_id] = missed
+                    updated_tracks[track_id] = last_bbox
+
+        # Clear missed counters for tracks matched this frame
+        for track_id in updated_tracks:
+            self._missed_frames.pop(track_id, None)
 
         self.active_tracks = updated_tracks
         return results

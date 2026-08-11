@@ -19,6 +19,9 @@ class AppConfig(BaseSettings):
     llm_temperature: float = 0.0
     llm_enabled: bool = True
 
+    # Event ingest: nơi CV worker gửi EventCandidate (back-end API)
+    event_ingest_url: str = "http://127.0.0.1:8000/api/v1/events/ingest"
+
     def load_yaml(self, filename: str) -> dict[str, Any]:
         path = self.config_dir / filename
         if not path.exists():

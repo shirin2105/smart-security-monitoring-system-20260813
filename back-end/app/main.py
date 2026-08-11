@@ -1,13 +1,14 @@
 import asyncio
 import logging
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api import alerts, auth, cameras, events_ingest
 from app.db.database import init_db_and_seed
-from app.api import auth, cameras, alerts
-from app.services.websocket import manager
 from app.services.simulator import background_event_simulator
+from app.services.websocket import manager
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -16,7 +17,7 @@ async def lifespan(app: FastAPI):
     # Initialize DB & Seed Data
     logger.info("Initializing Database & Seed Data...")
     init_db_and_seed()
-    
+
     # Start Background Simulation Task
     sim_task = asyncio.create_task(background_event_simulator(interval_seconds=30))
     logger.info("Application setup complete.")
@@ -57,6 +58,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(cameras.router)
 app.include_router(alerts.router)
+app.include_router(events_ingest.router)
 
 @app.get("/health")
 def health_check():

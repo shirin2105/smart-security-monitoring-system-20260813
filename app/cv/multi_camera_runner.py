@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import threading
+from collections.abc import Callable, Iterable
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Any, Callable, Iterable
+from typing import Any
 
 from app.config import settings
 from app.cv.detector import YOLODetector
@@ -42,7 +43,7 @@ class MultiCameraRunner:
 
         def execute(cfg: dict):
             worker = self.worker_factory(camera_id=cfg["camera_id"], source_uri=cfg.get("source_uri"),
-                                         detector=self.detector)
+                                         detector=self.detector._detector)
             return worker.run(max_frames=max_frames)
 
         with ThreadPoolExecutor(max_workers=min(self.max_workers, max(1, len(enabled)))) as pool:
