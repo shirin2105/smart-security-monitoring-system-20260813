@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Maximize2, ShieldAlert, Video, VideoOff } from 'lucide-react';
 
-import { Camera, EVENT_TYPE_LABEL, SecurityEvent } from '../../domain/types';
+import { Camera, SecurityEvent } from '../../domain/types';
 import { EmptyState } from '../common/States';
 import { HealthDot, SourceBadge } from '../common/Badges';
 import { CameraDetailModal } from './CameraDetailModal';
@@ -109,23 +109,6 @@ export function CameraGrid({ cameras, events }: CameraGridProps) {
                     <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] opacity-25" />
                     <div className="animate-radar pointer-events-none absolute inset-x-0 h-1 bg-blue-500/40" />
                   </>
-                )}
-
-                {/* Khung phát hiện */}
-                {active && !offline && (
-                  <div
-                    className="animate-bbox pointer-events-none absolute flex items-start border-2 border-red-500 bg-red-500/20 p-1 rounded-sm"
-                    style={{
-                      left: `${((camera.id * 15) % 50) + 10}%`,
-                      top: `${((camera.id * 20) % 40) + 15}%`,
-                      width: '35%',
-                      height: '45%',
-                    }}
-                  >
-                    <span className="rounded bg-red-600 px-1 font-mono text-[9px] font-bold uppercase tracking-wider text-white shadow-sm">
-                      {EVENT_TYPE_LABEL[active.eventType]}
-                    </span>
-                  </div>
                 )}
 
                 {/* HUD dưới */}
