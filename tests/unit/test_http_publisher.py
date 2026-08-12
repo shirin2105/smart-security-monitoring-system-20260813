@@ -128,3 +128,19 @@ def test_http_publisher_fails_closed_without_token(monkeypatch):
 
     assert publisher.publish(EventCandidate.model_validate(_event_payload())) is False
     client_factory.assert_not_called()
+
+
+def test_http_publisher_exposes_backend_receipt_without_changing_boolean_contract(monkeypatch):
+    client = MagicMock()
+    client.__enter__.return_value = client
+    response = Mock(status_code=201)
+    response.json.return_value = {"status": "ACCEPTED", "incident": {"id": 42}}
+    client.post.return_value = response
+    monkeypatch.setattr("app.publisher.http_publisher.httpx.Client", Mock(return_value=client))
+    publisher = HttpEventPublisher("http://backend/ingest", bearer_token="secret")
+    candidate = EventCandidate.model_validate(_event_payload())
+
+    assert publisher.publish(candidate) is True
+    assert publisher.last_receipt.candidate_id == candidate.candidateId
+    assert publisher.last_receipt.status == "ACCEPTED"
+    assert publisher.last_receipt.incident == {"id": 42}

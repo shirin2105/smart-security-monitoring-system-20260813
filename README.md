@@ -165,3 +165,24 @@ Sau khi chạy thành công `docker compose up --build -d`, các dịch vụ s�
 | **Swagger API Documentation** | [http://localhost:8000/docs](http://localhost:8000/docs) | Tài liệu API tương tác tự động |
 | **ReDoc API Documentation** | [http://localhost:8000/redoc](http://localhost:8000/redoc) | Giao diện xem tài liệu API ReDoc |
 | **PostgreSQL Database** | `localhost:5432` | DB: `security_db` \| User: `postgres` \| Pass: `postgres` |
+
+## Demo video → cảnh báo Web
+
+Sau khi backend và frontend đang chạy, đặt cùng một `EVENT_INGEST_TOKEN` không rỗng
+cho backend và terminal hiện tại. Lệnh dưới đây dùng DEIMv2 thật, clip mẫu cố định,
+kết nối `/ws/alerts` trước khi chạy CV, rồi kiểm tra cùng incident qua WebSocket và REST:
+
+```powershell
+$env:EVENT_INGEST_TOKEN = '<same-secret-as-backend>'
+python -m app.cv.demo_cli
+```
+
+Demo không khởi động hoặc dừng service, không in token, và fail sớm nếu service,
+video, source/checkpoint/backbone DEIMv2 hoặc checksum chưa sẵn sàng. Config demo
+ép mọi VLM/LLM validator về `disabled`; sau khi backend trả duplicate, runner tiếp tục
+quan sát WebSocket trong 2 giây (cấu hình được, không cho phép thấp hơn) để bắt rebroadcast trễ.
+Mỗi lần chạy có namespace ngẫu nhiên cho `candidateId`, nên lần chạy mới tạo incident
+mới trong khi publish lặp ngay trong cùng lần chạy vẫn dùng đúng ID để kiểm tra idempotency.
+CV thật chạy trong process `spawn` riêng (an toàn trên Windows). Timeout sẽ phát tín
+hiệu dừng, chờ grace period, rồi terminate và join dứt điểm trước khi báo lỗi; vì vậy
+không còn child nào có thể publish cảnh báo sau khi CLI đã trả failure.
