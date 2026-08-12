@@ -207,3 +207,17 @@ def test_ingest_rejects_candidate_id_longer_than_database_column():
         json=candidate_payload("x" * 256),
     )
     assert response.status_code == 422
+
+
+def test_ingest_rejects_unbounded_or_malformed_assessment_metadata():
+    base = candidate_payload("evt-bounds")
+    cases = [
+        {**base, "confidence": float("inf")},
+        {**base, "zoneId": "x" * 101},
+        {**base, "cameraId": "../../secret"},
+        {**base, "firstSeenAt": "2026-08-11T09:00:00Z"},
+        {**base, "modelVersion": "bad version with spaces"},
+    ]
+    for payload in cases:
+        response = client.post("/api/v1/events/ingest", headers=INGEST_HEADERS, json=payload)
+        assert response.status_code == 422

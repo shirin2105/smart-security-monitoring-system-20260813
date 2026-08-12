@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
@@ -46,6 +46,39 @@ class Incident(Base):
 
     camera = relationship("Camera", back_populates="incidents")
     audit_logs = relationship("AuditLog", back_populates="incident")
+    assessment_jobs = relationship("AssessmentJob", back_populates="incident")
+    assessments = relationship("IncidentAssessment", back_populates="incident")
+
+class AssessmentJob(Base):
+    __tablename__ = "assessment_jobs"
+    __table_args__ = (UniqueConstraint("incident_id", name="uq_assessment_jobs_incident"),)
+
+    id = Column(Integer, primary_key=True)
+    incident_id = Column(Integer, ForeignKey("incidents.id"), nullable=False, index=True)
+    status = Column(String(20), nullable=False, default="READY", index=True)
+    snapshot_json = Column(Text, nullable=False)
+    provider_attempts = Column(Integer, nullable=False, default=0)
+    lease_token = Column(String(64), nullable=True)
+    lease_expires_at = Column(DateTime, nullable=True)
+    available_at = Column(DateTime, nullable=False, default=utc_now)
+    last_error = Column(String(255), nullable=True)
+    created_at = Column(DateTime, nullable=False, default=utc_now)
+    incident = relationship("Incident", back_populates="assessment_jobs")
+
+class IncidentAssessment(Base):
+    __tablename__ = "incident_assessments"
+    __table_args__ = (UniqueConstraint("incident_id", "version", name="uq_incident_assessment_version"),)
+
+    id = Column(Integer, primary_key=True)
+    incident_id = Column(Integer, ForeignKey("incidents.id"), nullable=False, index=True)
+    version = Column(Integer, nullable=False, default=1)
+    outcome = Column(String(30), nullable=False)
+    summary = Column(Text, nullable=False)
+    rationale = Column(Text, nullable=False)
+    provider = Column(String(50), nullable=False)
+    is_fallback = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime, nullable=False, default=utc_now)
+    incident = relationship("Incident", back_populates="assessments")
 
 class AuditLog(Base):
     __tablename__ = "audit_logs"
