@@ -2,7 +2,7 @@ import logging
 import os
 
 import bcrypt
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import sessionmaker
 
 from app.db.models import Base, Camera, User
@@ -55,6 +55,7 @@ def get_db():
 
 def init_db_and_seed():
     Base.metadata.create_all(bind=engine)
+    _ensure_incident_ingest_columns()
     db = SessionLocal()
     try:
         # Seed users if empty
@@ -99,3 +100,16 @@ def init_db_and_seed():
         db.rollback()
     finally:
         db.close()
+
+
+def _ensure_incident_ingest_columns():
+    """Keep databases created before authenticated ingest backward compatible."""
+    columns = {column["name"] for column in inspect(engine).get_columns("incidents")}
+    with engine.begin() as connection:
+        if "candidate_id" not in columns:
+            connection.execute(text("ALTER TABLE incidents ADD COLUMN candidate_id VARCHAR(255)"))
+        if "payload_hash" not in columns:
+            connection.execute(text("ALTER TABLE incidents ADD COLUMN payload_hash VARCHAR(64)"))
+        connection.execute(
+            text("CREATE UNIQUE INDEX IF NOT EXISTS ix_incidents_candidate_id ON incidents (candidate_id)")
+        )

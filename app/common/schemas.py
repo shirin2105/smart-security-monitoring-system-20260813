@@ -47,6 +47,7 @@ class VLMValidationResult(BaseModel):
     reason: str | None = None
 
 class ObservationData(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
     personCount: int = 0
     dwellSeconds: float | None = None
     insideZone: bool = False
@@ -55,6 +56,7 @@ class ObservationData(BaseModel):
 
 
 class ArtifactData(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
     available: bool = False
     contentType: str = "image/jpeg"
     redactionStatus: RedactionStatus = RedactionStatus.PENDING
@@ -62,7 +64,8 @@ class ArtifactData(BaseModel):
 
 
 class EventCandidate(BaseModel):
-    candidateId: str
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    candidateId: str = Field(min_length=1, max_length=255)
     sourceEngine: SourceEngine = SourceEngine.CV
     cameraId: str
     zoneId: str | None = None
