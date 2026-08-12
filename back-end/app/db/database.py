@@ -85,7 +85,7 @@ def init_db_and_seed():
         # Seed cameras if empty
         if db.query(Camera).count() == 0:
             cameras_seed = [
-                Camera(id=1, name="Camera Cổng Chính", location="Cổng A - Tầng 1", stream_url="/media/walking_people.mp4", status="online", source="CV"),
+                Camera(id=1, name="Camera Cổng Chính", location="Cổng A - Tầng 1", stream_url="/media/walking_people_browser.webm", status="online", source="CV"),
                 Camera(id=2, name="Camera Sảnh Chờ", location="Sảnh Tòa Nhà - Tầng 1", stream_url="/media/people_detection.mp4", status="online", source="CV"),
                 Camera(id=3, name="Camera Hàng Rào Tây", location="Khu Vực Hàng Rào - Phía Tây", stream_url="/media/pets2006_3.mp4", status="warning", source="SIMULATOR"),
                 Camera(id=4, name="Camera Phòng Server", location="Khai Thác Kỹ Thuật - Tầng Hầm", stream_url="/media/aban3.mp4", status="online", source="SIMULATOR"),
