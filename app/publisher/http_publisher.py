@@ -1,8 +1,16 @@
 import time
 import uuid
 import httpx
+from dataclasses import dataclass
 from app.common.schemas import EventCandidate
 from app.publisher.base import EventPublisher
+
+
+@dataclass(frozen=True)
+class PublishReceipt:
+    candidate_id: str
+    status: str
+    incident: dict | None
 
 
 class HttpEventPublisher(EventPublisher):
@@ -17,8 +25,10 @@ class HttpEventPublisher(EventPublisher):
         self.bearer_token = bearer_token
         self.timeout_seconds = timeout_seconds
         self.max_retries = max_retries
+        self.last_receipt: PublishReceipt | None = None
 
     def publish(self, candidate: EventCandidate) -> bool:
+        self.last_receipt = None
         request_id = str(uuid.uuid4())
         if not self.bearer_token.strip():
             print(
@@ -43,6 +53,15 @@ class HttpEventPublisher(EventPublisher):
                     response = client.post(self.endpoint_url, json=payload, headers=headers)
 
                 if 200 <= response.status_code < 300:
+                    try:
+                        body = response.json()
+                    except (ValueError, TypeError):
+                        body = {}
+                    self.last_receipt = PublishReceipt(
+                        candidate.candidateId,
+                        str(body.get("status", "ACCEPTED")),
+                        body.get("incident"),
+                    )
                     print(
                         f"[HttpPublisher] Published candidateId={candidate.candidateId} "
                         f"(request_id={request_id}, status={response.status_code})"

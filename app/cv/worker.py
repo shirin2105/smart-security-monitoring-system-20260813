@@ -1,5 +1,7 @@
 from collections.abc import Callable
 from typing import Any
+import threading
+import time
 
 from app.common.schemas import EventCandidate
 from app.config import settings
@@ -16,13 +18,17 @@ from app.publisher.http_publisher import HttpEventPublisher
 from app.sources.camera_health import CameraHealthMonitor
 from app.sources.mp4_source import MP4VideoSource
 from app.vlm.region_validator import create_region_validator
+from app.vlm.region_validator import RegionValidator
 
 
 class CVWorker:
     def __init__(self, camera_id: str, source_uri: str | None = None, publisher: EventPublisher | None = None,
                  detector: DEIMv2Detector | None = None, tracker: Any | None = None,
-                 detector_factory: Callable[[], DEIMv2Detector] | None = None):
+                 detector_factory: Callable[[], DEIMv2Detector] | None = None,
+                 region_validator: RegionValidator | None = None,
+                 candidate_id_namespace: Callable[[str], str] | None = None):
         self.camera_id = camera_id
+        self.candidate_id_namespace = candidate_id_namespace or (lambda value: value)
 
         # Load configs
         cameras_cfg = settings.cameras
@@ -58,9 +64,9 @@ class CVWorker:
 
         # All CV Event Engines Registered
         vlm_cfg = abandoned_rules.get("vlm", {})
-        validator = create_region_validator(vlm_cfg.get("mode", "disabled"),
-                                            model=vlm_cfg.get("model", "google/gemma-3-4b-it"),
-                                            timeout_seconds=vlm_cfg.get("timeout_seconds", 8.0))
+        validator = region_validator or create_region_validator(
+            vlm_cfg.get("mode", "disabled"), model=vlm_cfg.get("model", "google/gemma-3-4b-it"),
+            timeout_seconds=vlm_cfg.get("timeout_seconds", 8.0))
         self.engines = [
             IntrusionEventEngine(
                 camera_id=camera_id,
@@ -89,7 +95,8 @@ class CVWorker:
             )
         self.publisher = publisher
 
-    def run(self, max_frames: int | None = None) -> list[EventCandidate]:
+    def run(self, max_frames: int | None = None, stop_event: threading.Event | None = None,
+            deadline: float | None = None) -> list[EventCandidate]:
         generated_candidates: list[EventCandidate] = []
         processed_count = 0
 
@@ -99,6 +106,8 @@ class CVWorker:
             if self.detector is None:
                 self.detector = self.detector_factory()
             for frame_data in self.source.read_frames():
+                if (stop_event is not None and stop_event.is_set()) or (deadline is not None and time.monotonic() >= deadline):
+                    break
                 self.health_monitor.update_frame_time(frame_data.captured_at)
 
                 if not self.frame_sampler.should_process(frame_data):
@@ -122,6 +131,11 @@ class CVWorker:
                 for engine in self.engines:
                     candidates = engine.evaluate(active_tracks, frame_data)
                     for candidate in candidates:
+                        if (stop_event is not None and stop_event.is_set()) or (deadline is not None and time.monotonic() >= deadline):
+                            break
+                        namespaced_id = self.candidate_id_namespace(candidate.candidateId)
+                        if namespaced_id != candidate.candidateId:
+                            candidate = candidate.model_copy(update={"candidateId": namespaced_id})
                         self.publisher.publish(candidate)
                         generated_candidates.append(candidate)
 

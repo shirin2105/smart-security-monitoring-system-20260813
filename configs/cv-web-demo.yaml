@@ -1,0 +1,16 @@
+camera_id: cam_01
+backend_url: http://127.0.0.1:8000
+frontend_url: http://127.0.0.1:5173
+websocket_url: ws://127.0.0.1:8000/ws/alerts
+sample_path: tests/clips/walking_people.mp4
+max_frames: 3
+timeout_seconds: 60
+duplicate_observation_seconds: 2
+inference_fps: 5
+tracker:
+  track_activation_threshold: 0.05
+  high_conf_det_threshold: 0.05
+  minimum_consecutive_frames: 1
+validation:
+  region_validator: disabled
+  external_llm: false
