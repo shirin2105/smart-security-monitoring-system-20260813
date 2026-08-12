@@ -1,0 +1,2 @@
+artifacts/phase7a-results/outputs/phase7a_deimv2_s_person_luggage/best.pth filter=lfs diff=lfs merge=lfs -text
+third_party/deimv2/ckpts/vitt_distill.pt filter=lfs diff=lfs merge=lfs -text
