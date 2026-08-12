@@ -5,11 +5,12 @@
 
 import hmac
 import os
+from datetime import datetime
 from typing import Literal
 
 from app.services.ingest import CandidateReferenceError, IdempotencyConflict, ingest_event_candidate
 from fastapi import APIRouter, Header, HTTPException, Response
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 router = APIRouter(prefix="/api/v1/events", tags=["Events Ingest"])
 
@@ -17,30 +18,30 @@ router = APIRouter(prefix="/api/v1/events", tags=["Events Ingest"])
 class ObservationData(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    personCount: int = 0
-    dwellSeconds: float | None = None
+    personCount: int = Field(default=0, ge=0, le=100000)
+    dwellSeconds: float | None = Field(default=None, ge=0, le=86400, allow_inf_nan=False)
     insideZone: bool = False
-    stationarySeconds: float | None = None
-    ownerAbsentSeconds: float | None = None
+    stationarySeconds: float | None = Field(default=None, ge=0, le=86400, allow_inf_nan=False)
+    ownerAbsentSeconds: float | None = Field(default=None, ge=0, le=86400, allow_inf_nan=False)
 
 
 class ArtifactData(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     available: bool = False
-    contentType: str = "image/jpeg"
+    contentType: str = Field(default="image/jpeg", max_length=100)
     redactionStatus: Literal["PENDING", "COMPLETE", "FAILED"] = "PENDING"
-    uri: str | None = None
+    uri: str | None = Field(default=None, max_length=2048)
 
 
 class EventCandidateIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    candidateId: str = Field(min_length=1, max_length=255)
+    candidateId: str = Field(min_length=1, max_length=255, pattern=r"^[A-Za-z0-9][A-Za-z0-9._:-]*$")
     sourceEngine: Literal["CV", "VLM"] = "CV"
-    cameraId: str
-    zoneId: str | None = None
-    sourceType: str = "SIMULATED"
+    cameraId: str = Field(min_length=1, max_length=50, pattern=r"^cam_[0-9]+$")
+    zoneId: str | None = Field(default=None, max_length=100, pattern=r"^[A-Za-z0-9][A-Za-z0-9._:-]*$")
+    sourceType: str = Field(default="SIMULATED", min_length=1, max_length=30, pattern=r"^[A-Za-z0-9_-]+$")
     eventType: Literal[
         "ZONE_INTRUSION",
         "CROWD_THRESHOLD",
@@ -49,17 +50,26 @@ class EventCandidateIn(BaseModel):
         "COVERAGE_DEGRADED",
     ]
     eventDetected: bool = True
-    detectedAt: str
-    firstSeenAt: str
-    lastSeenAt: str
-    confidence: float
-    trackCount: int = 1
-    trackIds: list[int] = Field(default_factory=list)
+    detectedAt: datetime
+    firstSeenAt: datetime
+    lastSeenAt: datetime
+    confidence: float = Field(ge=0, le=1, allow_inf_nan=False)
+    trackCount: int = Field(default=1, ge=0, le=100000)
+    trackIds: list[int] = Field(default_factory=list, max_length=10000)
     observations: ObservationData
-    modelVersion: str = "deimv2-phase7a"
-    ruleVersion: str = "intrusion-rule-v1"
-    policyVersion: int = 1
+    modelVersion: str = Field(default="deimv2-phase7a", min_length=1, max_length=100, pattern=r"^[A-Za-z0-9._:-]+$")
+    ruleVersion: str = Field(default="intrusion-rule-v1", min_length=1, max_length=100, pattern=r"^[A-Za-z0-9._:-]+$")
+    policyVersion: int = Field(default=1, ge=1, le=1000000)
     artifact: ArtifactData = Field(default_factory=ArtifactData)
+
+    @model_validator(mode="after")
+    def validate_timestamps(self):
+        if any(value.tzinfo is None or value.utcoffset() is None for value in
+               (self.firstSeenAt, self.detectedAt, self.lastSeenAt)):
+            raise ValueError("timestamps must include a timezone")
+        if not (self.firstSeenAt <= self.detectedAt <= self.lastSeenAt):
+            raise ValueError("timestamps must satisfy firstSeenAt <= detectedAt <= lastSeenAt")
+        return self
 
 
 def _authenticate(authorization: str | None) -> None:

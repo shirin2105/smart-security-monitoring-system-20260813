@@ -5,7 +5,7 @@ import json
 from datetime import UTC, datetime
 
 from app.db.database import SessionLocal
-from app.db.models import Camera, Incident
+from app.db.models import AssessmentJob, Camera, Incident
 from app.services.websocket import manager
 from sqlalchemy.exc import IntegrityError
 
@@ -61,6 +61,28 @@ def _payload_hash(payload: dict) -> str:
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
+def assessment_snapshot(payload: dict, camera_id: int) -> dict:
+    """Return only policy-approved, non-identifying event metadata."""
+    observations = payload["observations"]
+    return {
+        "cameraId": camera_id,
+        "zoneId": payload.get("zoneId"),
+        "eventType": payload["eventType"],
+        "detectedAt": payload["detectedAt"],
+        "firstSeenAt": payload["firstSeenAt"],
+        "lastSeenAt": payload["lastSeenAt"],
+        "confidence": payload["confidence"],
+        "trackCount": payload["trackCount"],
+        "observations": {
+            key: observations.get(key)
+            for key in ("personCount", "dwellSeconds", "insideZone", "stationarySeconds", "ownerAbsentSeconds")
+        },
+        "modelVersion": payload["modelVersion"],
+        "ruleVersion": payload["ruleVersion"],
+        "policyVersion": payload["policyVersion"],
+    }
+
+
 def _incident_payload(incident: Incident, camera_name: str) -> dict:
     return {
         "id": incident.id,
@@ -100,6 +122,13 @@ async def ingest_event_candidate(payload: dict) -> dict:
             created_at=datetime.now(UTC),
         )
         db.add(incident)
+        db.flush()
+        db.add(AssessmentJob(
+            incident_id=incident.id,
+            status="READY",
+            snapshot_json=json.dumps(assessment_snapshot(payload, camera_id), separators=(",", ":")),
+            available_at=datetime.now(UTC),
+        ))
         try:
             db.commit()
         except IntegrityError:
