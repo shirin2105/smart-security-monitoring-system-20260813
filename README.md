@@ -149,6 +149,13 @@ docker compose down
 
 ## 🌐 Các Đường Dẫn Truy Cập (Access URLs)
 
+### CV event ingest credential
+
+Before starting the backend, generate a random token with at least 32 bytes using your
+deployment secret manager, then set `EVENT_INGEST_TOKEN` to the same value for the CV
+producer and backend. Keep the value outside source control; `.env.example` intentionally
+leaves it blank, and Docker Compose refuses to start the backend without it.
+
 Sau khi chạy thành công `docker compose up --build -d`, các dịch vụ sẽ sẵn sàng tại các đường dẫn sau:
 
 | Dịch vụ | Địa chỉ / URL | Mô tả |

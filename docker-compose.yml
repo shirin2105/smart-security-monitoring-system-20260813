@@ -29,6 +29,7 @@ services:
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/security_db
       - JWT_SECRET=super-secret-security-monitoring-key-2026
+      - EVENT_INGEST_TOKEN=${EVENT_INGEST_TOKEN:?EVENT_INGEST_TOKEN must be set and non-empty}
     depends_on:
       postgres:
         condition: service_healthy

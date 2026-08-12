@@ -25,6 +25,9 @@ class AppConfig(BaseSettings):
 
     # Event ingest: nơi CV worker gửi EventCandidate (back-end API)
     event_ingest_url: str = "http://127.0.0.1:8000/api/v1/events/ingest"
+    event_ingest_token: str = ""
+    event_ingest_timeout_seconds: float = 5.0
+    event_ingest_max_attempts: int = 3
 
     def load_yaml(self, filename: str) -> dict[str, Any]:
         path = self.config_dir / filename

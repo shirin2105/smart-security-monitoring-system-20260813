@@ -81,7 +81,12 @@ class CVWorker:
         ]
         self.abandoned_engine = self.engines[-1]
         if publisher is None:
-            publisher = HttpEventPublisher(endpoint_url=settings.event_ingest_url)
+            publisher = HttpEventPublisher(
+                endpoint_url=settings.event_ingest_url,
+                bearer_token=settings.event_ingest_token,
+                timeout_seconds=settings.event_ingest_timeout_seconds,
+                max_retries=settings.event_ingest_max_attempts,
+            )
         self.publisher = publisher
 
     def run(self, max_frames: int | None = None) -> list[EventCandidate]:

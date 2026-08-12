@@ -1,4 +1,5 @@
 import pytest
+from pydantic import ValidationError
 from app.common.schemas import EventCandidate, ObservationData, ArtifactData
 from app.common.enums import EventType, SourceEngine, RedactionStatus
 from app.common.time_utils import utc_now_iso
@@ -33,3 +34,6 @@ def test_event_candidate_schema_validation():
     assert candidate.eventType == EventType.ZONE_INTRUSION
     assert candidate.observations.dwellSeconds == 3.5
     assert candidate.artifact.redactionStatus == RedactionStatus.COMPLETE
+
+    with pytest.raises(ValidationError):
+        candidate.confidence = 0.1

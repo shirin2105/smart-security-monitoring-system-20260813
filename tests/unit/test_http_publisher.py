@@ -1,4 +1,7 @@
 import uuid
+from unittest.mock import MagicMock, Mock
+
+import httpx
 
 import pytest
 from fastapi import FastAPI
@@ -9,6 +12,8 @@ from app.main import app, create_app
 from app.services.intake import PersistedIntake
 from app.common.time_utils import utc_now_iso
 from tests.unit.test_llm_adapter import _make_adapter
+from app.common.schemas import EventCandidate
+from app.publisher.http_publisher import HttpEventPublisher
 
 
 def test_global_app_import_remains_compatible():
@@ -75,3 +80,51 @@ def test_fastapi_event_candidate_ingestion_and_idempotency(tmp_path):
     assert first.json()["status"] == "ACCEPTED"
     assert second.status_code == 201
     assert second.json()["status"] == "DUPLICATE_IGNORED"
+
+
+@pytest.mark.parametrize("status_code", [400, 401, 403, 422])
+def test_http_publisher_does_not_retry_permanent_client_errors(monkeypatch, status_code):
+    client = MagicMock()
+    client.__enter__.return_value = client
+    client.post.return_value.status_code = status_code
+    monkeypatch.setattr("app.publisher.http_publisher.httpx.Client", Mock(return_value=client))
+    publisher = HttpEventPublisher("http://backend/ingest", bearer_token="secret", max_retries=3)
+
+    assert publisher.publish(EventCandidate.model_validate(_event_payload())) is False
+    assert client.post.call_count == 1
+    assert client.post.call_args.kwargs["headers"]["Authorization"] == "Bearer secret"
+
+
+@pytest.mark.parametrize("status_code", [408, 429, 500, 503])
+def test_http_publisher_retries_transient_statuses(monkeypatch, status_code):
+    client = MagicMock()
+    client.__enter__.return_value = client
+    client.post.side_effect = [Mock(status_code=status_code), Mock(status_code=201)]
+    monkeypatch.setattr("app.publisher.http_publisher.httpx.Client", Mock(return_value=client))
+    monkeypatch.setattr("app.publisher.http_publisher.time.sleep", Mock())
+    publisher = HttpEventPublisher("http://backend/ingest", bearer_token="secret", max_retries=2)
+
+    assert publisher.publish(EventCandidate.model_validate(_event_payload())) is True
+    assert client.post.call_count == 2
+
+
+def test_http_publisher_retries_transport_exception(monkeypatch):
+    client = MagicMock()
+    client.__enter__.return_value = client
+    request = httpx.Request("POST", "http://backend/ingest")
+    client.post.side_effect = [httpx.ConnectError("offline", request=request), Mock(status_code=201)]
+    monkeypatch.setattr("app.publisher.http_publisher.httpx.Client", Mock(return_value=client))
+    monkeypatch.setattr("app.publisher.http_publisher.time.sleep", Mock())
+    publisher = HttpEventPublisher("http://backend/ingest", bearer_token="secret", max_retries=2)
+
+    assert publisher.publish(EventCandidate.model_validate(_event_payload())) is True
+    assert client.post.call_count == 2
+
+
+def test_http_publisher_fails_closed_without_token(monkeypatch):
+    client_factory = Mock()
+    monkeypatch.setattr("app.publisher.http_publisher.httpx.Client", client_factory)
+    publisher = HttpEventPublisher("http://backend/ingest", bearer_token="   ")
+
+    assert publisher.publish(EventCandidate.model_validate(_event_payload())) is False
+    client_factory.assert_not_called()
