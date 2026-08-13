@@ -1,0 +1,46 @@
+# Core
+fastapi>=0.115.0
+uvicorn[standard]>=0.34.0
+pydantic>=2.10.0
+pydantic-settings>=2.7.0
+python-dotenv>=1.0.0
+
+# Computer Vision & Geometry
+torch==2.5.1
+torchvision==0.20.1
+Pillow==12.2.0
+supervision==0.30.0
+trackers==2.5.0.post0
+opencv-python-headless>=4.10.0
+shapely>=2.0.0
+pyyaml>=6.0.1
+tensorboard>=2.18.0
+faster-coco-eval>=1.6.7
+scipy
+calflops
+transformers
+
+# AI / LangChain
+langchain>=0.3.0
+langchain-openai>=0.3.0
+langgraph>=0.2.0
+
+# Database (back-end/ API service)
+sqlalchemy>=2.0.28
+psycopg2-binary>=2.9.9
+pyjwt>=2.8.0
+passlib[bcrypt]>=1.7.4
+bcrypt>=4.1.2
+python-multipart>=0.0.9
+websockets>=12.0
+
+# Vector Store (uncomment as needed)
+# chromadb>=0.5.0
+
+# Dev tools
+coverage>=7.6.0
+ruff>=0.8.0
+pytest>=8.0.0
+pytest-asyncio>=0.24.0
+httpx>=0.28.0
+

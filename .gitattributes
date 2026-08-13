@@ -1,0 +1,1 @@
+third_party/deimv2/ckpts/vitt_distill.pt filter=lfs diff=lfs merge=lfs -text

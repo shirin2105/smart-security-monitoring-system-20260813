@@ -1,0 +1,16 @@
+target-version = "py311"
+line-length = 120
+
+[lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+ignore = ["E501"]
+
+[lint.per-file-ignores]
+# camelCase field names are the versioned API/JSON contract (PRD §10)
+"app/common/schemas.py" = ["N815"]
+# sys.path bootstrap is required for repo-root scripts (existing pattern)
+"scripts/run_enrichment.py" = ["E402"]
+
+[format]
+quote-style = "double"
+indent-style = "space"

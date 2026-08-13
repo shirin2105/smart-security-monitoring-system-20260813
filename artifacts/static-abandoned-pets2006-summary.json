@@ -1,0 +1,98 @@
+{
+  "source": "tests/clips/pets2006_3.mp4",
+  "source_sha256": "a7ad83f2997dca28d94d57352730fde314fcc855b6d48feffc36fc60416023f1",
+  "source_untouched": true,
+  "output": "examples/static-abandoned-pets2006-demo.mp4",
+  "config": {
+    "static_region": {
+      "warmup_seconds": 3.0,
+      "stationary_seconds": 6.0,
+      "clear_grace_seconds": 2.0,
+      "min_area_ratio": 0.0001,
+      "max_area_ratio": 0.06,
+      "foreground_threshold": 35,
+      "morphology_kernel": 3,
+      "match_iou": 0.15,
+      "learning_rate": 0.04
+    },
+    "owner_absent_seconds": 0.0,
+    "validation_mode": "huggingface",
+    "model": "google/gemma-3-4b-it",
+    "timeout_seconds": 30.0,
+    "source_start": "2026-08-01T00:00:00Z",
+    "max_vlm_decisions": 1
+  },
+  "fps": 30.0,
+  "frame_count": 681,
+  "width": 720,
+  "height": 1152,
+  "source_frame_count": 1510,
+  "processing_truncated": true,
+  "alert_frame": null,
+  "alert_time_seconds": null,
+  "candidate_time": "2026-08-01T00:00:14.666667Z",
+  "decision_time": "2026-08-01T00:00:22.666667Z",
+  "sampled_timestamps": [
+    "2026-08-01T00:00:07.000000Z",
+    "2026-08-01T00:00:08.000000Z",
+    "2026-08-01T00:00:09.000000Z",
+    "2026-08-01T00:00:10.000000Z",
+    "2026-08-01T00:00:11.000000Z",
+    "2026-08-01T00:00:12.000000Z",
+    "2026-08-01T00:00:13.000000Z",
+    "2026-08-01T00:00:14.000000Z",
+    "2026-08-01T00:00:15.000000Z",
+    "2026-08-01T00:00:16.000000Z",
+    "2026-08-01T00:00:17.000000Z",
+    "2026-08-01T00:00:18.000000Z",
+    "2026-08-01T00:00:19.000000Z",
+    "2026-08-01T00:00:20.000000Z",
+    "2026-08-01T00:00:21.000000Z",
+    "2026-08-01T00:00:22.000000Z"
+  ],
+  "sampled_frame_count": 16,
+  "event_count": 0,
+  "events": [],
+  "validation_decision_count": 1,
+  "validation_decisions": [
+    {
+      "region_id": "static-demo-region-122",
+      "bbox": [
+        96.0,
+        680.0,
+        132.0,
+        728.0
+      ],
+      "candidate_time": "2026-08-01T00:00:14.666667Z",
+      "decision_time": "2026-08-01T00:00:22.666667Z",
+      "sampled_timestamps": [
+        "2026-08-01T00:00:07.000000Z",
+        "2026-08-01T00:00:08.000000Z",
+        "2026-08-01T00:00:09.000000Z",
+        "2026-08-01T00:00:10.000000Z",
+        "2026-08-01T00:00:11.000000Z",
+        "2026-08-01T00:00:12.000000Z",
+        "2026-08-01T00:00:13.000000Z",
+        "2026-08-01T00:00:14.000000Z",
+        "2026-08-01T00:00:15.000000Z",
+        "2026-08-01T00:00:16.000000Z",
+        "2026-08-01T00:00:17.000000Z",
+        "2026-08-01T00:00:18.000000Z",
+        "2026-08-01T00:00:19.000000Z",
+        "2026-08-01T00:00:20.000000Z",
+        "2026-08-01T00:00:21.000000Z",
+        "2026-08-01T00:00:22.000000Z"
+      ],
+      "sampled_frame_count": 16,
+      "validation": {
+        "verdict": "rejected",
+        "confidence": 0.99,
+        "reason": "huggingface_vlm:The object (a person) is consistently present and moving within the bounding box across all frames. There is no evidence of an object being left behind and remaining unattended."
+      }
+    }
+  ],
+  "incomplete_temporal_region_count": 0,
+  "warnings": [],
+  "semantic_vlm_executed": true,
+  "validation_disclosure": "Semantic Hugging Face VLM executed."
+}

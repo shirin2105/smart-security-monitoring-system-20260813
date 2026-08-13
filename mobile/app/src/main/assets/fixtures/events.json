@@ -1,0 +1,97 @@
+[
+  {
+    "eventId": "evt_01H8ZK",
+    "eventType": "ZONE_INTRUSION",
+    "severity": "CRITICAL",
+    "state": "PENDING_REVIEW",
+    "cameraName": "Camera Hàng Rào Tây",
+    "siteId": "site_01",
+    "detectedAt": "2026-08-05T02:14:33Z",
+    "description": "Một người vượt hàng rào phía Tây và ở trong vùng cấm 12 giây, vượt ngưỡng dwell 8 giây.",
+    "version": 1,
+    "artifact": { "artifactId": "art_01", "redactionStatus": "COMPLETE" }
+  },
+  {
+    "eventId": "evt_01H8ZL",
+    "eventType": "CROWD_THRESHOLD",
+    "severity": "HIGH",
+    "state": "ACKNOWLEDGED",
+    "cameraName": "Camera Hành Lang T4",
+    "siteId": "site_01",
+    "detectedAt": "2026-08-05T01:52:10Z",
+    "description": "Đếm được 9 người trong ROI hành lang tầng 4, giữ liên tục 45 giây.",
+    "version": 2,
+    "artifact": { "artifactId": "art_02", "redactionStatus": "COMPLETE" }
+  },
+  {
+    "eventId": "evt_01H8ZM",
+    "eventType": "ZONE_INTRUSION",
+    "severity": "CRITICAL",
+    "state": "CONFIRMED",
+    "cameraName": "Camera Phòng Server",
+    "siteId": "site_01",
+    "detectedAt": "2026-08-05T01:20:04Z",
+    "description": "Phát hiện mở cửa phòng server tầng hầm ngoài lịch bảo trì.",
+    "version": 4,
+    "artifact": { "artifactId": "art_03", "redactionStatus": "COMPLETE" }
+  },
+  {
+    "eventId": "evt_01H8ZN",
+    "eventType": "CROWD_THRESHOLD",
+    "severity": "WARNING",
+    "state": "OPEN",
+    "cameraName": "Camera Sảnh Chờ",
+    "siteId": "site_01",
+    "detectedAt": "2026-08-05T00:58:41Z",
+    "description": "Đếm được 6 người tụ tập tại sảnh chờ tầng 1, giữ trong 25 giây.",
+    "version": 1,
+    "artifact": { "artifactId": "art_04", "redactionStatus": "COMPLETE" }
+  },
+  {
+    "eventId": "evt_01H8ZP",
+    "eventType": "ZONE_INTRUSION",
+    "severity": "WARNING",
+    "state": "ACKNOWLEDGED",
+    "cameraName": "Camera Cổng Chính",
+    "siteId": "site_01",
+    "detectedAt": "2026-08-05T00:31:17Z",
+    "description": "Có người di chuyển qua cổng chính ngoài khung giờ quy định.",
+    "version": 2,
+    "artifact": { "artifactId": "art_05", "redactionStatus": "COMPLETE" }
+  },
+  {
+    "eventId": "evt_01H8ZQ",
+    "eventType": "ABANDONED_OBJECT",
+    "severity": "HIGH",
+    "state": "OPEN",
+    "cameraName": "Camera Bãi Xe B1",
+    "siteId": "site_01",
+    "detectedAt": "2026-08-05T00:12:55Z",
+    "description": "Một vali đứng yên 4 phút 30 giây, không có người trong bán kính 3 mét.",
+    "version": 1,
+    "artifact": { "artifactId": "art_06", "redactionStatus": "FAILED" }
+  },
+  {
+    "eventId": "evt_01H8ZR",
+    "eventType": "CROWD_THRESHOLD",
+    "severity": "INFO",
+    "state": "RESOLVED",
+    "cameraName": "Camera Hành Lang T4",
+    "siteId": "site_01",
+    "detectedAt": "2026-08-04T23:40:02Z",
+    "description": "Nhóm nhân viên tụ tập ngắn giờ nghỉ, đã tự giải tán.",
+    "version": 3,
+    "artifact": { "artifactId": "art_07", "redactionStatus": "COMPLETE" }
+  },
+  {
+    "eventId": "evt_01H8ZS",
+    "eventType": "ABANDONED_OBJECT",
+    "severity": "WARNING",
+    "state": "DISMISSED",
+    "cameraName": "Camera Bãi Xe B1",
+    "siteId": "site_01",
+    "detectedAt": "2026-08-04T22:05:38Z",
+    "description": "Thùng carton để tạm cạnh cột B1, xác minh là hàng của bộ phận kho.",
+    "version": 2
+  }
+]

@@ -1,0 +1,266 @@
+{
+  "version": 1,
+  "source": "https://groups.inf.ed.ac.uk/vision/DATASETS/CAVIAR/CAVIARDATA1/",
+  "clips": [
+    {
+      "clip_id": "LeftBag",
+      "video_path": "videos/LeftBag.mpg",
+      "camera_id": "CAM_LEFTBAG",
+      "camera_config_path": "configs/CAM_LEFTBAG.json",
+      "scenario_tags": [
+        "intrusion_negative",
+        "crowd_negative",
+        "abandoned_positive",
+        "abandoned_object"
+      ],
+      "expected_duration_s": 57.6
+    },
+    {
+      "clip_id": "LeftBag_AtChair",
+      "video_path": "videos/LeftBag_AtChair.mpg",
+      "camera_id": "CAM_LEFTBAG_ATCHAIR",
+      "camera_config_path": "configs/CAM_LEFTBAG_ATCHAIR.json",
+      "scenario_tags": [
+        "intrusion_negative",
+        "crowd_negative",
+        "abandoned_positive",
+        "abandoned_object"
+      ],
+      "expected_duration_s": 44.64
+    },
+    {
+      "clip_id": "LeftBag_BehindChair",
+      "video_path": "videos/LeftBag_BehindChair.mpg",
+      "camera_id": "CAM_LEFTBAG_BEHINDCHAIR",
+      "camera_config_path": "configs/CAM_LEFTBAG_BEHINDCHAIR.json",
+      "scenario_tags": [
+        "intrusion_negative",
+        "crowd_negative",
+        "abandoned_positive",
+        "abandoned_object"
+      ],
+      "expected_duration_s": 42.72
+    },
+    {
+      "clip_id": "LeftBox",
+      "video_path": "videos/LeftBox.mpg",
+      "camera_id": "CAM_LEFTBOX",
+      "camera_config_path": "configs/CAM_LEFTBOX.json",
+      "scenario_tags": [
+        "intrusion_negative",
+        "crowd_negative",
+        "abandoned_positive",
+        "abandoned_object"
+      ],
+      "expected_duration_s": 34.56
+    },
+    {
+      "clip_id": "LeftBag_PickedUp",
+      "video_path": "videos/LeftBag_PickedUp.mpg",
+      "camera_id": "CAM_LEFTBAG_PICKEDUP",
+      "camera_config_path": "configs/CAM_LEFTBAG_PICKEDUP.json",
+      "scenario_tags": [
+        "intrusion_negative",
+        "crowd_negative",
+        "abandoned_positive",
+        "abandoned_object"
+      ],
+      "expected_duration_s": 54.24
+    },
+    {
+      "clip_id": "Meet_Crowd",
+      "video_path": "videos/Meet_Crowd.mpg",
+      "camera_id": "CAM_MEET_CROWD",
+      "camera_config_path": "configs/CAM_MEET_CROWD.json",
+      "scenario_tags": [
+        "intrusion_negative",
+        "crowd_positive",
+        "abandoned_negative",
+        "crowd_threshold"
+      ],
+      "expected_duration_s": 19.68
+    },
+    {
+      "clip_id": "Meet_WalkTogether1",
+      "video_path": "videos/Meet_WalkTogether1.mpg",
+      "camera_id": "CAM_MEET_WALKTOGETHER1",
+      "camera_config_path": "configs/CAM_MEET_WALKTOGETHER1.json",
+      "scenario_tags": [
+        "intrusion_negative",
+        "crowd_positive",
+        "abandoned_negative",
+        "crowd_threshold"
+      ],
+      "expected_duration_s": 28.32
+    },
+    {
+      "clip_id": "Meet_WalkTogether2",
+      "video_path": "videos/Meet_WalkTogether2.mpg",
+      "camera_id": "CAM_MEET_WALKTOGETHER2",
+      "camera_config_path": "configs/CAM_MEET_WALKTOGETHER2.json",
+      "scenario_tags": [
+        "intrusion_negative",
+        "crowd_positive",
+        "abandoned_negative",
+        "crowd_threshold"
+      ],
+      "expected_duration_s": 33.12
+    },
+    {
+      "clip_id": "Meet_WalkSplit",
+      "video_path": "videos/Meet_WalkSplit.mpg",
+      "camera_id": "CAM_MEET_WALKSPLIT",
+      "camera_config_path": "configs/CAM_MEET_WALKSPLIT.json",
+      "scenario_tags": [
+        "intrusion_negative",
+        "crowd_positive",
+        "abandoned_negative",
+        "crowd_threshold"
+      ],
+      "expected_duration_s": 24.96
+    },
+    {
+      "clip_id": "Meet_Split_3rdGuy",
+      "video_path": "videos/Meet_Split_3rdGuy.mpg",
+      "camera_id": "CAM_MEET_SPLIT_3RDGUY",
+      "camera_config_path": "configs/CAM_MEET_SPLIT_3RDGUY.json",
+      "scenario_tags": [
+        "intrusion_negative",
+        "crowd_positive",
+        "abandoned_negative",
+        "crowd_threshold"
+      ],
+      "expected_duration_s": 36.96
+    },
+    {
+      "clip_id": "Walk1",
+      "video_path": "videos/Walk1.mpg",
+      "camera_id": "CAM_WALK1",
+      "camera_config_path": "configs/CAM_WALK1.json",
+      "scenario_tags": [
+        "intrusion_positive",
+        "crowd_negative",
+        "abandoned_negative",
+        "zone_intrusion"
+      ],
+      "expected_duration_s": 24.48
+    },
+    {
+      "clip_id": "Walk2",
+      "video_path": "videos/Walk2.mpg",
+      "camera_id": "CAM_WALK2",
+      "camera_config_path": "configs/CAM_WALK2.json",
+      "scenario_tags": [
+        "intrusion_positive",
+        "crowd_negative",
+        "abandoned_negative",
+        "zone_intrusion"
+      ],
+      "expected_duration_s": 42.24
+    },
+    {
+      "clip_id": "Walk3",
+      "video_path": "videos/Walk3.mpg",
+      "camera_id": "CAM_WALK3",
+      "camera_config_path": "configs/CAM_WALK3.json",
+      "scenario_tags": [
+        "intrusion_positive",
+        "crowd_negative",
+        "abandoned_negative",
+        "zone_intrusion"
+      ],
+      "expected_duration_s": 55.2
+    },
+    {
+      "clip_id": "WalkByShop1cor",
+      "video_path": "videos/WalkByShop1cor.mpg",
+      "camera_id": "CAM_WALKBYSHOP1COR",
+      "camera_config_path": "configs/CAM_WALKBYSHOP1COR.json",
+      "scenario_tags": [
+        "intrusion_positive",
+        "crowd_negative",
+        "abandoned_negative",
+        "zone_intrusion"
+      ],
+      "expected_duration_s": 94.4
+    },
+    {
+      "clip_id": "WalkByShop1front",
+      "video_path": "videos/WalkByShop1front.mpg",
+      "camera_id": "CAM_WALKBYSHOP1FRONT",
+      "camera_config_path": "configs/CAM_WALKBYSHOP1FRONT.json",
+      "scenario_tags": [
+        "intrusion_positive",
+        "crowd_negative",
+        "abandoned_negative",
+        "zone_intrusion"
+      ],
+      "expected_duration_s": 94.4
+    },
+    {
+      "clip_id": "Browse1",
+      "video_path": "videos/Browse1.mpg",
+      "camera_id": "CAM_BROWSE1",
+      "camera_config_path": "configs/CAM_BROWSE1.json",
+      "scenario_tags": [
+        "intrusion_negative",
+        "crowd_negative",
+        "abandoned_negative",
+        "mixed_negative"
+      ],
+      "expected_duration_s": 41.76
+    },
+    {
+      "clip_id": "Browse2",
+      "video_path": "videos/Browse2.mpg",
+      "camera_id": "CAM_BROWSE2",
+      "camera_config_path": "configs/CAM_BROWSE2.json",
+      "scenario_tags": [
+        "intrusion_negative",
+        "crowd_negative",
+        "abandoned_negative",
+        "mixed_negative"
+      ],
+      "expected_duration_s": 35.04
+    },
+    {
+      "clip_id": "Browse3",
+      "video_path": "videos/Browse3.mpg",
+      "camera_id": "CAM_BROWSE3",
+      "camera_config_path": "configs/CAM_BROWSE3.json",
+      "scenario_tags": [
+        "intrusion_negative",
+        "crowd_negative",
+        "abandoned_negative",
+        "mixed_negative"
+      ],
+      "expected_duration_s": 36.48
+    },
+    {
+      "clip_id": "Browse4",
+      "video_path": "videos/Browse4.mpg",
+      "camera_id": "CAM_BROWSE4",
+      "camera_config_path": "configs/CAM_BROWSE4.json",
+      "scenario_tags": [
+        "intrusion_negative",
+        "crowd_negative",
+        "abandoned_negative",
+        "mixed_negative"
+      ],
+      "expected_duration_s": 45.6
+    },
+    {
+      "clip_id": "Rest_InChair",
+      "video_path": "videos/Rest_InChair.mpg",
+      "camera_id": "CAM_REST_INCHAIR",
+      "camera_config_path": "configs/CAM_REST_INCHAIR.json",
+      "scenario_tags": [
+        "intrusion_negative",
+        "crowd_negative",
+        "abandoned_negative",
+        "mixed_negative"
+      ],
+      "expected_duration_s": 40.32
+    }
+  ]
+}

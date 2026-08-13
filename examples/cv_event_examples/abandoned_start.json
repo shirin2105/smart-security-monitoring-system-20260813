@@ -1,0 +1,18 @@
+{
+  "schema_version": "cv-event-v1",
+  "event_id": "CAM01_AO_000001",
+  "event_type": "ABANDONED_OBJECT",
+  "event_state": "START",
+  "camera_id": "CAM01",
+  "event_time": "2026-08-10T16:32:25.125+07:00",
+  "event_time_s": 52.586,
+  "cv_confidence": 0.91,
+  "objects": {
+    "luggage": {"physical_id": "LUG_0001", "source_track_ids": [2000004, 2000005], "bbox_xyxy": [129.8, 324.4, 186.5, 377.6]},
+    "owner": {"person_track_id": 1000005}
+  },
+  "evidence": {"stationary_duration_s": 8.4, "owner_away_duration_s": 5.1, "owner_association_score": 0.912},
+  "spatial": {"zone_id": "FLOOR_A", "normalized_center": [0.247, 0.731]},
+  "media": {"snapshot_path": "events/CAM01_AO_000001.jpg", "clip_start_s": 42.0, "clip_end_s": 57.0},
+  "diagnostics": {"pipeline_fps": 18.7}
+}

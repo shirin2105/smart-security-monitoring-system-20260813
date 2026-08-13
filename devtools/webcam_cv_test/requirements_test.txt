@@ -1,0 +1,4 @@
+Flask>=3.0,<4
+opencv-python==4.10.0.84
+trackers==2.5.0.post0
+supervision>=0.25

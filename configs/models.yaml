@@ -1,0 +1,11 @@
+detector:
+  source_path: "third_party/deimv2"
+  config_path: "configs/deimv2-phase7a-runtime.yaml"
+  checkpoint_path: "artifacts/phase7a-results/outputs/phase7a_deimv2_s_person_luggage/best.pth"
+  backbone_path: "third_party/deimv2/ckpts/vitt_distill.pt"
+  device: "auto"
+  confidence_threshold: 0.05
+  nms_iou_threshold: 0.50
+  model_version: "deimv2-phase7a"
+  checkpoint_sha256: "56063D9767463AD4DB270BA34CB82F86469D56FCB323E44B22C018898CB29BF3"
+  backbone_sha256: "2053B865F4E2673FBA3F95F7E7E54AD5EE18143885E3AD27EAABB5B3B9919738"

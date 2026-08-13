@@ -1,0 +1,162 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+dist/
+build/
+.eggs/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+*.venv/
+
+# Environment variables & secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+
+# IDE & Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.iml
+.project
+.settings/
+.classpath
+
+# OS & System
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Data (never commit large data)
+/data/
+*.db
+*.sqlite3
+*.sqlite
+*.db-journal
+*.sqlite3-journal
+*.db-shm
+*.db-wal
+*.sqlite3-shm
+*.sqlite3-wal
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Test coverage & Jupyter
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+coverage/
+.hypothesis/
+.ipynb_checkpoints/
+
+# Local dependency bundles
+.python-packages/
+.runtime-packages/
+.runtime-wheels/
+
+# Model weights and training outputs
+*.pt
+!third_party/deimv2/ckpts/vitt_distill.pt
+*.pth
+*.safetensors
+*.bin
+*.ckpt
+*.engine
+*.tflite
+*.onnx
+runs/
+models/_output_.zip
+models/cctv_dataset.zip
+models/cctv_dataset/
+kaggle_pipeline/dataset/
+kaggle_pipeline/kernel/
+kaggle_pipeline/cctv_dataset/
+kaggle_pipeline/cctv_dataset.zip
+outputs/
+training/
+kaggle_pipeline/phase5_checkpoint_dataset/*.pth
+
+# Downloaded/generated datasets
+datasets/cctv_abandoned_combined/
+datasets/temp_extracted/
+datasets/temp_baggage.zip
+datasets/raw/
+
+# Generated runtime artifacts
+artifacts/backend_events/
+artifacts/events/
+artifacts/evidence/
+artifacts/test_evidence/
+artifacts/diagnostic-*.jpg
+artifacts/qa-*
+artifacts/runtime/
+artifacts/phase5-results/
+!artifacts/phase7a-results/
+artifacts/phase7a-results/*
+!artifacts/phase7a-results/outputs/
+artifacts/phase7a-results/outputs/*
+!artifacts/phase7a-results/outputs/phase7a_deimv2_s_person_luggage/
+artifacts/phase7a-results/outputs/phase7a_deimv2_s_person_luggage/*
+artifacts/phase7a-kernel-log/
+artifacts/phase7b1-results/
+kaggle_pipeline/phase7b_video_dataset/*.avi
+
+# Scratch files
+temp-chat.txt
+.qa-tmp/
+
+# Docker
+docker-compose.override.yml
+
+# Node (frontend)
+node_modules/
+.next/
+out/
+.nuxt/
+.vite/
+.eslintcache
+*.tsbuildinfo
+
+# Android / Mobile
+.gradle/
+local.properties
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+*.keystore
+*.jks
+
+# AI logs — tracked structure, ignored content
+.ai-log/*.jsonl
+.ai-log/archive/
+
+docs/superpowers/*
+# Git worktrees
+.worktrees/
+
+# Video
+video/

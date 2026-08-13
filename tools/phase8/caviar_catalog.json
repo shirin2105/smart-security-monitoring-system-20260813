@@ -1,0 +1,22 @@
+[
+  {"clip_id":"LeftBag","event_target":"ABANDONED_OBJECT","polarity":"positive","video":"LeftBag/LeftBag.mpg","xml":"LeftBag/lb1gt.xml"},
+  {"clip_id":"LeftBag_AtChair","event_target":"ABANDONED_OBJECT","polarity":"positive","video":"LeftBag_AtChair/LeftBag_AtChair.mpg","xml":"LeftBag_AtChair/lb2gt.xml"},
+  {"clip_id":"LeftBag_BehindChair","event_target":"ABANDONED_OBJECT","polarity":"positive","video":"LeftBag_BehindChair/LeftBag_BehindChair.mpg","xml":"LeftBag_BehindChair/lbbcgt.xml"},
+  {"clip_id":"LeftBox","event_target":"ABANDONED_OBJECT","polarity":"positive","video":"LeftBox/LeftBox.mpg","xml":"LeftBox/lbgt.xml"},
+  {"clip_id":"LeftBag_PickedUp","event_target":"ABANDONED_OBJECT","polarity":"positive","video":"LeftBag_PickedUp/LeftBag_PickedUp.mpg","xml":"LeftBag_PickedUp/lbpugt.xml"},
+  {"clip_id":"Meet_Crowd","event_target":"CROWD_THRESHOLD","polarity":"positive","video":"Meet_Crowd/Meet_Crowd.mpg","xml":"Meet_Crowd/mc1gt.xml"},
+  {"clip_id":"Meet_WalkTogether1","event_target":"CROWD_THRESHOLD","polarity":"positive","video":"Meet_WalkTogether1/Meet_WalkTogether1.mpg","xml":"Meet_WalkTogether1/mwt1gt.xml"},
+  {"clip_id":"Meet_WalkTogether2","event_target":"CROWD_THRESHOLD","polarity":"positive","video":"Meet_WalkTogether2/Meet_WalkTogether2.mpg","xml":"Meet_WalkTogether2/mwt2gt.xml"},
+  {"clip_id":"Meet_WalkSplit","event_target":"CROWD_THRESHOLD","polarity":"positive","video":"Meet_WalkSplit/Meet_WalkSplit.mpg","xml":"Meet_WalkSplit/mws1gt.xml"},
+  {"clip_id":"Meet_Split_3rdGuy","event_target":"CROWD_THRESHOLD","polarity":"positive","video":"Meet_Split_3rdGuy/Meet_Split_3rdGuy.mpg","xml":"Meet_Split_3rdGuy/ms3ggt.xml"},
+  {"clip_id":"Walk1","event_target":"ZONE_INTRUSION","polarity":"positive","video":"Walk1/Walk1.mpg","xml":"Walk1/wk1gt.xml"},
+  {"clip_id":"Walk2","event_target":"ZONE_INTRUSION","polarity":"positive","video":"Walk2/Walk2.mpg","xml":"Walk2/wk2gt.xml"},
+  {"clip_id":"Walk3","event_target":"ZONE_INTRUSION","polarity":"positive","video":"Walk3/Walk3.mpg","xml":"Walk3/wk3gt.xml"},
+  {"clip_id":"WalkByShop1cor","event_target":"ZONE_INTRUSION","polarity":"positive","dataset":"CAVIARDATA2","video":"WalkByShop1cor/WalkByShop1cor.mpg","xml":"WalkByShop1cor/cwbs1gt.xml"},
+  {"clip_id":"WalkByShop1front","event_target":"ZONE_INTRUSION","polarity":"positive","dataset":"CAVIARDATA2","video":"WalkByShop1front/WalkByShop1front.mpg","xml":"WalkByShop1front/fwbs1gt.xml"},
+  {"clip_id":"Browse1","event_target":"MIXED_NEGATIVE","polarity":"negative","video":"Browse1/Browse1.mpg","xml":"Browse1/br1gt.xml"},
+  {"clip_id":"Browse2","event_target":"MIXED_NEGATIVE","polarity":"negative","video":"Browse2/Browse2.mpg","xml":"Browse2/br2gt.xml"},
+  {"clip_id":"Browse3","event_target":"MIXED_NEGATIVE","polarity":"negative","video":"Browse3/Browse3.mpg","xml":"Browse3/br3gt.xml"},
+  {"clip_id":"Browse4","event_target":"MIXED_NEGATIVE","polarity":"negative","video":"Browse4/Browse4.mpg","xml":"Browse4/br4gt.xml"},
+  {"clip_id":"Rest_InChair","event_target":"MIXED_NEGATIVE","polarity":"negative","video":"Rest_InChair/Rest_InChair.mpg","xml":"Rest_InChair/ricgt.xml"}
+]
