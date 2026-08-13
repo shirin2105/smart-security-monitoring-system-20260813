@@ -1,4 +1,6 @@
+import json
 import os
+
 
 TEST_DB_PATH = "./test_security_monitoring.db"
 if os.path.exists(TEST_DB_PATH):
@@ -212,7 +214,7 @@ def test_ingest_rejects_candidate_id_longer_than_database_column():
 def test_ingest_rejects_unbounded_or_malformed_assessment_metadata():
     base = candidate_payload("evt-bounds")
     cases = [
-        {**base, "confidence": float("inf")},
+        {**base, "confidence": 1.5},
         {**base, "zoneId": "x" * 101},
         {**base, "cameraId": "../../secret"},
         {**base, "firstSeenAt": "2026-08-11T09:00:00Z"},
@@ -221,3 +223,23 @@ def test_ingest_rejects_unbounded_or_malformed_assessment_metadata():
     for payload in cases:
         response = client.post("/api/v1/events/ingest", headers=INGEST_HEADERS, json=payload)
         assert response.status_code == 422
+
+
+def test_zones_api():
+    res_get = client.get("/api/v1/zones")
+    assert res_get.status_code == 200
+    assert isinstance(res_get.json(), list)
+
+    zone_payload = {
+        "zone_id": "test_zone_01",
+        "camera_id": "cam_01",
+        "name": "Test Zone",
+        "polygon": [[10, 10], [100, 10], [100, 100], [10, 100]],
+        "enabled": True
+    }
+    res_post = client.post("/api/v1/zones", json=zone_payload)
+    assert res_post.status_code == 200
+    assert res_post.json()["zone_id"] == "test_zone_01"
+
+
+

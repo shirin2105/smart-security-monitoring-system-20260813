@@ -20,6 +20,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Run CV event detection pipeline")
     parser.add_argument("--max-frames", type=int, default=None, help="Cap frames per camera")
     parser.add_argument("--camera", type=str, default=None, help="Run single camera (camera_id)")
+    parser.add_argument("--no-loop", action="store_true", help="Do not loop video clips")
+    parser.add_argument("--fast", "--no-realtime", action="store_true", help="Run at maximum speed without real-time wall-clock pacing")
     args = parser.parse_args()
 
     configs = settings.cameras
@@ -29,8 +31,9 @@ def main() -> int:
             print(f"No camera config for {args.camera}", file=sys.stderr)
             return 1
 
-    print(f"Running CV pipeline: {len(configs)} camera(s), ingest -> {settings.event_ingest_url}")
-    runner = MultiCameraRunner(camera_configs=configs)
+    realtime = not args.fast
+    print(f"Running CV pipeline: {len(configs)} camera(s) (loop={not args.no_loop}, realtime={realtime}), ingest -> {settings.event_ingest_url}")
+    runner = MultiCameraRunner(camera_configs=configs, loop=not args.no_loop, realtime=realtime)
     results = runner.run(max_frames=args.max_frames)
 
     total = 0

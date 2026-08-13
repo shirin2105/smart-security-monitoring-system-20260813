@@ -14,6 +14,11 @@ trackers==2.5.0.post0
 opencv-python-headless>=4.10.0
 shapely>=2.0.0
 pyyaml>=6.0.1
+tensorboard>=2.18.0
+faster-coco-eval>=1.6.7
+scipy
+calflops
+transformers
 
 # AI / LangChain
 langchain>=0.3.0

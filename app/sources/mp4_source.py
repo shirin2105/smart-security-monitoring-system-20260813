@@ -17,11 +17,13 @@ class MP4VideoSource(BaseVideoSource):
         source_type: str = "SIMULATED",
         inference_fps: float = 5.0,
         source_start: Optional[str] = None,
+        loop: bool = True,
     ):
         self.camera_id = camera_id
         self.source_uri = source_uri
         self.source_type = source_type
         self.inference_fps = inference_fps
+        self.loop = loop
         is_live = source_type.upper() in {"LIVE", "CAMERA", "RTSP"}
         self.source_start = source_start or (utc_now_iso() if is_live else DEFAULT_FILE_SOURCE_EPOCH)
         self.cap: Optional[cv2.VideoCapture] = None
@@ -37,10 +39,16 @@ class MP4VideoSource(BaseVideoSource):
         frame_id = 0
         if self.cap and self.cap.isOpened():
             source_fps = self.cap.get(cv2.CAP_PROP_FPS) or 25.0
-            while self.cap.isOpened():
+            while self.cap and self.cap.isOpened():
                 ret, frame = self.cap.read()
                 if not ret:
-                    break
+                    if self.loop:
+                        self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                        ret, frame = self.cap.read()
+                        if not ret:
+                            break
+                    else:
+                        break
                 frame_id += 1
                 yield FrameData(
                     camera_id=self.camera_id,

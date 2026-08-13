@@ -1,6 +1,7 @@
 import {
   ActionType,
   Camera,
+  CameraZone,
   EventAction,
   EventState,
   EventType,
@@ -54,6 +55,8 @@ export interface ApiTransport {
   postAction(id: number, payload: ActionPayload): Promise<SecurityEvent>;
   getAuditLog(): Promise<EventAction[]>;
   triggerSimulation(): Promise<void>;
+  getZones(): Promise<CameraZone[]>;
+  saveZone(zone: CameraZone): Promise<CameraZone>;
 }
 
 export const DEFAULT_PAGE_SIZE = 10;

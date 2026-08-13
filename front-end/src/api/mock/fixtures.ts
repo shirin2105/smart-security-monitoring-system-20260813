@@ -13,17 +13,16 @@ function minutesAgo(minutes: number): string {
   return new Date(Date.now() - minutes * 60_000).toISOString();
 }
 
-const PREVIEW = (id: number) =>
-  `https://images.unsplash.com/photo-${
-    [
-      '1557597774-9d273605dfa9',
-      '1541888946425-d0fbb186a5b7',
-      '1508873696983-2df515122519',
-      '1558494949-ef010cbdcc31',
-      '1506521781263-d8422e82f27a',
-      '1517502884422-41eaead166d4',
-    ][id - 1]
-  }?w=600&h=337&auto=format&fit=crop`;
+const CAMERA_CLIPS: Record<number, string> = {
+  1: '/media/walking_people.mp4',
+  2: '/media/people_detection.mp4',
+  3: '/media/aban3.mp4',
+  4: '/media/pets2006_3.mp4',
+  5: '/media/store-aisle-detection.mp4',
+  6: '/media/person-bicycle-car-detection.mp4',
+};
+
+const PREVIEW = (id: number) => CAMERA_CLIPS[id] || '/media/walking_people.mp4';
 
 export const MOCK_CAMERAS: Camera[] = [
   {

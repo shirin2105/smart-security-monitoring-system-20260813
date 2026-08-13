@@ -55,3 +55,30 @@ def test_supervisor_shares_detector_and_isolates_camera_failures():
     assert len({id(item) for item in seen_detectors}) == 1
     assert all(item is not detector for item in seen_detectors)
     assert all(hasattr(item, "detect") for item in seen_detectors)
+
+
+def test_cv_worker_realtime_pacing():
+    from app.cv.worker import CVWorker
+    from unittest.mock import MagicMock
+
+    detector = MagicMock()
+    detector.detect.return_value = ([], 5.0)
+
+    worker = CVWorker(
+        camera_id="cam_test",
+        source_uri="./tests/clips/walking_people.mp4",
+        detector=detector,
+        realtime=True,
+        loop=False,
+    )
+    # Set high inference fps to test small sleep interval (~0.05s = 20 fps)
+    worker.frame_sampler.inference_fps = 20.0
+    worker.source.inference_fps = 20.0
+
+    t0 = time.monotonic()
+    worker.run(max_frames=3)
+    elapsed = time.monotonic() - t0
+
+    # 3 frames sampled at 20fps -> 2 intervals of 0.05s = ~0.10s expected elapsed time
+    assert elapsed >= 0.05
+

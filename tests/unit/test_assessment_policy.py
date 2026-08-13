@@ -96,8 +96,7 @@ def test_fallback_severity_defaults_to_info_for_unknown_event_type():
     class _UnknownEventType(StrEnum):
         NEW_EVENT = "NEW_EVENT"
 
-    candidate = _candidate()
-    candidate.eventType = _UnknownEventType.NEW_EVENT
+    candidate = _candidate().model_copy(update={"eventType": _UnknownEventType.NEW_EVENT})
 
     draft = fallback_draft(candidate, reason="llm_unavailable")
     assert draft.recommended_severity == "INFO"

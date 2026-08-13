@@ -94,6 +94,7 @@ class IntrusionEventEngine(BaseEventEngine):
                                 confidence=track.confidence,
                                 trackCount=1,
                                 trackIds=[t_id],
+                                bbox=list(track.latest_bbox),
                                 observations=ObservationData(
                                     personCount=1,
                                     dwellSeconds=round(dwell_duration, 2),

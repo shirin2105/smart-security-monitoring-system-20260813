@@ -24,21 +24,32 @@ class LockedDetector:
 
 class MultiCameraRunner:
     def __init__(self, camera_configs: Iterable[dict] | None = None, max_workers: int = 6,
-                 detector: Any | None = None, worker_factory: Callable[..., Any] = CVWorker):
+                 detector: Any | None = None, worker_factory: Callable[..., Any] = CVWorker,
+                 loop: bool = True, realtime: bool = True):
         self.camera_configs = list(camera_configs if camera_configs is not None else settings.cameras)
         self.max_workers = max(1, min(int(max_workers), 6))
         model_cfg = settings.detector_config
         shared = detector if detector is not None else DEIMv2Detector(**model_cfg)
         self.detector = LockedDetector(shared)
         self.worker_factory = worker_factory
+        self.loop = loop
+        self.realtime = realtime
 
     def run(self, max_frames: int | None = None) -> dict[str, dict]:
         enabled = [cfg for cfg in self.camera_configs if cfg.get("enabled", True)][:6]
         results: dict[str, dict] = {}
 
         def execute(cfg: dict):
-            worker = self.worker_factory(camera_id=cfg["camera_id"], source_uri=cfg.get("source_uri"),
-                                         detector=self.detector)
+            try:
+                worker = self.worker_factory(camera_id=cfg["camera_id"], source_uri=cfg.get("source_uri"),
+                                             detector=self.detector, loop=self.loop, realtime=self.realtime)
+            except TypeError:
+                try:
+                    worker = self.worker_factory(camera_id=cfg["camera_id"], source_uri=cfg.get("source_uri"),
+                                                 detector=self.detector, loop=self.loop)
+                except TypeError:
+                    worker = self.worker_factory(camera_id=cfg["camera_id"], source_uri=cfg.get("source_uri"),
+                                                 detector=self.detector)
             return worker.run(max_frames=max_frames)
 
         with ThreadPoolExecutor(max_workers=min(self.max_workers, max(1, len(enabled)))) as pool:

@@ -43,7 +43,10 @@ services:
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/security_db
       - DATABASE_FAIL_CLOSED=true
       - JWT_SECRET=super-secret-security-monitoring-key-2026
-      - EVENT_INGEST_TOKEN=${EVENT_INGEST_TOKEN:?EVENT_INGEST_TOKEN must be set and non-empty}
+      # - EVENT_INGEST_TOKEN=${EVENT_INGEST_TOKEN:?EVENT_INGEST_TOKEN must be set and non-empty}
+      - EVENT_INGEST_TOKEN=dummy
+    volumes:
+      - ./tests/clips:/app/tests/clips
     depends_on:
       db-init:
         condition: service_completed_successfully

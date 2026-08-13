@@ -6,6 +6,7 @@ import { AppLayout } from './components/layout/AppLayout';
 import { ToastProvider } from './components/common/ToastProvider';
 import { EventsProvider } from './realtime/EventsProvider';
 import { ThemeProvider } from './theme/ThemeProvider';
+import { NotificationToast } from './components/common/NotificationToast';
 import { AuditPage } from './pages/AuditPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { HeatmapPage } from './pages/HeatmapPage';
@@ -33,6 +34,7 @@ export function App() {
               element={
                 <ProtectedRoute>
                   <EventsProvider>
+                    <NotificationToast />
                     <AppLayout />
                   </EventsProvider>
                 </ProtectedRoute>

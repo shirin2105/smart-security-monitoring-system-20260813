@@ -26,9 +26,13 @@ class CVWorker:
                  detector: DEIMv2Detector | None = None, tracker: Any | None = None,
                  detector_factory: Callable[[], DEIMv2Detector] | None = None,
                  region_validator: RegionValidator | None = None,
-                 candidate_id_namespace: Callable[[str], str] | None = None):
+                 candidate_id_namespace: Callable[[str], str] | None = None,
+                 loop: bool = True,
+                 realtime: bool = False,
+                 **kwargs: Any):
         self.camera_id = camera_id
         self.candidate_id_namespace = candidate_id_namespace or (lambda value: value)
+        self.realtime = realtime
 
         # Load configs
         cameras_cfg = settings.cameras
@@ -48,6 +52,7 @@ class CVWorker:
             source_uri=uri,
             source_type=cam_info.get("source_type", "SIMULATED"),
             inference_fps=cam_info.get("inference_fps", 5.0),
+            loop=loop,
         )
         self.health_monitor = CameraHealthMonitor(camera_id=camera_id)
         self.frame_sampler = FrameSampler(inference_fps=cam_info.get("inference_fps", 5.0))
@@ -99,6 +104,8 @@ class CVWorker:
             deadline: float | None = None) -> list[EventCandidate]:
         generated_candidates: list[EventCandidate] = []
         processed_count = 0
+        start_wall_time: float | None = None
+        prev_frame_id: int | None = None
 
         try:
             # Resolve before reading frames, but inside the cleanup boundary so a
@@ -113,6 +120,23 @@ class CVWorker:
                 if not self.frame_sampler.should_process(frame_data):
                     continue
 
+                src_fps = frame_data.source_fps if frame_data.source_fps > 0 else 25.0
+                video_time = float((frame_data.frame_id - 1) / src_fps)
+
+                if getattr(self, "realtime", False):
+                    now = time.monotonic()
+                    if start_wall_time is None or (prev_frame_id is not None and frame_data.frame_id < prev_frame_id):
+                        start_wall_time = now - video_time
+                    expected_wall_time = start_wall_time + video_time
+                    sleep_dur = expected_wall_time - now
+                    if sleep_dur > 0:
+                        if stop_event is not None:
+                            if stop_event.wait(timeout=sleep_dur):
+                                break
+                        else:
+                            time.sleep(sleep_dur)
+                    prev_frame_id = frame_data.frame_id
+
             # 1. Detection
                 detections, latency_ms = self.detector.detect(frame_data)
 
@@ -125,6 +149,31 @@ class CVWorker:
                     track_state = self.track_store.update_track(tr)
                     active_tracks.append(track_state)
 
+                # Publish real-time frame telemetry for Dev Mode
+                if hasattr(self.publisher, "publish_telemetry"):
+                    frame_h, frame_w = (frame_data.image.shape[:2] if frame_data.image is not None else (480, 640))
+                    person_tracks = [tr for tr in active_tracks if tr.class_name == "person"]
+                    telemetry_tracks = [
+                        {
+                            "trackId": tr.track_id,
+                            "className": tr.class_name,
+                            "confidence": round(float(tr.confidence), 3),
+                            "bbox": [round(float(c), 2) for c in tr.latest_bbox],
+                        }
+                        for tr in person_tracks
+                    ]
+                    ts_str = frame_data.captured_at if isinstance(frame_data.captured_at, str) else frame_data.captured_at.isoformat()
+                    video_time = round(float((frame_data.frame_id - 1) / (frame_data.source_fps if frame_data.source_fps > 0 else 25.0)), 3)
+                    telemetry_payload = {
+                        "cameraId": self.camera_id,
+                        "timestamp": ts_str,
+                        "videoTime": video_time,
+                        "frameSize": [frame_w, frame_h],
+                        "tracks": telemetry_tracks,
+                    }
+                    self.publisher.publish_telemetry(telemetry_payload)
+
+
             # 4. Evaluate across registered Event Engines
                 regions = self.static_region_detector.update(frame_data.image, frame_data.captured_at)
                 self.abandoned_engine.submit_static_regions(regions)
@@ -133,7 +182,8 @@ class CVWorker:
                     for candidate in candidates:
                         if (stop_event is not None and stop_event.is_set()) or (deadline is not None and time.monotonic() >= deadline):
                             break
-                        namespaced_id = self.candidate_id_namespace(candidate.candidateId)
+                        namespace_fn = getattr(self, "candidate_id_namespace", lambda value: value)
+                        namespaced_id = namespace_fn(candidate.candidateId)
                         if namespaced_id != candidate.candidateId:
                             candidate = candidate.model_copy(update={"candidateId": namespaced_id})
                         self.publisher.publish(candidate)

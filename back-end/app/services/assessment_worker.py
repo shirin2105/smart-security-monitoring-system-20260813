@@ -33,6 +33,8 @@ def settings():
 
 def claim_job(db, now=None, incident_id=None):
     now = now or datetime.now(UTC)
+    if db.bind.dialect.name == "sqlite" and now.tzinfo is not None:
+        now = now.replace(tzinfo=None)
     eligible = or_(
         and_(AssessmentJob.status == "READY", AssessmentJob.available_at <= now),
         and_(AssessmentJob.status == "PROCESSING", AssessmentJob.lease_expires_at < now),
@@ -65,6 +67,8 @@ def reserve_attempt(job_id, token):
     db = SessionLocal()
     try:
         now = datetime.now(UTC)
+        if db.bind.dialect.name == "sqlite" and now.tzinfo is not None:
+            now = now.replace(tzinfo=None)
         changed = db.execute(update(AssessmentJob).where(
             AssessmentJob.id == job_id,
             AssessmentJob.lease_token == token,
@@ -82,6 +86,8 @@ def _finish(job_id, token, result, is_fallback, error=None):
     db = SessionLocal()
     try:
         now = datetime.now(UTC)
+        if db.bind.dialect.name == "sqlite" and now.tzinfo is not None:
+            now = now.replace(tzinfo=None)
         incident_id = db.query(AssessmentJob.incident_id).filter(AssessmentJob.id == job_id).scalar()
         changed = db.execute(update(AssessmentJob).where(
             AssessmentJob.id == job_id,

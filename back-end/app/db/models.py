@@ -42,6 +42,7 @@ class Incident(Base):
     source = Column(String(20), nullable=False, default="SIMULATOR")  # "CV", "SIMULATOR"
     candidate_id = Column(String(255), nullable=True, unique=True, index=True)
     payload_hash = Column(String(64), nullable=True)
+    bbox_json = Column(Text, nullable=True)
     created_at = Column(DateTime, default=utc_now, nullable=False)
 
     camera = relationship("Camera", back_populates="incidents")

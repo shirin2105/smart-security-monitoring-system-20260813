@@ -7,7 +7,7 @@
  * nhánh lỗi 403/409 của BAC-53 kiểm chứng được mà không cần backend.
  */
 
-import { ActionType, EventAction, SecurityEvent, User } from '../../domain/types';
+import { ActionType, CameraZone, EventAction, SecurityEvent, User } from '../../domain/types';
 import { allowedActions, reasonRequired } from '../../domain/permissions';
 import { ApiError } from '../errors';
 import { applyQuery } from '../query';
@@ -22,6 +22,23 @@ let events: SecurityEvent[] = MOCK_EVENTS.map((event) => ({
 }));
 let nextEventId = 200;
 let nextActionId = 10_000;
+
+let mockZones: CameraZone[] = [
+  {
+    zoneId: 'restricted_gate',
+    cameraId: 'cam_01',
+    name: 'Khu vực hạn chế Cổng A',
+    polygon: [[50, 100], [590, 100], [590, 440], [50, 440]],
+    enabled: true,
+  },
+  {
+    zoneId: 'lobby_area',
+    cameraId: 'cam_02',
+    name: 'Khu vực sảnh',
+    polygon: [[50, 50], [1200, 50], [1200, 700], [50, 700]],
+    enabled: true,
+  },
+];
 
 let actorGetter: () => User | null = () => null;
 
@@ -216,4 +233,21 @@ export const mockTransport: ApiTransport = {
     events = [created, ...events];
     emit(created, 'created');
   },
+
+  async getZones(): Promise<CameraZone[]> {
+    await latency();
+    return [...mockZones];
+  },
+
+  async saveZone(zone: CameraZone): Promise<CameraZone> {
+    await latency();
+    const idx = mockZones.findIndex((z) => z.zoneId === zone.zoneId || z.cameraId === zone.cameraId);
+    if (idx >= 0) {
+      mockZones[idx] = zone;
+    } else {
+      mockZones.push(zone);
+    }
+    return zone;
+  },
 };
+

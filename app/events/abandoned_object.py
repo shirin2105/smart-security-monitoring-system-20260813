@@ -295,7 +295,7 @@ class AbandonedObjectEngine(BaseEventEngine):
             candidateId=candidate_id, sourceEngine=SourceEngine.CV, cameraId=self.camera_id,
             sourceType=pending.source_type, eventType=EventType.ABANDONED_OBJECT,
             detectedAt=timestamp, firstSeenAt=region.first_seen_at, lastSeenAt=timestamp,
-            confidence=region.confidence, trackCount=0, trackIds=[],
+            confidence=region.confidence, trackCount=0, trackIds=[], bbox=list(region.bbox),
             observations=ObservationData(personCount=pending.person_count,
                 stationarySeconds=round(region.persistence_seconds, 2),
                 ownerAbsentSeconds=round(pending.absent_seconds, 2)),
@@ -454,6 +454,7 @@ class AbandonedObjectEngine(BaseEventEngine):
                         confidence=0.90,
                         trackCount=1,
                         trackIds=[t_id],
+                        bbox=list(bbox_to_use),
                         observations=ObservationData(
                             personCount=len(person_tracks),
                             stationarySeconds=round(stat_dur, 2),

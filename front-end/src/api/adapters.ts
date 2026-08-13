@@ -16,6 +16,7 @@ import { API_BASE_URL } from './config';
 import {
   Camera,
   CameraHealth,
+  CameraZone,
   EscalationState,
   EventAction,
   EventState,
@@ -236,3 +237,32 @@ export function toUser(raw: RawUser): User {
     cameraScope: raw.camera_scope ?? [],
   };
 }
+
+export interface RawZone {
+  zone_id: string;
+  camera_id: string;
+  name: string;
+  polygon: [number, number][];
+  enabled: boolean;
+}
+
+export function toCameraZone(raw: RawZone): CameraZone {
+  return {
+    zoneId: raw.zone_id,
+    cameraId: raw.camera_id,
+    name: raw.name,
+    polygon: raw.polygon,
+    enabled: raw.enabled ?? true,
+  };
+}
+
+export function toRawZone(zone: CameraZone): RawZone {
+  return {
+    zone_id: zone.zoneId,
+    camera_id: zone.cameraId,
+    name: zone.name,
+    polygon: zone.polygon,
+    enabled: zone.enabled,
+  };
+}
+

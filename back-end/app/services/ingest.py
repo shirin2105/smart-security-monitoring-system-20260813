@@ -23,7 +23,10 @@ EVENT_SEVERITY_MAP = {
     "SUSPECTED_FALL": "critical",
     "COVERAGE_DEGRADED": "warning",
 }
-CAMERA_ID_MAP = {"cam_01": 1, "cam_02": 2}
+CAMERA_ID_MAP = {
+    "cam_01": 1, "cam_02": 2, "cam_03": 3,
+    "cam_04": 4, "cam_05": 5, "cam_06": 6,
+}
 
 
 class IdempotencyConflict(ValueError):
@@ -84,6 +87,7 @@ def assessment_snapshot(payload: dict, camera_id: int) -> dict:
 
 
 def _incident_payload(incident: Incident, camera_name: str) -> dict:
+    bbox = json.loads(incident.bbox_json) if incident.bbox_json else None
     return {
         "id": incident.id,
         "camera_id": incident.camera_id,
@@ -94,6 +98,7 @@ def _incident_payload(incident: Incident, camera_name: str) -> dict:
         "status": incident.status,
         "source": incident.source,
         "created_at": incident.created_at.isoformat(),
+        "bbox": bbox,
     }
 
 
@@ -110,6 +115,8 @@ async def ingest_event_candidate(payload: dict) -> dict:
         canonical_event_type = payload["eventType"]
         event_type = map_event_type(canonical_event_type)
         severity = EVENT_SEVERITY_MAP[canonical_event_type]
+        bbox_data = payload.get("bbox")
+        bbox_json_str = json.dumps(bbox_data) if bbox_data else None
         incident = Incident(
             camera_id=camera_id,
             event_type=event_type,
@@ -119,6 +126,7 @@ async def ingest_event_candidate(payload: dict) -> dict:
             source="CV",
             candidate_id=candidate_id,
             payload_hash=digest,
+            bbox_json=bbox_json_str,
             created_at=datetime.now(UTC),
         )
         db.add(incident)
@@ -138,7 +146,7 @@ async def ingest_event_candidate(payload: dict) -> dict:
         db.refresh(incident)
         camera = db.query(Camera).filter(Camera.id == camera_id).first()
         incident_payload = _incident_payload(incident, camera.name if camera else f"Camera #{camera_id}")
-        incident_payload["bbox"] = None
+        incident_payload["bbox"] = bbox_data
         await manager.broadcast({"type": "NEW_ALERT", "incident": incident_payload})
         return {"status": "ACCEPTED", "incident": incident_payload}
     finally:

@@ -26,6 +26,13 @@ class HttpEventPublisher(EventPublisher):
         self.timeout_seconds = timeout_seconds
         self.max_retries = max_retries
         self.last_receipt: PublishReceipt | None = None
+        self._client: httpx.Client | None = None
+
+    @property
+    def client(self) -> httpx.Client:
+        if self._client is None or self._client.is_closed:
+            self._client = httpx.Client(timeout=self.timeout_seconds)
+        return self._client
 
     def publish(self, candidate: EventCandidate) -> bool:
         self.last_receipt = None
@@ -49,8 +56,7 @@ class HttpEventPublisher(EventPublisher):
         # Bounded retry loop with exponential backoff
         for attempt in range(1, self.max_retries + 1):
             try:
-                with httpx.Client(timeout=self.timeout_seconds) as client:
-                    response = client.post(self.endpoint_url, json=payload, headers=headers)
+                response = self.client.post(self.endpoint_url, json=payload, headers=headers)
 
                 if 200 <= response.status_code < 300:
                     try:
@@ -88,3 +94,15 @@ class HttpEventPublisher(EventPublisher):
                 time.sleep(0.2 * (2 ** (attempt - 1)))  # Backoff: 0.2s, 0.4s
 
         return False
+
+    def publish_telemetry(self, telemetry: dict) -> bool:
+        telemetry_url = self.endpoint_url.rsplit("/", 1)[0] + "/telemetry"
+        headers = {"Content-Type": "application/json"}
+        if self.bearer_token.strip():
+            headers["Authorization"] = f"Bearer {self.bearer_token}"
+        try:
+            resp = self.client.post(telemetry_url, json=telemetry, headers=headers, timeout=1.0)
+            return 200 <= resp.status_code < 300
+        except Exception:
+            return False
+

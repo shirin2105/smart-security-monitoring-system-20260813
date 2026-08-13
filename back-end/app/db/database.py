@@ -82,19 +82,25 @@ def init_db_and_seed():
             db.commit()
             logger.info("Default seed users created: guard, manager")
 
-        # Seed cameras if empty
-        if db.query(Camera).count() == 0:
-            cameras_seed = [
-                Camera(id=1, name="Camera Cổng Chính", location="Cổng A - Tầng 1", stream_url="/media/walking_people_browser.webm", status="online", source="CV"),
-                Camera(id=2, name="Camera Sảnh Chờ", location="Sảnh Tòa Nhà - Tầng 1", stream_url="/media/people_detection.mp4", status="online", source="CV"),
-                Camera(id=3, name="Camera Hàng Rào Tây", location="Khu Vực Hàng Rào - Phía Tây", stream_url="/media/pets2006_3.mp4", status="warning", source="SIMULATOR"),
-                Camera(id=4, name="Camera Phòng Server", location="Khai Thác Kỹ Thuật - Tầng Hầm", stream_url="/media/aban3.mp4", status="online", source="SIMULATOR"),
-                Camera(id=5, name="Camera Bãi Xe B1", location="Bãi Xe Ô Tô - Tầng B1", stream_url="/media/store-aisle-detection.mp4", status="online", source="SIMULATOR"),
-                Camera(id=6, name="Camera Hành Lang T4", location="Hành Lang Văn Phòng - Tầng 4", stream_url="/media/store-aisle-detection.mp4", status="online", source="SIMULATOR"),
-            ]
-            db.add_all(cameras_seed)
-            db.commit()
-            logger.info("6 Default cameras seeded into database")
+        # Seed or update cameras
+        cameras_seed = [
+            (1, "Camera Cổng Chính", "Cổng A - Tầng 1", "/media/walking_people_browser.webm"),
+            (2, "Camera Sảnh Chờ", "Sảnh Tòa Nhà - Tầng 1", "/media/people_detection.mp4"),
+            (3, "Camera Hàng Rào Tây", "Khu Vực Hàng Rào - Phía Tây", "/media/pets2006_3.mp4"),
+            (4, "Camera Phòng Server", "Khai Thác Kỹ Thuật - Tầng Hầm", "/media/aban3.mp4"),
+            (5, "Camera Bãi Xe B1", "Bãi Xe Ô Tô - Tầng B1", "/media/store-aisle-detection.mp4"),
+            (6, "Camera Hành Lang T4", "Hành Lang Văn Phòng - Tầng 4", "/media/person-bicycle-car-detection.mp4"),
+        ]
+        for cam_id, name, location, stream_url in cameras_seed:
+            existing = db.query(Camera).filter(Camera.id == cam_id).first()
+            if existing:
+                if "unsplash.com" in (existing.stream_url or ""):
+                    existing.stream_url = stream_url
+                    existing.source = "CV"
+            else:
+                db.add(Camera(id=cam_id, name=name, location=location, stream_url=stream_url, status="online", source="CV"))
+        db.commit()
+        logger.info("Default cameras seeded/updated in database")
 
 
     except Exception as e:
@@ -106,12 +112,20 @@ def init_db_and_seed():
 
 def _ensure_incident_ingest_columns():
     """Keep databases created before authenticated ingest backward compatible."""
-    columns = {column["name"] for column in inspect(engine).get_columns("incidents")}
+    inc_columns = {column["name"] for column in inspect(engine).get_columns("incidents")}
+    cam_columns = {column["name"] for column in inspect(engine).get_columns("cameras")}
     with engine.begin() as connection:
-        if "candidate_id" not in columns:
+        if "candidate_id" not in inc_columns:
             connection.execute(text("ALTER TABLE incidents ADD COLUMN candidate_id VARCHAR(255)"))
-        if "payload_hash" not in columns:
+        if "payload_hash" not in inc_columns:
             connection.execute(text("ALTER TABLE incidents ADD COLUMN payload_hash VARCHAR(64)"))
+        if "bbox_json" not in inc_columns:
+            connection.execute(text("ALTER TABLE incidents ADD COLUMN bbox_json TEXT"))
+        if "source" not in inc_columns:
+            connection.execute(text("ALTER TABLE incidents ADD COLUMN source VARCHAR(20) DEFAULT 'SIMULATOR' NOT NULL"))
+        if "source" not in cam_columns:
+            connection.execute(text("ALTER TABLE cameras ADD COLUMN source VARCHAR(20) DEFAULT 'SIMULATOR' NOT NULL"))
         connection.execute(
             text("CREATE UNIQUE INDEX IF NOT EXISTS ix_incidents_candidate_id ON incidents (candidate_id)")
         )
+
