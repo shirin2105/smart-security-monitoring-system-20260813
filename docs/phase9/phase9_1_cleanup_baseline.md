@@ -9,3 +9,18 @@
   ABODA real-video runner. Webcam is manual hardware verification only.
 - Dirty/untracked datasets, artifacts, virtual environments, and the temporary
   worktree are not cleanup targets.
+
+## Final closure evidence — 2026-08-14
+
+- Focused unified CV tests: **PASS** (`15 passed`): manager, JSONL publisher,
+  worker publisher/configuration, Phase7C production adapter, unified baseline, and
+  unified worker.
+- ABODA real-video regression: **PASS** using `datasets/aboda-video1.avi` (SHA-256
+  `a4b089eddc52631421c3bb834b62de95d11ac78684a69b69305ed9299e1477db`): 320
+  processed frames and 320 detector calls, 11 TrackStore tracks, two schema-valid
+  `ABANDONED_OBJECT` CVEvent v1 records, valid START-to-END lifecycle, and no duplicate
+  record. Evidence: `artifacts/phase91-final-closure-aboda/report.json`.
+- Webcam remains **NOT HARDWARE VERIFIED**; the manual checklist keeps it explicitly
+  outside automated merge evidence.
+- Final reference taxonomy is recorded in `phase9_1_reference_audit.md`. No stale
+  active unified-CV runtime/config/current-doc reference remains.

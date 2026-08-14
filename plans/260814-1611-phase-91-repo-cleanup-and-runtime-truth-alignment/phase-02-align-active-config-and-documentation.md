@@ -1,7 +1,7 @@
 ---
 phase: 2
 title: "Align active configuration and documentation"
-status: pending
+status: complete
 priority: P1
 effort: "4h"
 dependencies: [1]
@@ -61,4 +61,3 @@ Revert the configuration/docs commit as one unit. It changes no persisted data o
 ## Next steps
 
 Provides current truth to Phase 3 and the validation statements for Phase 4.
-

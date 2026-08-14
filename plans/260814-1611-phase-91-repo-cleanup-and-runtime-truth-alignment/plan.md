@@ -1,7 +1,7 @@
 ---
 title: "Phase 9.1 repo cleanup and runtime truth alignment"
 description: "Remove only proven-dead CV legacy paths and make current documentation/configuration match the validated Phase 9 runtime."
-status: pending
+status: complete
 priority: P1
 effort: 14h
 branch: develop
@@ -29,18 +29,25 @@ Scope is cleanup and runtime-truth alignment after completed Phase 9. The runtim
 
 | # | Phase | Depends on | Status |
 |---|---|---|---|
-| 1 | [Freeze and classify references](./phase-01-freeze-and-classify-references.md) | none | Pending |
-| 2 | [Align active configuration and documentation](./phase-02-align-active-config-and-documentation.md) | 1 | Pending |
-| 3 | [Remove proven-dead legacy CV surface](./phase-03-remove-proven-dead-legacy-cv-surface.md) | 1, 2 | Pending |
-| 4 | [Regression, evidence, and merge gate](./phase-04-regression-evidence-and-merge-gate.md) | 2, 3 | Pending |
+| 1 | [Freeze and classify references](./phase-01-freeze-and-classify-references.md) | none | Complete |
+| 2 | [Align active configuration and documentation](./phase-02-align-active-config-and-documentation.md) | 1 | Complete |
+| 3 | [Remove proven-dead legacy CV surface](./phase-03-remove-proven-dead-legacy-cv-surface.md) | 1, 2 | Complete |
+| 4 | [Regression, evidence, and merge gate](./phase-04-regression-evidence-and-merge-gate.md) | 2, 3 | Complete |
 
 ## Success Criteria
 
-- [ ] Active config stays Phase7C-only and is loadable; its thresholds are byte-for-byte unchanged unless an audit proves a stale key.
-- [ ] Current docs identify DEIMv2, ByteTrack, shared TrackStore, Phase7C, CVEvent v1, and JsonlPublisher; remaining historical mentions are clearly `LEGACY`.
-- [ ] `app.vlm`, `StaticRegionDetector`, old static abandoned engine, and dependent demo/tests are deleted only after the audit proves no active import/call/config edge; otherwise they remain explicitly legacy and isolated.
-- [ ] Focused contract/worker/adapter/publisher/config tests and the known ABODA smoke pass; webcam is PASS only after human hardware verification, otherwise `NOT HARDWARE VERIFIED`.
-- [ ] Final grep classification has zero active-runtime/current-doc hits for static-region/VLM/YOLO/StrongSORT claims; Phase 10 work remains absent.
+- [x] Active config stays Phase7C-only and is loadable; its thresholds are byte-for-byte unchanged unless an audit proves a stale key.
+- [x] Current docs identify DEIMv2, ByteTrack, shared TrackStore, Phase7C, CVEvent v1, and JsonlPublisher; remaining historical mentions are clearly `LEGACY`.
+- [x] `app.vlm`, `StaticRegionDetector`, old static abandoned engine, and dependent demo/tests remain explicitly legacy and isolated because retained tests/demos still import them.
+- [x] Focused contract/worker/adapter/publisher/config tests and the known ABODA smoke pass; webcam is `NOT HARDWARE VERIFIED`.
+- [x] Final grep classification has zero stale active unified-CV runtime/current-doc hits for static-region/VLM/YOLO/StrongSORT claims; Phase 10 work remains absent.
+
+## Final status
+
+**PHASE 9.1 COMPLETE — MERGE READY.** The closure evidence is in
+`docs/phase9/phase9_1_cleanup_baseline.md` and
+`docs/phase9/phase9_1_reference_audit.md`. Backend, LLM, and Phase 10 remain outside
+this completed CV cleanup scope.
 
 ## Dependency and rollback rule
 

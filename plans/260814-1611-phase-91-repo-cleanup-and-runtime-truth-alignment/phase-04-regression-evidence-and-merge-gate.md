@@ -1,7 +1,7 @@
 ---
 phase: 4
 title: "Regression, evidence, and merge gate"
-status: pending
+status: complete
 priority: P1
 effort: "3h"
 dependencies: [2, 3]
@@ -54,10 +54,10 @@ Inputs: cleaned config/docs/code, the Phase 1 baseline, and known video assets/c
 
 ## Success criteria
 
-- [ ] Focused CV tests pass with command/output recorded.
-- [ ] ABODA minimum regression passes or is honestly reported as environment-blocked; no fabricated pass.
-- [ ] Final audit lists all residual hits and none are active runtime/current docs.
-- [ ] Merge status includes all 14 requested deliverables and an explicit no-Phase-10 assertion.
+- [x] Focused CV tests pass with command/output recorded.
+- [x] ABODA minimum regression passes; no fabricated pass.
+- [x] Final audit lists residual-hit families and none are stale active unified-CV runtime/current docs.
+- [x] Merge status includes the requested closure deliverables and an explicit no-Phase-10 assertion.
 
 ## Rollback
 
