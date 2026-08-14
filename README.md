@@ -100,6 +100,41 @@ docker compose up --build -d
 ```powershell
 docker compose down
 ```
+
+---
+
+## Phase 9 Computer Vision
+
+The production CV boundary is local and backend-independent:
+
+```text
+DEIMv2 -> ByteTrack -> shared TrackStore
+       -> intrusion / crowd / Phase7C abandoned adapters
+       -> CVEventManager -> CVEvent v1 -> CVEventPublisher -> JSONL
+```
+
+`CVEventPublisher.publish(CVEvent)` is the final CV interface. `JsonlPublisher` is the
+canonical implementation and appends schema-valid `cv-event-v1` records to
+`artifacts/events/cv-events.jsonl`. A backend endpoint is not required by Phase 9;
+backend and LLM integration are outside CV scope.
+
+Real-video regression passed ABODA abandoned-object, Phase 8 intrusion, Phase 8 crowd,
+and a negative clip. Each processed frame had exactly one detector call; one ByteTrack
+runtime and one shared `TrackStore` fed all three adapters. All lifecycle records
+validated as CVEvent v1 without duplicate payloads. Phase 9 CV tests passed 78 tests
+plus 8 subtests; webcam devtool tests passed 3/3. See
+[`reports/phase9-real-video-regression.md`](./reports/phase9-real-video-regression.md).
+
+Webcam code is ready but was not hardware-verified in the agent environment. Run the
+local tool and manually verify intrusion on the right half, crowd with two people, and
+the Phase7C abandoned-object scenario:
+
+```powershell
+third_party\deimv2\.python311\python.exe devtools\webcam_cv_test\app.py
+```
+
+The EventCandidate/backend demo above is retained for legacy compatibility; it is not
+the Phase 9 CV output boundary.
 *(Nếu muốn xóa toàn bộ dữ liệu PostgreSQL trong volume, thêm cờ `-v`: `docker compose down -v`)*
 
 ---

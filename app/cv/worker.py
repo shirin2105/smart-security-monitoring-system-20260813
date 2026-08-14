@@ -1,38 +1,52 @@
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from typing import Any
 import threading
 import time
+import warnings
 
-from app.common.schemas import EventCandidate
 from app.config import settings
+from app.cv.contracts.cv_event import CVEvent
+from app.cv.contracts.validation import validate_event
 from app.cv.detector import DEIMv2Detector
+from app.cv.event_manager import CVEventManager
+from app.cv.events.crowd_adapter import CrowdLifecycleAdapter
+from app.cv.events.intrusion_adapter import IntrusionLifecycleAdapter
+from app.cv.events.phase7c_abandoned_adapter import Phase7CAbandonedAdapter
 from app.cv.frame_sampler import FrameSampler
-from app.cv.static_region_detector import StaticRegionDetector
 from app.cv.track_store import TrackStore
 from app.cv.tracker import ByteTrackMultiObjectTracker
-from app.events.abandoned_object import AbandonedObjectEngine
-from app.events.crowd import CrowdEventEngine
-from app.events.intrusion import IntrusionEventEngine
-from app.publisher.base import EventPublisher
-from app.publisher.http_publisher import HttpEventPublisher
+from app.publisher.base import CVEventPublisher
+from app.publisher.jsonl_publisher import JsonlPublisher
 from app.sources.camera_health import CameraHealthMonitor
 from app.sources.mp4_source import MP4VideoSource
-from app.vlm.region_validator import create_region_validator
-from app.vlm.region_validator import RegionValidator
 
 
 class CVWorker:
-    def __init__(self, camera_id: str, source_uri: str | None = None, publisher: EventPublisher | None = None,
-                 detector: DEIMv2Detector | None = None, tracker: Any | None = None,
-                 detector_factory: Callable[[], DEIMv2Detector] | None = None,
-                 region_validator: RegionValidator | None = None,
-                 candidate_id_namespace: Callable[[str], str] | None = None):
+    def __init__(
+        self,
+        camera_id: str,
+        source_uri: str | None = None,
+        publisher: CVEventPublisher | None = None,
+        detector: DEIMv2Detector | None = None,
+        tracker: Any | None = None,
+        detector_factory: Callable[[], DEIMv2Detector] | None = None,
+        region_validator: Any | None = None,
+        candidate_id_namespace: Callable[[str], str] | None = None,
+        adapters: Sequence[Any] | None = None,
+        event_manager: CVEventManager | None = None,
+        camera_config: dict[str, Any] | None = None,
+        zones_config: list[dict[str, Any]] | None = None,
+        rules_config: dict[str, Any] | None = None,
+    ):
         self.camera_id = camera_id
-        self.candidate_id_namespace = candidate_id_namespace or (lambda value: value)
+        self.processed_frames = 0
+        self.event_id_namespace = candidate_id_namespace or (lambda value: value)
+        if region_validator is not None:
+            warnings.warn("region_validator is ignored by the unified CV event worker", DeprecationWarning)
 
-        # Load configs
-        cameras_cfg = settings.cameras
-        cam_info = next((c for c in cameras_cfg if c["camera_id"] == camera_id), None)
+        cam_info = camera_config or next(
+            (c for c in settings.cameras if c["camera_id"] == camera_id), None
+        )
         if not cam_info:
             cam_info = {
                 "camera_id": camera_id,
@@ -40,109 +54,159 @@ class CVWorker:
                 "source_uri": source_uri or "./tests/clips/intrusion_positive.mp4",
                 "inference_fps": 5.0,
             }
-
         uri = source_uri or cam_info.get("source_uri", "./tests/clips/intrusion_positive.mp4")
+        fps = float(cam_info.get("inference_fps", 5.0))
 
-        self.source = MP4VideoSource(
-            camera_id=camera_id,
-            source_uri=uri,
-            source_type=cam_info.get("source_type", "SIMULATED"),
-            inference_fps=cam_info.get("inference_fps", 5.0),
-        )
+        self.source = MP4VideoSource(camera_id, uri, cam_info.get("source_type", "SIMULATED"), fps)
         self.health_monitor = CameraHealthMonitor(camera_id=camera_id)
-        self.frame_sampler = FrameSampler(inference_fps=cam_info.get("inference_fps", 5.0))
-
-        models_cfg = settings.detector_config
+        self.frame_sampler = FrameSampler(inference_fps=fps)
         self.detector = detector
-        self.detector_factory = detector_factory or (lambda: DEIMv2Detector(**models_cfg))
-        self.tracker = tracker or ByteTrackMultiObjectTracker(
-            camera_id=camera_id, frame_rate=cam_info.get("inference_fps", 5.0)
-        )
+        self.detector_factory = detector_factory or (lambda: DEIMv2Detector(**settings.detector_config))
+        self.tracker = tracker or ByteTrackMultiObjectTracker(camera_id=camera_id, frame_rate=fps)
         self.track_store = TrackStore(camera_id=camera_id)
-        abandoned_rules = settings.event_rules.get("abandoned_object", {})
-        self.static_region_detector = StaticRegionDetector(camera_id, abandoned_rules.get("static_region", {}))
 
-        # All CV Event Engines Registered
-        vlm_cfg = abandoned_rules.get("vlm", {})
-        validator = region_validator or create_region_validator(
-            vlm_cfg.get("mode", "disabled"), model=vlm_cfg.get("model", "google/gemma-3-4b-it"),
-            timeout_seconds=vlm_cfg.get("timeout_seconds", 8.0))
-        self.engines = [
-            IntrusionEventEngine(
-                camera_id=camera_id,
-                zones_config=settings.zones,
-                rules_config=settings.event_rules,
-            ),
-            CrowdEventEngine(
-                camera_id=camera_id,
-                zones_config=settings.zones,
-                rules_config=settings.event_rules,
-            ),
-            AbandonedObjectEngine(
-                camera_id=camera_id,
-                zones_config=settings.zones,
-                rules_config=settings.event_rules,
-                region_validator=validator,
-            ),
-        ]
-        self.abandoned_engine = self.engines[-1]
-        if publisher is None:
-            publisher = HttpEventPublisher(
-                endpoint_url=settings.event_ingest_url,
-                bearer_token=settings.event_ingest_token,
-                timeout_seconds=settings.event_ingest_timeout_seconds,
-                max_retries=settings.event_ingest_max_attempts,
+        rules = rules_config or settings.event_rules
+        zones = zones_config if zones_config is not None else settings.zones
+        abandoned = rules.get("abandoned_object", {})
+        if any(key in abandoned for key in ("static_region", "vlm", "candidate_source")):
+            warnings.warn(
+                "legacy abandoned_object static-region/VLM settings are ignored by the unified worker",
+                DeprecationWarning,
             )
-        self.publisher = publisher
+        phase7c_config = abandoned.get("phase7c", {})
+        self._validate_phase7c_config(phase7c_config)
+        self.adapters = tuple(adapters) if adapters is not None else (
+            IntrusionLifecycleAdapter(camera_id, zones, rules),
+            CrowdLifecycleAdapter(camera_id, zones, rules),
+            Phase7CAbandonedAdapter(camera_id, phase7c_config, fps),
+        )
+        self.event_manager = event_manager or CVEventManager(camera_id)
+        self.publisher = publisher or JsonlPublisher(
+            output_path=settings.artifact_dir / "events" / "cv-events.jsonl"
+        )
 
-    def run(self, max_frames: int | None = None, stop_event: threading.Event | None = None,
-            deadline: float | None = None) -> list[EventCandidate]:
-        generated_candidates: list[EventCandidate] = []
+    def run(
+        self,
+        max_frames: int | None = None,
+        stop_event: threading.Event | None = None,
+        deadline: float | None = None,
+    ) -> list[CVEvent]:
+        generated_events: list[CVEvent] = []
         processed_count = 0
-
         try:
-            # Resolve before reading frames, but inside the cleanup boundary so a
-            # startup failure still releases source and pending engine resources.
             if self.detector is None:
                 self.detector = self.detector_factory()
             for frame_data in self.source.read_frames():
-                if (stop_event is not None and stop_event.is_set()) or (deadline is not None and time.monotonic() >= deadline):
+                if self._should_stop(stop_event, deadline):
                     break
                 self.health_monitor.update_frame_time(frame_data.captured_at)
-
                 if not self.frame_sampler.should_process(frame_data):
                     continue
 
-            # 1. Detection
-                detections, latency_ms = self.detector.detect(frame_data)
-
-            # 2. Tracking
+                detections, _latency_ms = self.detector.detect(frame_data)
                 track_results = self.tracker.track(detections, frame_data)
-
-            # 3. Track Store Update
-                active_tracks = []
-                for tr in track_results:
-                    track_state = self.track_store.update_track(tr)
-                    active_tracks.append(track_state)
-
-            # 4. Evaluate across registered Event Engines
-                regions = self.static_region_detector.update(frame_data.image, frame_data.captured_at)
-                self.abandoned_engine.submit_static_regions(regions)
-                for engine in self.engines:
-                    candidates = engine.evaluate(active_tracks, frame_data)
-                    for candidate in candidates:
-                        if (stop_event is not None and stop_event.is_set()) or (deadline is not None and time.monotonic() >= deadline):
+                active_snapshot = tuple(
+                    self.track_store.update_track(track) for track in track_results
+                )
+                for adapter in self.adapters:
+                    for signal in adapter.evaluate(active_snapshot, frame_data):
+                        if self._should_stop(stop_event, deadline):
                             break
-                        namespaced_id = self.candidate_id_namespace(candidate.candidateId)
-                        if namespaced_id != candidate.candidateId:
-                            candidate = candidate.model_copy(update={"candidateId": namespaced_id})
-                        self.publisher.publish(candidate)
-                        generated_candidates.append(candidate)
+                        event = self.event_manager.process(signal)
+                        if event is None:
+                            continue
+                        original_event_id = event.event_id
+                        event = self._namespace_event(event)
+                        self._publish(event, original_event_id)
+                        generated_events.append(event)
 
                 processed_count += 1
-                if max_frames and processed_count >= max_frames:
+                self.processed_frames = processed_count
+                if max_frames is not None and processed_count >= max_frames:
                     break
-        finally:
-            self.abandoned_engine.finalize()
-            self.source.release()
-        return generated_candidates
+        except BaseException as primary_error:
+            try:
+                self._cleanup(generated_events)
+            except BaseException as cleanup_error:
+                primary_error.add_note(f"CV cleanup also failed: {cleanup_error!r}")
+            try:
+                self.source.release()
+            except BaseException as release_error:
+                primary_error.add_note(f"CV source release also failed: {release_error!r}")
+            raise
+        else:
+            try:
+                self._cleanup(generated_events)
+            finally:
+                self.source.release()
+        return generated_events
+
+    def _publish(self, event: CVEvent, lifecycle_event_id: str | None = None) -> None:
+        validate_event(event)
+        rollback_id = lifecycle_event_id or event.event_id
+        try:
+            published = self.publisher.publish(event)
+        except BaseException:
+            if event.event_state == "START":
+                self.event_manager.discard(rollback_id)
+            raise
+        if published is False:
+            if event.event_state == "START":
+                self.event_manager.discard(rollback_id)
+            raise RuntimeError(f"failed to publish CVEvent {event.event_id}")
+
+    def _cleanup(self, generated_events: list[CVEvent]) -> None:
+        end_all = getattr(self.event_manager, "end_all", None)
+        ending_events = end_all() if callable(end_all) else []
+        for event in ending_events:
+            original_event_id = event.event_id
+            event = self._namespace_event(event)
+            self._publish(event, original_event_id)
+            generated_events.append(event)
+        for component in (*self.adapters, self.event_manager):
+            finalize = getattr(component, "finalize", None)
+            if callable(finalize):
+                finalize()
+
+    @staticmethod
+    def _should_stop(stop_event: threading.Event | None, deadline: float | None) -> bool:
+        return bool(
+            (stop_event is not None and stop_event.is_set())
+            or (deadline is not None and time.monotonic() >= deadline)
+        )
+
+    def _namespace_event(self, event: CVEvent) -> CVEvent:
+        event_id = self.event_id_namespace(event.event_id)
+        if event_id == event.event_id:
+            return event
+        return CVEvent.from_dict({**event.to_dict(), "event_id": event_id})
+
+    @staticmethod
+    def _validate_phase7c_config(config: dict[str, Any]) -> None:
+        if not isinstance(config, dict):
+            raise ValueError("abandoned_object.phase7c must be an object")
+        ratio_fields = {
+            "person_high_conf", "person_median_conf", "person_rolling_high_ratio",
+            "person_min_rolling_good_ratio", "person_min_global_high_ratio",
+            "luggage_high_conf", "luggage_median_conf", "luggage_rolling_high_ratio",
+            "luggage_min_rolling_good_ratio", "luggage_min_global_high_ratio",
+            "max_spread_norm", "max_net_displacement_norm", "min_association_score",
+        }
+        for section in ("quality", "stitch", "stationary", "owner"):
+            values = config.get(section, {})
+            if not isinstance(values, dict):
+                raise ValueError(f"abandoned_object.phase7c.{section} must be an object")
+            for key, value in values.items():
+                if isinstance(value, bool) or not isinstance(value, (int, float)):
+                    raise ValueError(f"abandoned_object.phase7c.{section}.{key} must be numeric")
+                if value < 0 or (key == "min_samples" and value < 1):
+                    raise ValueError(f"abandoned_object.phase7c.{section}.{key} is out of range")
+                if key in ratio_fields and value > 1:
+                    raise ValueError(f"abandoned_object.phase7c.{section}.{key} must be <= 1")
+        roi = config.get("valid_floor_roi_polygon")
+        if roi is not None and (
+            not isinstance(roi, list)
+            or len(roi) < 3
+            or any(not isinstance(point, (list, tuple)) or len(point) != 2 for point in roi)
+        ):
+            raise ValueError("abandoned_object.phase7c.valid_floor_roi_polygon must be a polygon")

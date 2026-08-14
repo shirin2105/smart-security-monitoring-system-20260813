@@ -1,4 +1,5 @@
 import pytest
+from types import SimpleNamespace
 
 from app.cv.worker import CVWorker
 
@@ -28,11 +29,12 @@ class FinalizeSpy:
 
 @pytest.mark.parametrize("error", [None, RuntimeError("stream failed")])
 def test_worker_finalizes_temporal_state_on_eos_and_stream_error(error, empty_detector):
-    worker = CVWorker(camera_id="cam_01", detector=empty_detector)
+    worker = CVWorker(camera_id="cam_01", detector=empty_detector,
+                      tracker=SimpleNamespace(track=lambda _detections, _frame: []))
     source = EmptySource(error)
     finalizer = FinalizeSpy()
     worker.source = source
-    worker.abandoned_engine = finalizer
+    worker.adapters = (finalizer,)
 
     if error:
         with pytest.raises(RuntimeError, match="stream failed"):
@@ -44,13 +46,8 @@ def test_worker_finalizes_temporal_state_on_eos_and_stream_error(error, empty_de
     assert source.released is True
 
 
-def test_worker_receives_production_temporal_resource_defaults():
-    worker = CVWorker(camera_id="cam_01")
-    engine = worker.abandoned_engine
-    assert engine.temporal_enabled is True
-    assert engine.temporal_pre_seconds == 8
-    assert engine.temporal_post_seconds == 8
-    assert engine.temporal_sample_fps == 1
-    assert engine.temporal_max_frames == 17
-    assert engine.temporal_max_dimension == 480
-    assert engine.temporal_buffer_byte_ceiling == 12_000_000
+def test_worker_uses_phase7c_abandoned_adapter(empty_detector):
+    worker = CVWorker(camera_id="cam_01", detector=empty_detector,
+                      tracker=SimpleNamespace(track=lambda _detections, _frame: []))
+    assert worker.adapters[-1].config.stationary.hold_s == 3.0
+    assert worker.adapters[-1].config.owner.away_hold_s == 5.0

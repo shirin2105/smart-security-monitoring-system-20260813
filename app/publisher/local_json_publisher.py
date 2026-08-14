@@ -1,5 +1,6 @@
-import os
 import json
+import os
+
 from app.common.schemas import EventCandidate
 from app.publisher.base import EventPublisher
 
@@ -13,8 +14,7 @@ class LocalJsonEventPublisher(EventPublisher):
         file_path = os.path.join(self.output_dir, f"candidate_{candidate.candidateId}.json")
         try:
             with open(file_path, "w", encoding="utf-8") as f:
-                json_data = candidate.model_dump(mode="json")
-                json.dump(json_data, f, indent=2, ensure_ascii=False)
+                json.dump(candidate.model_dump(mode="json"), f, indent=2, ensure_ascii=False)
             print(f"[EventPublisher] Emitted EventCandidate to {file_path}")
             return True
         except Exception as e:

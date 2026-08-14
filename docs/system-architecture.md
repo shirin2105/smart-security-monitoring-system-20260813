@@ -2,7 +2,20 @@
 
 ## Computer vision runtime
 
-This is the active production CV runtime. YOLO/Ultralytics is not imported or configured by production code; the superseded implementation is retained only on the `legacy-yolo` branch.
+This is the active production CV runtime. One DEIMv2 inference runs per processed
+frame. Camera-local ByteTrack feeds one shared `TrackStore` snapshot to the intrusion,
+crowd, and Phase7C abandoned-object adapters. `CVEventManager` owns stable event IDs,
+`START`/`UPDATE`/`END` lifecycle state, update throttling, and duplicate suppression.
+
+```text
+DEIMv2 -> ByteTrack -> shared TrackStore -> three lifecycle adapters
+       -> CVEventManager -> CVEvent v1 -> CVEventPublisher -> JsonlPublisher
+```
+
+`CVEventPublisher.publish(CVEvent)` is the final CV boundary. The canonical
+`JsonlPublisher` appends schema-valid CVEvent v1 records to local JSONL (default
+`artifacts/events/cv-events.jsonl`). Phase 9 does not require a backend endpoint;
+backend and LLM behavior are outside the CV subsystem.
 
 One lock-protected DEIMv2 Phase 7A detector is shared by camera workers. Its four raw
 labels are normalized to `person` and `luggage`, then two camera-local ByteTrack
@@ -26,19 +39,31 @@ need no migration.
 file. A custom backbone therefore requires a matching YAML change; startup rejects a
 mismatched pair instead of rewriting deployment configuration at runtime.
 
-The executable owners are `app/cv/detector.py`, `app/cv/tracker.py`, `app/cv/worker.py`, and `app/cv/multi_camera_runner.py`; deployment defaults live in `configs/models.yaml` and `configs/deimv2-phase7a-runtime.yaml`. The final verification passed compile, 25 focused runtime tests, 6 affected legacy integrations, and the full suite (205 passed, 4 skipped, 8 passing subtests). A real checkpoint/backbone CPU smoke also passed without global `PYTHONPATH`. Coverage tooling was unavailable, so these results make no coverage claim.
+The executable owners are `app/cv/detector.py`, `app/cv/tracker.py`,
+`app/cv/track_store.py`, `app/cv/worker.py`, `app/cv/event_manager.py`, the adapters
+under `app/cv/events/`, and publishers under `app/publisher/`. Deployment defaults live
+in `configs/models.yaml` and `configs/deimv2-phase7a-runtime.yaml`.
 
 ## Abandoned-object pipeline
 
-The current abandoned-object path can use class-independent static regions instead of relying on detector labels such as `backpack`, `handbag`, or `suitcase`.
+The active abandoned-object adapter reuses Phase7C track quality, physical-luggage
+stitching, stationary, owner-association, and owner-away logic. It consumes the same
+shared tracked-object snapshot as intrusion and crowd and emits lifecycle signals to
+`CVEventManager`. The ABODA regression emitted valid abandoned-object `START` and
+`END` records at media time 52.519 s, inside the exploratory 48-56 s label window.
+
+The following static-region sequence is retained as legacy documentation only:
 
 1. `StaticRegionDetector` builds a background model, ignores the warm-up baseline, tracks foreground regions by IoU, and exposes a region only after its configured stationary duration.
 2. `AbandonedObjectEngine.submit_static_regions()` supplies the active observations to the event engine. With `candidate_source: static_regions`, the engine associates a nearby person when possible, waits for owner absence, validates the crop once per region, deduplicates it, captures evidence, and emits an `ABANDONED_OBJECT` candidate.
 3. A cleared region is removed from engine state. If an object later reappears, the detector assigns a new region identity.
 
-This path is class-independent at candidate generation; it detects persistent visual change, not an object category. Background motion, illumination changes, occlusion, and fragmented regions can therefore produce false candidates.
+The earlier `StaticRegionDetector`, `candidate_source: static_regions`, `app.vlm`, and
+Gemma/Hugging Face validation path is **LEGACY**. It may remain in historical demos or
+tests, but the unified production worker does not execute it and explicitly ignores
+legacy static-region/VLM settings.
 
-## Region validation
+## Region validation (LEGACY)
 
 `app/vlm/region_validator.py` provides three modes:
 
@@ -48,13 +73,15 @@ This path is class-independent at candidate generation; it detects persistent vi
 | `heuristic` | Deterministic crop-size and contrast checks. This is not VLM inference. |
 | `huggingface` | In temporal mode, sends one ordered, multi-image request containing sampled full-scene JPEG frames to Hugging Face's OpenAI-compatible multimodal chat endpoint and accepts only a strict JSON response. Legacy temporal-disabled callers retain crop validation. |
 
-Production configuration enables Hugging Face mode with `google/gemma-3-4b-it`. The adapter reads `HF_TOKEN` only from the process environment; never commit or place it in configuration. Constructing the worker and validator performs no network request. Missing credentials, network/provider errors, invalid images, oversized aggregate requests, and malformed responses produce `unavailable`. The event engine deliberately fails open for `unavailable`, while an explicit `rejected` result suppresses that region's candidate.
+This retained section describes a historical experiment, not the Phase 9 production
+worker. Phase 9 has no active VLM dependency.
 
 The Hugging Face adapter enforces a 12 MB aggregate request budget by lowering JPEG quality and, if needed, dropping frames while retaining temporal coverage. It makes no network request when the payload cannot fit the configured budget.
 
-## Temporal full-scene validation
+## Temporal full-scene validation (LEGACY)
 
-Temporal validation is enabled by default in production `configs/event_rules.yaml`. Each camera engine:
+This retained flow belongs to the earlier static-region experiment and is not enabled
+by the unified production worker. Its historical behavior was:
 
 1. Samples full-scene frames at 1 FPS, resizing proportionally so the longest edge is at most 480 pixels.
 2. Keeps the camera-local buffer in memory only, with a 12 MB ceiling.
@@ -78,7 +105,7 @@ DEIMv2 production startup is fail-closed: the checkpoint and DINOv3 backbone mus
 
 This is bounded supervision, not evidence of six-camera production throughput. The repository has a unit test for the six-camera cap, shared detector, and failure isolation, but no real six-camera benchmark, load test, latency target, or hardware capacity result.
 
-## Canonical real-data demo
+## Canonical real-data demo (LEGACY)
 
 From the repository root:
 
@@ -98,7 +125,8 @@ Two committed summaries provide a direct comparison on the same untouched PETS s
 
 These are run observations, not labeled accuracy or benchmark claims. The Hugging Face summary reports `semantic_vlm_executed: true` from a successfully parsed `huggingface_vlm:` decision even though the decision suppresses the event; the heuristic comparison truthfully reports `false`.
 
-The production worker selects the semantic adapter by default. For an authenticated semantic run of the standalone demo, set `HF_TOKEN` in the process environment and run:
+The legacy standalone demo can select the semantic adapter. For an authenticated run,
+set `HF_TOKEN` in the process environment and run:
 
 ```bash
 python scripts/generate_static_abandoned_demo.py --validation huggingface

@@ -4,10 +4,14 @@
 
 | Capability | Status | Evidence |
 |---|---|---|
-| Class-independent static-region candidates | Complete | Detector, engine route, unit and integration tests |
+| Phase 9 unified CV worker | Complete | DEIMv2 -> ByteTrack -> shared TrackStore -> three adapters -> CVEventManager |
+| CVEvent v1 publisher boundary | Complete | `CVEventPublisher.publish(CVEvent)` with canonical local `JsonlPublisher`; backend endpoint not required |
+| Phase 9 real-video regression | Complete | ABODA, intrusion, crowd, and negative clips passed; valid lifecycle JSONL without duplicate payloads |
+| Phase 9 CV tests | Complete | 78 tests plus 8 subtests passed; webcam devtool tests 3/3 passed |
+| Webcam code | Ready; user manual verification | Agent environment did not claim hardware PASS |
+| Class-independent static-region candidates | Legacy | Retained historical experiment; not active in unified worker |
 | Deterministic media timestamps | Complete | Fixed source epoch and frame-offset tests |
-| Production Hugging Face multimodal validation | Complete | Enabled by default with Gemma 3 4B; environment-only token, no-startup-network, missing-token, request/response, and malformed-response tests |
-| Temporal full-scene VLM validation | Complete | Default 1 FPS `T-8s..T+8s` buffering, +8-second deferred decision, fail-open unavailable result, original timestamp, memory/request bounds, and EOS tests |
+| Hugging Face / temporal VLM validation | Legacy | Outside active Phase 9; retained only where tests or historical demos still import it |
 | Six-camera bounded supervisor | Complete | Shared-detector and failure-isolation unit test |
 | DEIMv2 Phase 7A production runtime | Complete | Active shared detector, class-isolated ByteTrack, mandatory artifact hashes, full test suite, and real-asset CPU smoke |
 | Canonical PETS real-data demo | Complete | Video plus machine-readable summary artifact |
@@ -18,11 +22,17 @@
 
 ## Next priorities
 
-1. Build a labeled evaluation set for static-region precision, recall, time-to-alert, and region fragmentation.
+1. User hardware-verifies webcam: intrusion on the right half, crowd with two people, and Phase7C abandoned object.
 2. Benchmark one through six real streams on declared hardware; report throughput, latency, memory, dropped frames, and detector-lock contention.
-3. Evaluate temporal Hugging Face validation on a labeled multi-scene dataset; the single authenticated PETS decision proves execution, not accuracy.
-4. Tune static-region and owner-association settings per camera scene using measured results.
+3. Build a labeled evaluation set for the three active event types and tune Phase7C owner/stationary thresholds from measured results.
 
 ## Acceptance evidence
 
-The completed milestones are supported by focused tests under `tests/unit/` and `tests/integration/`, plus the reproducible commands and artifacts documented in [`system-architecture.md`](./system-architecture.md). The DEIMv2 final gate passed 205 tests with 4 skips and 8 passing subtests; a real Phase 7A checkpoint and DINOv3 backbone also completed a CPU inference smoke. Coverage was unavailable and is not claimed. The authenticated PETS run rejected one false-person candidate using 16 full-scene frames and emitted no alert; the detector/heuristic comparison emitted three alerts, first at 45.5 seconds. Completion means the implemented contracts work; it does not establish production accuracy, scale, or six-camera performance.
+Phase 9 CV tests passed 78 tests plus 8 subtests; webcam devtool tests passed 3/3.
+Real-video production regression
+passed four clips and persisted only schema-valid CVEvent v1 JSONL records. Full-repo
+collection is classified as environment/optional dependency missing because the
+lightweight CV environment lacks backend/agent packages such as `langgraph`,
+`fastapi`, and `websockets`; this is not a Phase 9 CV test failure. Webcam hardware
+verification remains user manual. See
+[`phase9-real-video-regression.md`](../reports/phase9-real-video-regression.md).

@@ -1,5 +1,36 @@
 # Project Changelog
 
+## 2026-08-14
+
+### Added
+
+- Unified production CV flow: DEIMv2, one ByteTrack update, one shared `TrackStore`
+  snapshot, intrusion/crowd/Phase7C adapters, `CVEventManager`, and CVEvent v1.
+- Stable `START`/`UPDATE`/`END` lifecycle IDs and duplicate suppression.
+- `CVEventPublisher.publish(CVEvent)` as the final CV boundary, with canonical
+  `JsonlPublisher` local JSONL output. No backend endpoint is required by Phase 9.
+
+### Changed
+
+- Replaced the active static-region/VLM abandoned-object route with the Phase7C
+  track-based adapter. Retained VLM/static-region code is legacy-only where tests or
+  historical demos still import it.
+- Classified webcam as code-ready and hardware verification as user manual; no agent
+  hardware PASS is claimed.
+
+### Verification notes
+
+- Real-video regression passed ABODA abandoned object (320 frames), Phase 8 intrusion
+  (122), Phase 8 crowd (98), and a negative clip (208). Detector calls equaled
+  processed frames; one ByteTrack runtime and one shared `TrackStore` fed all adapters.
+- Every output passed CVEvent v1 validation, lifecycle sequences were valid, and no
+  duplicate payload was emitted. Phase9/CV tests passed 78 tests plus 8 subtests;
+  webcam devtool tests passed 3/3.
+- Full-repository collection is blocked by absent optional backend/agent dependencies
+  in the lightweight CV environment; classified environment/dependency missing, not a
+  Phase 9 test failure. See
+  [`phase9-real-video-regression.md`](../reports/phase9-real-video-regression.md).
+
 ## 2026-08-11
 
 ### Changed
