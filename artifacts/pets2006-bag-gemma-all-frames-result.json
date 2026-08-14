@@ -1,0 +1,30 @@
+{
+  "source": "tests/clips/pets2006_3.mp4",
+  "source_window_seconds": {
+    "requested_start": 37.5,
+    "requested_end": 53.5,
+    "available_start": 37.5,
+    "available_end": 50.333333,
+    "note": "The source clip ends before the requested +8 second boundary."
+  },
+  "candidate_time_seconds": 45.5,
+  "candidate_bbox_original": [308, 426, 349, 469],
+  "input": {
+    "camera_count": 1,
+    "fps": 30.0,
+    "frame_count": 385,
+    "frames_omitted": 0,
+    "transport": "25 chronological 4x4 contact sheets",
+    "full_scene_preserved": true,
+    "video_directly_supported": false,
+    "request_bytes": 3405042
+  },
+  "model": "google/gemma-3-4b-it",
+  "result": {
+    "verdict": "rejected",
+    "confidence": 0.8,
+    "object": "bag",
+    "reason": "At frame 240 (45.5s), a bag is visible within the red box. However, in the subsequent frames (241-384), the bag disappears and is not seen again. There is no evidence of the bag being left behind or remaining unattended.",
+    "left_at_seconds": null
+  }
+}

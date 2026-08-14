@@ -1,0 +1,26 @@
+{
+  "camera_id": "CAM_01",
+  "inference_profile": "full640",
+  "intrusion": {
+    "enabled": true,
+    "zone_id": "INTRUSION_ROI",
+    "roi_polygon": [[50, 100], [590, 100], [590, 470], [50, 470]],
+    "hold_s": 1.0,
+    "cooldown_s": 30.0
+  },
+  "crowd": {
+    "enabled": true,
+    "zone_id": "CROWD_ROI",
+    "roi_polygon": [[50, 100], [590, 100], [590, 470], [50, 470]],
+    "threshold": 10,
+    "release_threshold": 8,
+    "hold_s": 3.0,
+    "cooldown_s": 60.0
+  },
+  "abandoned": {
+    "enabled": true,
+    "valid_floor_roi_polygon": [[0, 220], [640, 220], [640, 480], [0, 480]],
+    "stationary_hold_s": 3.0,
+    "owner_away_hold_s": 5.0
+  }
+}

@@ -12,6 +12,8 @@ from app.services.websocket import manager
 
 router = APIRouter(prefix="/api/v1/alerts", tags=["Alerts & Incidents"])
 
+import json
+
 class IncidentResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -22,7 +24,9 @@ class IncidentResponse(BaseModel):
     severity: str
     description: str
     status: str
+    source: str = "SIMULATOR"
     created_at: datetime
+    bbox: Optional[List[float]] = None
 
 class AuditLogResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -38,6 +42,7 @@ def get_incidents(db: Session = Depends(get_db)):
     incidents = db.query(Incident).order_by(Incident.created_at.desc()).limit(50).all()
     results = []
     for inc in incidents:
+        bbox = json.loads(inc.bbox_json) if inc.bbox_json else None
         results.append({
             "id": inc.id,
             "camera_id": inc.camera_id,
@@ -46,7 +51,9 @@ def get_incidents(db: Session = Depends(get_db)):
             "severity": inc.severity,
             "description": inc.description,
             "status": inc.status,
-            "created_at": inc.created_at
+            "source": inc.source,
+            "created_at": inc.created_at,
+            "bbox": bbox,
         })
     return results
 

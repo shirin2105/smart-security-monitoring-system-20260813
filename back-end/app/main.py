@@ -1,32 +1,24 @@
-import asyncio
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
+
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
+from app.api import alerts, auth, cameras, events_ingest, zones
 from app.db.database import init_db_and_seed
-from app.api import auth, cameras, alerts
 from app.services.websocket import manager
-from app.services.simulator import background_event_simulator
 
 logger = logging.getLogger("uvicorn.error")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Initialize DB & Seed Data
+    # Initialize DB & Seed Data (users + cameras; incidents chỉ từ CV pipeline)
     logger.info("Initializing Database & Seed Data...")
     init_db_and_seed()
-    
-    # Start Background Simulation Task
-    sim_task = asyncio.create_task(background_event_simulator(interval_seconds=30))
     logger.info("Application setup complete.")
     yield
-    # Cleanup background task on shutdown
-    sim_task.cancel()
-    try:
-        await sim_task
-    except asyncio.CancelledError:
-        pass
     logger.info("Application shutdown completed.")
 
 app = FastAPI(
@@ -57,6 +49,38 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(cameras.router)
 app.include_router(alerts.router)
+app.include_router(events_ingest.router)
+app.include_router(zones.router)
+
+# Serve video clips làm nguồn camera giả lập cho MVP
+candidate_paths = [
+    Path(__file__).resolve().parent.parent.parent / "tests" / "clips",
+    Path("/app/tests/clips"),
+    Path("tests/clips"),
+    Path("../tests/clips"),
+]
+media_dir = None
+for candidate in candidate_paths:
+    if candidate.exists() and candidate.is_dir():
+        media_dir = candidate
+        break
+
+class CORSStaticFiles(StaticFiles):
+    async def __call__(self, scope, receive, send):
+        async def send_with_cors(message):
+            if message.get("type") == "http.response.start":
+                headers = list(message.get("headers", []))
+                headers.append((b"access-control-allow-origin", b"*"))
+                headers.append((b"access-control-allow-methods", b"GET, HEAD, OPTIONS"))
+                message["headers"] = headers
+            await send(message)
+        await super().__call__(scope, receive, send_with_cors)
+
+if media_dir:
+    logger.info(f"Mounting static media directory: {media_dir}")
+    app.mount("/media", CORSStaticFiles(directory=str(media_dir)), name="media")
+else:
+    logger.warning("No static media directory found for /media endpoint.")
 
 @app.get("/health")
 def health_check():

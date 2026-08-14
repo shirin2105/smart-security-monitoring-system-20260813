@@ -13,17 +13,16 @@ function minutesAgo(minutes: number): string {
   return new Date(Date.now() - minutes * 60_000).toISOString();
 }
 
-const PREVIEW = (id: number) =>
-  `https://images.unsplash.com/photo-${
-    [
-      '1557597774-9d273605dfa9',
-      '1541888946425-d0fbb186a5b7',
-      '1508873696983-2df515122519',
-      '1558494949-ef010cbdcc31',
-      '1506521781263-d8422e82f27a',
-      '1517502884422-41eaead166d4',
-    ][id - 1]
-  }?w=600&h=337&auto=format&fit=crop`;
+const CAMERA_CLIPS: Record<number, string> = {
+  1: '/media/walking_people.mp4',
+  2: '/media/people_detection.mp4',
+  3: '/media/aban3.mp4',
+  4: '/media/pets2006_3.mp4',
+  5: '/media/store-aisle-detection.mp4',
+  6: '/media/person-bicycle-car-detection.mp4',
+};
+
+const PREVIEW = (id: number) => CAMERA_CLIPS[id] || '/media/walking_people.mp4';
 
 export const MOCK_CAMERAS: Camera[] = [
   {
@@ -112,6 +111,7 @@ export const MOCK_EVENTS: SecurityEvent[] = [
     description:
       'Một người vượt hàng rào phía Tây và ở trong vùng cấm 12 giây, vượt ngưỡng dwell 8 giây.',
     aiGenerated: true,
+    sourceType: 'SIMULATED',
     detectedAt: minutesAgo(3),
     version: 1,
     bbox: [120, 80, 240, 260],
@@ -128,6 +128,7 @@ export const MOCK_EVENTS: SecurityEvent[] = [
     escalation: 'NONE',
     description: 'Đếm được 7 người trong ROI hành lang, vượt ngưỡng 5 người trong 30 giây.',
     aiGenerated: true,
+    sourceType: 'SIMULATED',
     detectedAt: minutesAgo(9),
     version: 1,
     bbox: [200, 150, 450, 320],
@@ -145,6 +146,7 @@ export const MOCK_EVENTS: SecurityEvent[] = [
     description:
       'Một vali đứng yên 4 phút 30 giây, không có người nào trong bán kính 3 mét.',
     aiGenerated: true,
+    sourceType: 'SIMULATED',
     detectedAt: minutesAgo(15),
     version: 2,
     artifact: { url: PREVIEW(2), redactionStatus: 'COMPLETE' },
@@ -168,6 +170,7 @@ export const MOCK_EVENTS: SecurityEvent[] = [
     escalation: 'NONE',
     description: 'Có người di chuyển qua cổng chính ngoài khung giờ quy định.',
     aiGenerated: true,
+    sourceType: 'SIMULATED',
     detectedAt: minutesAgo(28),
     version: 2,
     artifact: { url: PREVIEW(1), redactionStatus: 'COMPLETE' },
@@ -191,6 +194,7 @@ export const MOCK_EVENTS: SecurityEvent[] = [
     escalation: 'APPROVED',
     description: 'Phát hiện mở cửa phòng server tầng hầm ngoài lịch bảo trì.',
     aiGenerated: true,
+    sourceType: 'SIMULATED',
     detectedAt: minutesAgo(45),
     version: 4,
     artifact: { url: PREVIEW(4), redactionStatus: 'COMPLETE' },
@@ -229,6 +233,7 @@ export const MOCK_EVENTS: SecurityEvent[] = [
     escalation: 'NONE',
     description: 'Nhóm nhân viên tụ tập ngắn giờ nghỉ trưa, đã tự giải tán.',
     aiGenerated: true,
+    sourceType: 'SIMULATED',
     detectedAt: minutesAgo(120),
     version: 3,
     artifact: { url: PREVIEW(6), redactionStatus: 'COMPLETE' },
@@ -259,6 +264,7 @@ export const MOCK_EVENTS: SecurityEvent[] = [
     escalation: 'NONE',
     description: 'Thùng carton để tạm cạnh cột B1, xác minh là hàng của bộ phận kho.',
     aiGenerated: true,
+    sourceType: 'SIMULATED',
     detectedAt: minutesAgo(180),
     version: 2,
     // Redaction thất bại → PRD §13 bắt buộc drop artifact, chỉ giữ metadata.

@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.0",
+  "cameras": {
+    "aboda_camera_01": {
+      "valid_floor_roi_polygon": null,
+      "quality": {
+        "window_s": 2.0,
+        "min_samples": 5,
+        "person_min_duration_s": 0.7,
+        "person_high_conf": 0.4,
+        "person_median_conf": 0.4,
+        "person_rolling_high_ratio": 0.3,
+        "person_min_rolling_good_ratio": 0.5,
+        "person_min_global_high_ratio": 0.3,
+        "luggage_min_duration_s": 1.5,
+        "luggage_high_conf": 0.35,
+        "luggage_median_conf": 0.35,
+        "luggage_rolling_high_ratio": 0.5,
+        "luggage_min_rolling_good_ratio": 0.5,
+        "luggage_min_global_high_ratio": 0.5
+      },
+      "stitch": {
+        "max_gap_s": 0.8,
+        "max_center_distance_px": 80.0,
+        "max_normalized_distance": 1.2
+      },
+      "stationary": {
+        "window_s": 2.0,
+        "min_samples": 10,
+        "max_spread_norm": 0.15,
+        "max_net_displacement_norm": 0.2,
+        "hold_s": 3.0
+      },
+      "owner": {
+        "near_norm": 0.5,
+        "min_overlap_s": 0.7,
+        "min_association_score": 0.6,
+        "away_hold_s": 5.0
+      }
+    }
+  },
+  "note": "Baseline bundle defaults only. Configure ROI per camera and tune thresholds only after multi-video review."
+}

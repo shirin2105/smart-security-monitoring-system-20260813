@@ -33,6 +33,7 @@ const REAL_WS_INCIDENT: RawIncident = {
   status: 'pending',
   created_at: '2026-08-04T16:38:58.580962',
   bbox: [120, 80, 240, 260],
+  source: 'CV',
 };
 
 const REAL_CAMERA: RawCamera = {
@@ -98,6 +99,7 @@ describe('toEvent — payload WebSocket thật', () => {
     expect(event.eventType).toBe('ZONE_INTRUSION');
     expect(event.effectiveSeverity).toBe('CRITICAL');
     expect(event.bbox).toEqual([120, 80, 240, 260]);
+    expect(event.sourceType).toBe('LIVE');
   });
 });
 

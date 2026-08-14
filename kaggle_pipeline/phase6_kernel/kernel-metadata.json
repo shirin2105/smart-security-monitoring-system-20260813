@@ -1,0 +1,17 @@
+{
+  "id": "shirin21st/ecdet-phase-6-visdrone-benchmark",
+  "title": "ECDet Phase 6 VisDrone Benchmark",
+  "code_file": "phase6_run_all.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": "true",
+  "enable_gpu": "true",
+  "machine_shape": "NvidiaTeslaT4",
+  "enable_internet": "true",
+  "dataset_sources": [
+    "duwipurnamasidik/visdrone-2019-coco-format",
+    "shirin21st/ecdet-phase6-scripts"
+  ],
+  "competition_sources": [],
+  "kernel_sources": []
+}

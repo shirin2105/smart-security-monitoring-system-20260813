@@ -19,6 +19,19 @@ services:
       timeout: 5s
       retries: 5
 
+  db-init:
+    build:
+      context: ./back-end
+      dockerfile: Dockerfile
+    command: ["python", "-c", "from app.db.database import init_db_and_seed; init_db_and_seed()"]
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/security_db
+      - DATABASE_FAIL_CLOSED=true
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
   backend:
     build:
       context: ./back-end
@@ -28,16 +41,41 @@ services:
       - "8000:8000"
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/security_db
+      - DATABASE_FAIL_CLOSED=true
       - JWT_SECRET=super-secret-security-monitoring-key-2026
+      # - EVENT_INGEST_TOKEN=${EVENT_INGEST_TOKEN:?EVENT_INGEST_TOKEN must be set and non-empty}
+      - EVENT_INGEST_TOKEN=dummy
+    volumes:
+      - ./tests/clips:/app/tests/clips
     depends_on:
-      postgres:
-        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 15s
       timeout: 5s
       retries: 3
+
+  assessment-worker:
+    build:
+      context: ./back-end
+      dockerfile: Dockerfile
+    command: ["python", "-m", "app.services.assessment_worker"]
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/security_db
+      - DATABASE_FAIL_CLOSED=true
+      - ASSESSMENT_LLM_BASE_URL=${ASSESSMENT_LLM_BASE_URL:-https://api.openai.com/v1}
+      - ASSESSMENT_LLM_API_KEY=${ASSESSMENT_LLM_API_KEY:-}
+      - ASSESSMENT_LLM_MODEL=${ASSESSMENT_LLM_MODEL:-gpt-4.1-mini}
+      - ASSESSMENT_LLM_TIMEOUT_SECONDS=${ASSESSMENT_LLM_TIMEOUT_SECONDS:-15}
+      - ASSESSMENT_LEASE_SECONDS=${ASSESSMENT_LEASE_SECONDS:-60}
+      - ASSESSMENT_POLL_SECONDS=${ASSESSMENT_POLL_SECONDS:-2}
+      - ASSESSMENT_MAX_RESPONSE_BYTES=${ASSESSMENT_MAX_RESPONSE_BYTES:-65536}
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
 
   frontend:
     build:

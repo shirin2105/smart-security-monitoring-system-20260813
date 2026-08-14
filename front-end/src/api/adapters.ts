@@ -12,9 +12,11 @@
  * BAC-21 thì UI chạy tiếp mà không cần sửa.
  */
 
+import { API_BASE_URL } from './config';
 import {
   Camera,
   CameraHealth,
+  CameraZone,
   EscalationState,
   EventAction,
   EventState,
@@ -34,6 +36,7 @@ export interface RawCamera {
   location: string;
   stream_url: string;
   status: string;
+  source?: string;
 }
 
 export interface RawIncident {
@@ -44,6 +47,7 @@ export interface RawIncident {
   severity: string;
   description: string;
   status: string;
+  source?: string;
   created_at: string;
   bbox?: [number, number, number, number];
   version?: number;
@@ -169,9 +173,12 @@ export function toCamera(raw: RawCamera): Camera {
     name: raw.name,
     location: raw.location,
     health: HEALTH_MAP[String(raw.status).toLowerCase()] ?? 'OFFLINE',
-    // MVP chỉ chạy nguồn giả lập — PRD §8.1 bắt buộc gắn nhãn SIMULATED.
-    sourceType: 'SIMULATED',
-    previewUrl: raw.stream_url,
+    // Nguồn theo backend: camera chạy CV pipeline thật là LIVE (PRD §8.1).
+    sourceType: raw.source === 'CV' ? 'LIVE' : 'SIMULATED',
+    // stream_url có thể là path relative (/media/...) — resolve sang backend origin
+    previewUrl: raw.stream_url.startsWith('http')
+      ? raw.stream_url
+      : `${API_BASE_URL}${raw.stream_url}`,
   };
 }
 
@@ -195,6 +202,7 @@ export function toEvent(raw: RawIncident, actions: EventAction[] = []): Security
     escalation,
     description: raw.description,
     aiGenerated: raw.ai_generated ?? false,
+    sourceType: raw.source === 'CV' ? 'LIVE' : 'SIMULATED',
     detectedAt: normalizeTimestamp(raw.created_at),
     version: raw.version ?? 1,
     artifact: raw.artifact_url
@@ -229,3 +237,32 @@ export function toUser(raw: RawUser): User {
     cameraScope: raw.camera_scope ?? [],
   };
 }
+
+export interface RawZone {
+  zone_id: string;
+  camera_id: string;
+  name: string;
+  polygon: [number, number][];
+  enabled: boolean;
+}
+
+export function toCameraZone(raw: RawZone): CameraZone {
+  return {
+    zoneId: raw.zone_id,
+    cameraId: raw.camera_id,
+    name: raw.name,
+    polygon: raw.polygon,
+    enabled: raw.enabled ?? true,
+  };
+}
+
+export function toRawZone(zone: CameraZone): RawZone {
+  return {
+    zone_id: zone.zoneId,
+    camera_id: zone.cameraId,
+    name: zone.name,
+    polygon: zone.polygon,
+    enabled: zone.enabled,
+  };
+}
+

@@ -100,6 +100,41 @@ docker compose up --build -d
 ```powershell
 docker compose down
 ```
+
+---
+
+## Phase 9 Computer Vision
+
+The production CV boundary is local and backend-independent:
+
+```text
+DEIMv2 -> ByteTrack -> shared TrackStore
+       -> intrusion / crowd / Phase7C abandoned adapters
+       -> CVEventManager -> CVEvent v1 -> CVEventPublisher -> JSONL
+```
+
+`CVEventPublisher.publish(CVEvent)` is the final CV interface. `JsonlPublisher` is the
+canonical implementation and appends schema-valid `cv-event-v1` records to
+`artifacts/events/cv-events.jsonl`. A backend endpoint is not required by Phase 9;
+backend and LLM integration are outside CV scope.
+
+Real-video regression passed ABODA abandoned-object, Phase 8 intrusion, Phase 8 crowd,
+and a negative clip. Each processed frame had exactly one detector call; one ByteTrack
+runtime and one shared `TrackStore` fed all three adapters. All lifecycle records
+validated as CVEvent v1 without duplicate payloads. Phase 9 CV tests passed 78 tests
+plus 8 subtests; webcam devtool tests passed 3/3. See
+[`reports/phase9-real-video-regression.md`](./reports/phase9-real-video-regression.md).
+
+Webcam code is ready but was not hardware-verified in the agent environment. Run the
+local tool and manually verify intrusion on the right half, crowd with two people, and
+the Phase7C abandoned-object scenario:
+
+```powershell
+third_party\deimv2\.python311\python.exe devtools\webcam_cv_test\app.py
+```
+
+The EventCandidate/backend demo above is retained for legacy compatibility; it is not
+the Phase 9 CV output boundary.
 *(Nếu muốn xóa toàn bộ dữ liệu PostgreSQL trong volume, thêm cờ `-v`: `docker compose down -v`)*
 
 ---
@@ -149,6 +184,13 @@ docker compose down
 
 ## 🌐 Các Đường Dẫn Truy Cập (Access URLs)
 
+### CV event ingest credential
+
+Before starting the backend, generate a random token with at least 32 bytes using your
+deployment secret manager, then set `EVENT_INGEST_TOKEN` to the same value for the CV
+producer and backend. Keep the value outside source control; `.env.example` intentionally
+leaves it blank, and Docker Compose refuses to start the backend without it.
+
 Sau khi chạy thành công `docker compose up --build -d`, các dịch vụ sẽ sẵn sàng tại các đường dẫn sau:
 
 | Dịch vụ | Địa chỉ / URL | Mô tả |
@@ -158,3 +200,24 @@ Sau khi chạy thành công `docker compose up --build -d`, các dịch vụ s�
 | **Swagger API Documentation** | [http://localhost:8000/docs](http://localhost:8000/docs) | Tài liệu API tương tác tự động |
 | **ReDoc API Documentation** | [http://localhost:8000/redoc](http://localhost:8000/redoc) | Giao diện xem tài liệu API ReDoc |
 | **PostgreSQL Database** | `localhost:5432` | DB: `security_db` \| User: `postgres` \| Pass: `postgres` |
+
+## Demo video → cảnh báo Web
+
+Sau khi backend và frontend đang chạy, đặt cùng một `EVENT_INGEST_TOKEN` không rỗng
+cho backend và terminal hiện tại. Lệnh dưới đây dùng DEIMv2 thật, clip mẫu cố định,
+kết nối `/ws/alerts` trước khi chạy CV, rồi kiểm tra cùng incident qua WebSocket và REST:
+
+```powershell
+$env:EVENT_INGEST_TOKEN = '<same-secret-as-backend>'
+python -m app.cv.demo_cli
+```
+
+Demo không khởi động hoặc dừng service, không in token, và fail sớm nếu service,
+video, source/checkpoint/backbone DEIMv2 hoặc checksum chưa sẵn sàng. Config demo
+ép mọi VLM/LLM validator về `disabled`; sau khi backend trả duplicate, runner tiếp tục
+quan sát WebSocket trong 2 giây (cấu hình được, không cho phép thấp hơn) để bắt rebroadcast trễ.
+Mỗi lần chạy có namespace ngẫu nhiên cho `candidateId`, nên lần chạy mới tạo incident
+mới trong khi publish lặp ngay trong cùng lần chạy vẫn dùng đúng ID để kiểm tra idempotency.
+CV thật chạy trong process `spawn` riêng (an toàn trên Windows). Timeout sẽ phát tín
+hiệu dừng, chờ grace period, rồi terminate và join dứt điểm trước khi báo lỗi; vì vậy
+không còn child nào có thể publish cảnh báo sau khi CLI đã trả failure.

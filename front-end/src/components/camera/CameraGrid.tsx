@@ -1,10 +1,13 @@
-import { useState } from 'react';
-import { Maximize2, ShieldAlert, Video, VideoOff } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Edit3, Maximize2, ShieldAlert, Video, VideoOff } from 'lucide-react';
 
-import { Camera, EVENT_TYPE_LABEL, SecurityEvent } from '../../domain/types';
+import { api } from '../../api';
+import { Camera, CameraZone, EVENT_TYPE_LABEL, SecurityEvent } from '../../domain/types';
 import { EmptyState } from '../common/States';
-import { HealthDot, SimulatedBadge } from '../common/Badges';
+import { HealthDot, SourceBadge } from '../common/Badges';
 import { CameraDetailModal } from './CameraDetailModal';
+import { ZoneEditorCanvas } from './ZoneEditorCanvas';
+import { useEvents } from '../../realtime/EventsProvider';
 
 interface CameraGridProps {
   cameras: Camera[];
@@ -16,6 +19,47 @@ const OPEN_STATES = ['OPEN', 'PENDING_REVIEW', 'ACKNOWLEDGED', 'CONFIRMED'];
 
 export function CameraGrid({ cameras, events }: CameraGridProps) {
   const [selected, setSelected] = useState<Camera | null>(null);
+  const [editingZoneCamera, setEditingZoneCamera] = useState<Camera | null>(null);
+  const [zones, setZones] = useState<CameraZone[]>([]);
+  const [devMode, setDevMode] = useState<boolean>(false);
+  const { telemetryMap } = useEvents();
+  const videoRefs = useRef<Record<number, HTMLVideoElement | null>>({});
+
+  useEffect(() => {
+    api.getZones().then(setZones).catch((err) => {
+      console.error('Không thể tải cấu hình vùng Intrusion:', err);
+    });
+  }, []);
+
+  const handleSaveZone = async (zone: CameraZone) => {
+    const updated = await api.saveZone(zone);
+    setZones((prev) => {
+      const idx = prev.findIndex(
+        (z) => z.zoneId === updated.zoneId || z.cameraId === updated.cameraId
+      );
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = updated;
+        return next;
+      }
+      return [...prev, updated];
+    });
+  };
+
+  useEffect(() => {
+    if (!devMode) return;
+    cameras.forEach((camera) => {
+      const video = videoRefs.current[camera.id];
+      const telemetry = telemetryMap?.[camera.id] ?? (telemetryMap as any)?.[`cam_${camera.id}`] ?? (telemetryMap as any)?.[`cam_0${camera.id}`];
+      if (video && telemetry && typeof telemetry.videoTime === 'number' && video.duration > 0 && !video.paused) {
+        const targetTime = telemetry.videoTime % video.duration;
+        const diff = Math.abs(video.currentTime - targetTime);
+        if (diff > 0.10) {
+          video.currentTime = targetTime;
+        }
+      }
+    });
+  }, [devMode, telemetryMap, cameras]);
 
   const activeFor = (cameraId: number) =>
     events.find(
@@ -43,14 +87,27 @@ export function CameraGrid({ cameras, events }: CameraGridProps) {
           <Video className="h-4 w-4 text-blue-600 dark:text-blue-400" aria-hidden />
           Lưới camera ({cameras.length} luồng)
         </h2>
-        <p className="font-mono text-xs text-gray-600 dark:text-gray-400">
-          <span
-            className={healthyCount === cameras.length ? 'font-bold text-emerald-600 dark:text-emerald-400' : 'font-bold text-amber-600 dark:text-amber-400'}
-          >
-            {healthyCount}/{cameras.length}
-          </span>{' '}
-          camera hoạt động bình thường
-        </p>
+        <div className="flex items-center gap-4">
+          <label className="flex items-center gap-2 text-xs font-semibold cursor-pointer text-gray-700 dark:text-gray-300">
+            <input
+              type="checkbox"
+              checked={devMode}
+              onChange={(e) => setDevMode(e.target.checked)}
+              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            <span className={devMode ? 'text-amber-600 dark:text-amber-400 font-bold' : ''}>
+              Dev Mode (Realtime Bbox)
+            </span>
+          </label>
+          <p className="font-mono text-xs text-gray-600 dark:text-gray-400">
+            <span
+              className={healthyCount === cameras.length ? 'font-bold text-emerald-600 dark:text-emerald-400' : 'font-bold text-amber-600 dark:text-amber-400'}
+            >
+              {healthyCount}/{cameras.length}
+            </span>{' '}
+            camera hoạt động bình thường
+          </p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 content-start md:grid-cols-2 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pr-1 xl:grid-cols-3">
@@ -58,6 +115,127 @@ export function CameraGrid({ cameras, events }: CameraGridProps) {
           const active = activeFor(camera.id);
           const critical = active?.effectiveSeverity === 'CRITICAL';
           const offline = camera.health === 'OFFLINE';
+
+          const camKey = camera.id <= 9 ? `cam_0${camera.id}` : `cam_${camera.id}`;
+          const cameraZone = zones.find(
+            (z) => z.cameraId === camKey || z.cameraId === `cam_${camera.id}` || z.cameraId === String(camera.id)
+          );
+
+          // Helper format bbox coords [x1, y1, x2, y2]
+          const renderBbox = () => {
+            if (!devMode || offline) return null;
+
+            const telemetry = telemetryMap?.[camera.id] ?? (telemetryMap as any)?.[`cam_${camera.id}`] ?? (telemetryMap as any)?.[`cam_0${camera.id}`];
+
+            // 1. Dùng telemetry realtime từ luồng CV (hiển thị tất cả người trong camera tại mọi thời điểm)
+            if (telemetry) {
+              const [frameW, frameH] = telemetry.frameSize || [1280, 720];
+              const frameAspect = frameW / frameH;
+              const containerAspect = 16 / 9;
+
+              let renderWidthPct = 100;
+              let renderHeightPct = 100;
+              let offsetXPct = 0;
+              let offsetYPct = 0;
+
+              if (frameAspect > containerAspect) {
+                renderHeightPct = (containerAspect / frameAspect) * 100;
+                offsetYPct = (100 - renderHeightPct) / 2;
+              } else if (frameAspect < containerAspect) {
+                renderWidthPct = (frameAspect / containerAspect) * 100;
+                offsetXPct = (100 - renderWidthPct) / 2;
+              }
+
+              return (
+                <>
+                  {(telemetry.tracks || []).map((track) => {
+                    const [x1, y1, x2, y2] = track.bbox;
+                    const isPercentage = x1 <= 1 && y1 <= 1 && x2 <= 1 && y2 <= 1;
+
+                    const relX1 = isPercentage ? x1 : x1 / frameW;
+                    const relY1 = isPercentage ? y1 : y1 / frameH;
+                    const relW = isPercentage ? x2 - x1 : (x2 - x1) / frameW;
+                    const relH = isPercentage ? y2 - y1 : (y2 - y1) / frameH;
+
+                    const leftPct = offsetXPct + Math.max(0, Math.min(1, relX1)) * renderWidthPct;
+                    const topPct = offsetYPct + Math.max(0, Math.min(1, relY1)) * renderHeightPct;
+                    const widthPct = Math.max(0, Math.min(100 - leftPct, relW * renderWidthPct));
+                    const heightPct = Math.max(0, Math.min(100 - topPct, relH * renderHeightPct));
+
+                    return (
+                      <div
+                        key={`track-${track.trackId}`}
+                        className="pointer-events-none absolute flex items-start border-2 border-emerald-500 bg-emerald-500/25 p-1 rounded-sm z-30 transition-all duration-100 ease-out"
+                        style={{
+                          left: `${leftPct}%`,
+                          top: `${topPct}%`,
+                          width: `${widthPct}%`,
+                          height: `${heightPct}%`,
+                        }}
+                      >
+                        <span className="rounded bg-emerald-600 px-1 font-mono text-[9px] font-bold uppercase tracking-wider text-white shadow-sm">
+                          Người #{track.trackId} ({Math.round(track.confidence * 100)}%)
+                        </span>
+                      </div>
+                    );
+                  })}
+                </>
+              );
+            }
+
+            // 2. Fallback sang active event bbox nếu không có telemetry
+            if (active && active.bbox && active.bbox.length === 4) {
+              const [x1, y1, x2, y2] = active.bbox;
+              const isPercentage = x1 <= 100 && x2 <= 100 && y1 <= 100 && y2 <= 100 && x2 <= 1 && y2 <= 1;
+              let style: React.CSSProperties;
+              if (isPercentage) {
+                style = {
+                  left: `${x1 * 100}%`,
+                  top: `${y1 * 100}%`,
+                  width: `${(x2 - x1) * 100}%`,
+                  height: `${(y2 - y1) * 100}%`,
+                };
+              } else {
+                const isHD = x2 > 640 || y2 > 480;
+                const width = isHD ? 1280 : 640;
+                const height = isHD ? 720 : 480;
+                style = {
+                  left: `${Math.max(0, Math.min(100, (x1 / width) * 100))}%`,
+                  top: `${Math.max(0, Math.min(100, (y1 / height) * 100))}%`,
+                  width: `${Math.max(0, Math.min(100, ((x2 - x1) / width) * 100))}%`,
+                  height: `${Math.max(0, Math.min(100, ((y2 - y1) / height) * 100))}%`,
+                };
+              }
+
+              return (
+                <div
+                  className="animate-bbox pointer-events-none absolute flex items-start border-2 border-red-500 bg-red-500/20 p-1 rounded-sm z-30"
+                  style={style}
+                >
+                  <span className="rounded bg-red-600 px-1 font-mono text-[9px] font-bold uppercase tracking-wider text-white shadow-sm">
+                    Người: {EVENT_TYPE_LABEL[active.eventType]}
+                  </span>
+                </div>
+              );
+            }
+
+            // 3. Fallback mock giả lập khi chưa có luồng telemetry CV
+            return (
+              <div
+                className="animate-bbox pointer-events-none absolute flex items-start border-2 border-amber-500 bg-amber-500/20 p-1 rounded-sm z-30"
+                style={{
+                  left: `${((camera.id * 15) % 50) + 10}%`,
+                  top: `${((camera.id * 20) % 40) + 15}%`,
+                  width: '35%',
+                  height: '45%',
+                }}
+              >
+                <span className="rounded bg-amber-600 px-1 font-mono text-[9px] font-bold uppercase tracking-wider text-white shadow-sm">
+                  {active ? EVENT_TYPE_LABEL[active.eventType] : 'Người: Phát hiện đối tượng'} (DEV Mode)
+                </span>
+              </div>
+            );
+          };
 
           return (
             <button
@@ -77,7 +255,23 @@ export function CameraGrid({ cameras, events }: CameraGridProps) {
                 <span className="truncate font-mono text-xs font-bold tracking-wider text-white drop-shadow-sm">
                   {camera.name}
                 </span>
-                <HealthDot health={camera.health} />
+                <div className="flex items-center gap-2">
+                  {devMode && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingZoneCamera(camera);
+                      }}
+                      className="flex items-center gap-1 rounded bg-amber-600/90 px-2 py-0.5 text-[10px] font-bold text-white shadow hover:bg-amber-500"
+                      title="Thiết lập vùng Intrusion"
+                    >
+                      <Edit3 className="h-3 w-3" />
+                      <span>Vùng Intrusion</span>
+                    </button>
+                  )}
+                  <HealthDot health={camera.health} />
+                </div>
               </div>
 
               <div className="relative flex aspect-video items-center justify-center overflow-hidden bg-slate-900">
@@ -86,11 +280,23 @@ export function CameraGrid({ cameras, events }: CameraGridProps) {
                     <VideoOff className="h-8 w-8" aria-hidden />
                     <span className="font-mono text-[11px] font-semibold">KHÔNG CÓ TÍN HIỆU</span>
                   </div>
+                ) : camera.previewUrl.match(/\.(mp4|webm|avi)(\?.*)?$/i) ? (
+                  <video
+                    ref={(el) => {
+                      videoRefs.current[camera.id] = el;
+                    }}
+                    src={camera.previewUrl}
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    className="h-full w-full object-contain opacity-85 transition-transform duration-500"
+                  />
                 ) : (
                   <img
                     src={camera.previewUrl}
                     alt=""
-                    className="h-full w-full object-cover opacity-85 transition-transform duration-500 group-hover:scale-105"
+                    className="h-full w-full object-contain opacity-85 transition-transform duration-500"
                   />
                 )}
 
@@ -102,27 +308,39 @@ export function CameraGrid({ cameras, events }: CameraGridProps) {
                   </>
                 )}
 
-                {/* Khung phát hiện */}
-                {active && !offline && (
-                  <div
-                    className="animate-bbox pointer-events-none absolute flex items-start border-2 border-red-500 bg-red-500/20 p-1 rounded-sm"
-                    style={{
-                      left: `${((camera.id * 15) % 50) + 10}%`,
-                      top: `${((camera.id * 20) % 40) + 15}%`,
-                      width: '35%',
-                      height: '45%',
-                    }}
+                {/* Intrusion Zone Overlay (hiển thị khi ở Dev Mode) */}
+                {devMode && cameraZone && cameraZone.polygon && cameraZone.polygon.length >= 3 && (
+                  <svg
+                    viewBox="0 0 1280 720"
+                    preserveAspectRatio="none"
+                    className="pointer-events-none absolute inset-0 h-full w-full z-20"
                   >
-                    <span className="rounded bg-red-600 px-1 font-mono text-[9px] font-bold uppercase tracking-wider text-white shadow-sm">
-                      {EVENT_TYPE_LABEL[active.eventType]}
-                    </span>
-                  </div>
+                    <polygon
+                      points={cameraZone.polygon.map((p) => `${p[0]},${p[1]}`).join(' ')}
+                      fill="rgba(245, 158, 11, 0.25)"
+                      stroke="#f59e0b"
+                      strokeWidth="3"
+                      strokeDasharray="5 3"
+                    />
+                    <text
+                      x={cameraZone.polygon[0][0] + 5}
+                      y={cameraZone.polygon[0][1] + 20}
+                      fill="#f59e0b"
+                      fontSize="16"
+                      fontWeight="bold"
+                      className="font-mono drop-shadow-md select-none"
+                    >
+                      {cameraZone.name}
+                    </text>
+                  </svg>
                 )}
 
+                {/* Khung phát hiện (chỉ hiển thị ở Dev Mode) */}
+                {renderBbox()}
                 {/* HUD dưới */}
                 <div className="absolute inset-x-0 bottom-0 z-20 flex items-center justify-between gap-2 bg-gradient-to-t from-black/90 to-transparent px-3.5 py-2 font-mono text-[11px] text-gray-300">
                   <span className="truncate">{camera.location}</span>
-                  <SimulatedBadge />
+                  <SourceBadge sourceType={camera.sourceType} />
                 </div>
 
                 <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center gap-2 bg-blue-900/40 backdrop-blur-[2px] text-xs font-semibold text-white opacity-0 transition-opacity group-hover:opacity-100">
@@ -147,6 +365,20 @@ export function CameraGrid({ cameras, events }: CameraGridProps) {
           camera={selected}
           events={events.filter((event) => event.cameraId === selected.id)}
           onClose={() => setSelected(null)}
+        />
+      )}
+
+      {editingZoneCamera && (
+        <ZoneEditorCanvas
+          camera={editingZoneCamera}
+          existingZone={zones.find(
+            (z) =>
+              z.cameraId === (editingZoneCamera.id <= 9 ? `cam_0${editingZoneCamera.id}` : `cam_${editingZoneCamera.id}`) ||
+              z.cameraId === `cam_${editingZoneCamera.id}` ||
+              z.cameraId === String(editingZoneCamera.id)
+          )}
+          onSave={handleSaveZone}
+          onClose={() => setEditingZoneCamera(null)}
         />
       )}
     </section>

@@ -1,0 +1,76 @@
+{
+  "camera_id": "CAM_WALK2",
+  "inference_profile": "full640",
+  "intrusion": {
+    "enabled": true,
+    "zone_id": "ROI_MAIN",
+    "roi_polygon": [
+      [
+        96,
+        58
+      ],
+      [
+        288,
+        58
+      ],
+      [
+        288,
+        270
+      ],
+      [
+        96,
+        270
+      ]
+    ],
+    "hold_s": 1.0
+  },
+  "crowd": {
+    "enabled": true,
+    "zone_id": "ROI_MAIN",
+    "roi_polygon": [
+      [
+        330,
+        5
+      ],
+      [
+        380,
+        5
+      ],
+      [
+        380,
+        50
+      ],
+      [
+        330,
+        50
+      ]
+    ],
+    "threshold": 2,
+    "hold_s": 1.0,
+    "release_s": 1.0
+  },
+  "abandoned": {
+    "enabled": true,
+    "zone_id": "FLOOR_MAIN",
+    "valid_floor_roi_polygon": [
+      [
+        96,
+        58
+      ],
+      [
+        288,
+        58
+      ],
+      [
+        288,
+        270
+      ],
+      [
+        96,
+        270
+      ]
+    ],
+    "stationary_hold_s": 3.0,
+    "owner_away_hold_s": 5.0
+  }
+}

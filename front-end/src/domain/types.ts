@@ -89,6 +89,8 @@ export interface SecurityEvent {
   state: EventState;
   escalation: EscalationState;
   description: string;
+  /** Nguồn phát hiện: CV pipeline thật hay simulator (PRD §8.1). */
+  sourceType: SourceType;
   /** Mô tả do LLM sinh — UI phải gắn nhãn AI-generated (FR-AI-03). */
   aiGenerated: boolean;
   detectedAt: string;
@@ -97,6 +99,22 @@ export interface SecurityEvent {
   artifact?: EventArtifact;
   bbox?: [number, number, number, number];
   actions: EventAction[];
+}
+
+export interface TelemetryTrack {
+  trackId: number;
+  className: string;
+  confidence: number;
+  bbox: [number, number, number, number];
+}
+
+export interface CameraTelemetry {
+  cameraId: string;
+  numericCameraId: number;
+  timestamp: string;
+  frameSize?: [number, number];
+  videoTime?: number;
+  tracks: TelemetryTrack[];
 }
 
 /** HIGH/CRITICAL là "severe" — đi nhánh review bắt buộc của Manager. */
@@ -155,3 +173,12 @@ export const ROLE_LABEL: Record<Role, string> = {
   GUARD: 'Bảo vệ trực',
   MANAGER: 'Quản lý an ninh',
 };
+
+export interface CameraZone {
+  zoneId: string;
+  cameraId: string;
+  name: string;
+  polygon: [number, number][];
+  enabled: boolean;
+}
+

@@ -1,9 +1,11 @@
-import os
 import logging
+import os
+
 import bcrypt
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import sessionmaker
-from app.db.models import Base, User, Camera, Incident
+
+from app.db.models import Base, Camera, User
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -25,9 +27,11 @@ try:
     engine = get_engine(DATABASE_URL)
     with engine.connect() as conn:
         pass
-    logger.info(f"Connected successfully to database: {DATABASE_URL}")
+    logger.info("Connected successfully to configured database")
 except Exception as e:
-    logger.warning(f"Could not connect to {DATABASE_URL} ({e}). Falling back to SQLite local database.")
+    if os.getenv("DATABASE_FAIL_CLOSED", "false").lower() == "true":
+        raise RuntimeError("Configured database connection required") from e
+    logger.warning("Configured database unavailable. Falling back to SQLite local database.")
     DATABASE_URL = SQLITE_FALLBACK_URL
     engine = get_engine(DATABASE_URL)
 
@@ -53,6 +57,7 @@ def get_db():
 
 def init_db_and_seed():
     Base.metadata.create_all(bind=engine)
+    _ensure_incident_ingest_columns()
     db = SessionLocal()
     try:
         # Seed users if empty
@@ -77,35 +82,50 @@ def init_db_and_seed():
             db.commit()
             logger.info("Default seed users created: guard, manager")
 
-        # Seed cameras if empty
-        if db.query(Camera).count() == 0:
-            cameras_seed = [
-                Camera(id=1, name="Camera Cổng Chính", location="Cổng A - Tầng 1", stream_url="https://images.unsplash.com/photo-1557597774-9d273605dfa9?w=600&auto=format&fit=crop", status="online"),
-                Camera(id=2, name="Camera Sảnh Chờ", location="Sảnh Tòa Nhà - Tầng 1", stream_url="https://images.unsplash.com/photo-1541888946425-d0fbb186a5b7?w=600&auto=format&fit=crop", status="online"),
-                Camera(id=3, name="Camera Hàng Rào Tây", location="Khu Vực Hàng Rào - Phía Tây", stream_url="https://images.unsplash.com/photo-1508873696983-2df515122519?w=600&auto=format&fit=crop", status="warning"),
-                Camera(id=4, name="Camera Phòng Server", location="Khai Thác Kỹ Thuật - Tầng Hầm", stream_url="https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=600&auto=format&fit=crop", status="online"),
-                Camera(id=5, name="Camera Bãi Xe B1", location="Bãi Xe Ô Tô - Tầng B1", stream_url="https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=600&auto=format&fit=crop", status="online"),
-                Camera(id=6, name="Camera Hành Lang T4", location="Hành Lang Văn Phòng - Tầng 4", stream_url="https://images.unsplash.com/photo-1517502884422-41eaead166d4?w=600&auto=format&fit=crop", status="online"),
-            ]
-            db.add_all(cameras_seed)
-            db.commit()
-            logger.info("6 Default cameras seeded into database")
+        # Seed or update cameras
+        cameras_seed = [
+            (1, "Camera Cổng Chính", "Cổng A - Tầng 1", "/media/walking_people_browser.webm"),
+            (2, "Camera Sảnh Chờ", "Sảnh Tòa Nhà - Tầng 1", "/media/people_detection.mp4"),
+            (3, "Camera Hàng Rào Tây", "Khu Vực Hàng Rào - Phía Tây", "/media/pets2006_3.mp4"),
+            (4, "Camera Phòng Server", "Khai Thác Kỹ Thuật - Tầng Hầm", "/media/aban3.mp4"),
+            (5, "Camera Bãi Xe B1", "Bãi Xe Ô Tô - Tầng B1", "/media/store-aisle-detection.mp4"),
+            (6, "Camera Hành Lang T4", "Hành Lang Văn Phòng - Tầng 4", "/media/person-bicycle-car-detection.mp4"),
+        ]
+        for cam_id, name, location, stream_url in cameras_seed:
+            existing = db.query(Camera).filter(Camera.id == cam_id).first()
+            if existing:
+                if "unsplash.com" in (existing.stream_url or ""):
+                    existing.stream_url = stream_url
+                    existing.source = "CV"
+            else:
+                db.add(Camera(id=cam_id, name=name, location=location, stream_url=stream_url, status="online", source="CV"))
+        db.commit()
+        logger.info("Default cameras seeded/updated in database")
 
-        # Seed initial sample incident if none
-        if db.query(Incident).count() == 0:
-            sample_incident = Incident(
-                camera_id=3,
-                event_type="xam_nhap",
-                severity="critical",
-                description="Phát hiện đối tượng xâm nhập hàng rào khu vực Phía Tây",
-                status="pending"
-            )
-            db.add(sample_incident)
-            db.commit()
-            logger.info("Initial sample incident seeded")
 
     except Exception as e:
         logger.error(f"Error seeding database: {e}")
         db.rollback()
     finally:
         db.close()
+
+
+def _ensure_incident_ingest_columns():
+    """Keep databases created before authenticated ingest backward compatible."""
+    inc_columns = {column["name"] for column in inspect(engine).get_columns("incidents")}
+    cam_columns = {column["name"] for column in inspect(engine).get_columns("cameras")}
+    with engine.begin() as connection:
+        if "candidate_id" not in inc_columns:
+            connection.execute(text("ALTER TABLE incidents ADD COLUMN candidate_id VARCHAR(255)"))
+        if "payload_hash" not in inc_columns:
+            connection.execute(text("ALTER TABLE incidents ADD COLUMN payload_hash VARCHAR(64)"))
+        if "bbox_json" not in inc_columns:
+            connection.execute(text("ALTER TABLE incidents ADD COLUMN bbox_json TEXT"))
+        if "source" not in inc_columns:
+            connection.execute(text("ALTER TABLE incidents ADD COLUMN source VARCHAR(20) DEFAULT 'SIMULATOR' NOT NULL"))
+        if "source" not in cam_columns:
+            connection.execute(text("ALTER TABLE cameras ADD COLUMN source VARCHAR(20) DEFAULT 'SIMULATOR' NOT NULL"))
+        connection.execute(
+            text("CREATE UNIQUE INDEX IF NOT EXISTS ix_incidents_candidate_id ON incidents (candidate_id)")
+        )
+

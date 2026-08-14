@@ -1,0 +1,19 @@
+{
+  "id": "shirin21st/deimv2-phase-8-cv-e2e-validation",
+  "title": "DEIMv2 Phase 8 CV E2E Validation",
+  "code_file": "phase8_kaggle_batch.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": "true",
+  "enable_gpu": "true",
+  "machine_shape": "NvidiaTeslaT4",
+  "enable_internet": "true",
+  "dataset_sources": [
+    "shirin21st/phase8-caviar-cv-validation",
+    "shirin21st/deimv2-phase8-code-bundle"
+  ],
+  "competition_sources": [],
+  "kernel_sources": [
+    "shirin21st/deimv2-phase-7a-person-luggage"
+  ]
+}

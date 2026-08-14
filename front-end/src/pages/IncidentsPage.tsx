@@ -8,6 +8,7 @@ import {
   EscalationBadge,
   EventTypeBadge,
   SeverityBadge,
+  SourceBadge,
   StateBadge,
 } from '../components/common/Badges';
 import { EmptyState, ErrorState, LoadingState } from '../components/common/States';
@@ -109,6 +110,7 @@ export function IncidentsPage() {
                         <div className="flex flex-wrap gap-1">
                           <StateBadge state={event.state} />
                           <EscalationBadge escalation={event.escalation} />
+                          <SourceBadge sourceType={event.sourceType} />
                         </div>
                       </td>
                       <td className="max-w-md px-3.5 py-3">
