@@ -4,7 +4,6 @@ from __future__ import annotations
 import argparse
 import os
 import time
-import uuid
 from pathlib import Path
 
 import cv2
@@ -13,7 +12,6 @@ from app.config import settings
 from app.cv.detector import DEIMv2Detector
 from app.cv.tracker import ByteTrackMultiObjectTracker
 from app.cv.worker import CVWorker
-from app.vlm.region_validator import DisabledRegionValidator
 
 
 class PreviewDetector:
@@ -45,7 +43,6 @@ def run_forever(clip: str, camera_id: str, frames: int, interval: float, preview
     detector = PreviewDetector(DEIMv2Detector(**settings.detector_config), preview)
     print("[cv-loop] DEIMv2 loaded once; continuous replay started", flush=True)
     while True:
-        run_id = uuid.uuid4().hex
         tracker = ByteTrackMultiObjectTracker(
             camera_id=camera_id,
             frame_rate=5.0,
@@ -58,11 +55,9 @@ def run_forever(clip: str, camera_id: str, frames: int, interval: float, preview
             source_uri=clip,
             detector=detector,
             tracker=tracker,
-            region_validator=DisabledRegionValidator(),
-            candidate_id_namespace=lambda value: f"live-{run_id}-{value}"[:255],
         )
         candidates = worker.run(max_frames=frames)
-        print(f"[cv-loop] completed replay run={run_id[:8]} candidates={len(candidates)}", flush=True)
+        print(f"[cv-loop] completed replay events={len(candidates)}", flush=True)
         time.sleep(max(0.0, interval))
 
 

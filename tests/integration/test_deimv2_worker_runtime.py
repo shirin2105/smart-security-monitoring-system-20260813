@@ -18,7 +18,7 @@ def test_worker_constructs_detector_at_run_start_before_reading_frames():
         read_frames=lambda: calls.append("read") or iter([]),
         release=lambda: calls.append("release"),
     )
-    worker.abandoned_engine = SimpleNamespace(finalize=lambda: calls.append("finalize"))
+    worker.adapters = (SimpleNamespace(finalize=lambda: calls.append("finalize")),)
 
     assert worker.run() == []
     assert worker.detector is detector
@@ -37,7 +37,7 @@ def test_worker_detector_factory_failure_prevents_source_read():
         read_frames=lambda: calls.append("read") or iter([]),
         release=lambda: calls.append("release"),
     )
-    worker.abandoned_engine = SimpleNamespace(finalize=lambda: calls.append("finalize"))
+    worker.adapters = (SimpleNamespace(finalize=lambda: calls.append("finalize")),)
 
     try:
         worker.run()
@@ -48,7 +48,7 @@ def test_worker_detector_factory_failure_prevents_source_read():
     assert calls == ["finalize", "release"]
 
 
-def test_worker_preserves_detector_tracker_store_engine_publisher_flow():
+def test_worker_preserves_detector_tracker_store_adapter_manager_publisher_flow():
     frame = FrameData(camera_id="cam", frame_id=1, captured_at="2026-01-01T00:00:00Z",
                       source_type="SIMULATED", source_fps=25, inference_fps=5)
     calls = []
@@ -59,12 +59,20 @@ def test_worker_preserves_detector_tracker_store_engine_publisher_flow():
     worker.detector = SimpleNamespace(detect=lambda value: (calls.append("detect") or ["detection"], 1.0))
     worker.tracker = SimpleNamespace(track=lambda detections, value: (calls.append(tuple(detections)) or ["track"]))
     worker.track_store = SimpleNamespace(update_track=lambda track: calls.append(track) or "state")
-    worker.static_region_detector = SimpleNamespace(update=lambda image, timestamp: [])
-    worker.abandoned_engine = SimpleNamespace(submit_static_regions=lambda regions: None,
-                                              finalize=lambda: calls.append("finalize"))
-    candidate = SimpleNamespace(candidateId="candidate")
-    worker.engines = [SimpleNamespace(evaluate=lambda tracks, value: [candidate])]
-    worker.publisher = SimpleNamespace(publish=lambda value: calls.append(value.candidateId))
+    signal = SimpleNamespace(name="signal")
+    event = SimpleNamespace(event_id="event")
+    worker.adapters = [SimpleNamespace(evaluate=lambda tracks, value: [signal],
+                                       finalize=lambda: calls.append("finalize"))]
+    worker.event_manager = SimpleNamespace(process=lambda value: event)
+    worker.event_id_namespace = lambda value: value
+    worker._namespace_event = lambda value: value
+    worker.publisher = SimpleNamespace(publish=lambda value: calls.append(value.event_id))
+    monkeypatch_validate = __import__("app.cv.worker", fromlist=["validate_event"])
+    original_validate = monkeypatch_validate.validate_event
+    monkeypatch_validate.validate_event = lambda value: None
 
-    assert worker.run(max_frames=1) == [candidate]
-    assert calls == ["detect", ("detection",), "track", "candidate", "finalize", "release"]
+    try:
+        assert worker.run(max_frames=1) == [event]
+    finally:
+        monkeypatch_validate.validate_event = original_validate
+    assert calls == ["detect", ("detection",), "track", "event", "finalize", "release"]

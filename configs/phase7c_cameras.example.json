@@ -2,9 +2,10 @@
   "schema_version": "1.0",
   "cameras": {
     "aboda_camera_01": {
-      "roi_polygon": null,
+      "valid_floor_roi_polygon": null,
       "quality": {
         "window_s": 2.0,
+        "min_samples": 5,
         "person_min_duration_s": 0.7,
         "person_high_conf": 0.4,
         "person_median_conf": 0.4,

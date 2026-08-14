@@ -1,4 +1,4 @@
-"""Repeatable MP4 -> CV -> backend -> WebSocket demo verification."""
+"""LEGACY backend compatibility demo; not part of the production CV boundary."""
 from __future__ import annotations
 
 import asyncio
@@ -21,7 +21,6 @@ import yaml
 from app.config import settings
 from app.cv.tracker import ByteTrackMultiObjectTracker
 from app.cv.worker import CVWorker
-from app.vlm.region_validator import DisabledRegionValidator
 
 
 class DemoFailure(RuntimeError):
@@ -55,11 +54,10 @@ def _worker_process(config: dict, run_id: str, output, stop_event) -> None:
         worker = CVWorker(
             camera_id=config["camera_id"], source_uri=config["sample_path"],
             tracker=tracker,
-            region_validator=DisabledRegionValidator(),
             candidate_id_namespace=lambda value: _namespace(run_id, value))
         candidates = worker.run(int(config["max_frames"]), stop_event, time.monotonic() + float(config["timeout_seconds"]))
         accepted = _receipt(worker.publisher.last_receipt)
-        matching = next((item for item in candidates if accepted and item.candidateId == accepted["candidate_id"]), None)
+        matching = next((item for item in candidates if accepted and item.event_id == accepted["candidate_id"]), None)
         duplicate = None
         if matching is not None and worker.publisher.publish(matching):
             duplicate = _receipt(worker.publisher.last_receipt)
@@ -110,7 +108,6 @@ async def _local_execution(config: dict, run_id: str, factory: Callable[..., obj
     """Fast test seam; production never uses this thread-based executor."""
     worker = factory(
         camera_id=config["camera_id"], source_uri=config["sample_path"],
-        region_validator=DisabledRegionValidator(),
         candidate_id_namespace=lambda value: _namespace(run_id, value))
     timeout, stop_event = float(config["timeout_seconds"]), threading.Event()
     future = asyncio.create_task(asyncio.to_thread(
@@ -125,7 +122,7 @@ async def _local_execution(config: dict, run_id: str, factory: Callable[..., obj
             raise DemoFailure("CV test executor: worker did not stop") from exc
         raise DemoFailure("CV timeout: worker stopped before post-timeout publish") from exc
     accepted = _receipt(getattr(worker.publisher, "last_receipt", None))
-    matching = next((item for item in candidates if accepted and item.candidateId == accepted["candidate_id"]), None)
+    matching = next((item for item in candidates if accepted and item.event_id == accepted["candidate_id"]), None)
     duplicate = None
     if matching is not None and worker.publisher.publish(matching):
         duplicate = _receipt(worker.publisher.last_receipt)
