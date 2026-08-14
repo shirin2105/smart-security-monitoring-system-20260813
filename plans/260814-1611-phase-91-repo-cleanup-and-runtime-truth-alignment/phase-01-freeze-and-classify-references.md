@@ -1,7 +1,7 @@
 ---
 phase: 1
 title: "Freeze and classify references"
-status: pending
+status: complete
 priority: P1
 effort: "3h"
 dependencies: []
@@ -57,4 +57,3 @@ Revert only the two Phase 1 Markdown files; source/runtime is unchanged.
 ## Next steps
 
 Unblocks Phases 2 and 3. Any unresolved classification blocks the corresponding delete, not documentation work.
-

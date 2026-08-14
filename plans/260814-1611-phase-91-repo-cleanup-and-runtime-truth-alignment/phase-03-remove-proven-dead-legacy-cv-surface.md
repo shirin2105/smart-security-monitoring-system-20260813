@@ -1,7 +1,7 @@
 ---
 phase: 3
 title: "Remove proven-dead legacy CV surface"
-status: pending
+status: complete
 priority: P1
 effort: "4h"
 dependencies: [1, 2]
@@ -61,4 +61,3 @@ Revert the single legacy-surface deletion commit; then re-run the Phase 4 focuse
 ## Next steps
 
 Phase 4 validates the retained runtime and records final residual grep classifications.
-
