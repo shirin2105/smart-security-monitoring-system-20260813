@@ -1,7 +1,8 @@
 import time
 import uuid
-import httpx
 from dataclasses import dataclass
+from typing import Any
+import httpx
 from app.common.schemas import EventCandidate
 from app.publisher.base import EventPublisher
 
@@ -34,24 +35,32 @@ class HttpEventPublisher(EventPublisher):
             self._client = httpx.Client(timeout=self.timeout_seconds)
         return self._client
 
-    def publish(self, candidate: EventCandidate) -> bool:
+    def publish(self, candidate: Any) -> bool:
         self.last_receipt = None
         request_id = str(uuid.uuid4())
+        candidate_id = getattr(candidate, "candidateId", getattr(candidate, "event_id", request_id))
         if not self.bearer_token.strip():
             print(
-                f"[HttpPublisher] Refused unauthenticated publish for candidateId={candidate.candidateId} "
+                f"[HttpPublisher] Refused unauthenticated publish for candidateId={candidate_id} "
                 f"(request_id={request_id})"
             )
             return False
         headers = {
             "Content-Type": "application/json",
-            "Idempotency-Key": candidate.candidateId,
+            "Idempotency-Key": str(candidate_id),
             "X-Request-ID": request_id,
         }
         headers["Authorization"] = f"Bearer {self.bearer_token}"
 
-        # Dump candidate JSON (excluding raw image matrices)
-        payload = candidate.model_dump(mode="json")
+        # Dump candidate JSON
+        if hasattr(candidate, "model_dump"):
+            payload = candidate.model_dump(mode="json")
+        elif hasattr(candidate, "to_dict"):
+            payload = candidate.to_dict()
+        elif isinstance(candidate, dict):
+            payload = candidate
+        else:
+            payload = vars(candidate)
 
         # Bounded retry loop with exponential backoff
         for attempt in range(1, self.max_retries + 1):
@@ -64,18 +73,18 @@ class HttpEventPublisher(EventPublisher):
                     except (ValueError, TypeError):
                         body = {}
                     self.last_receipt = PublishReceipt(
-                        candidate.candidateId,
+                        candidate_id,
                         str(body.get("status", "ACCEPTED")),
                         body.get("incident"),
                     )
                     print(
-                        f"[HttpPublisher] Published candidateId={candidate.candidateId} "
+                        f"[HttpPublisher] Published candidateId={candidate_id} "
                         f"(request_id={request_id}, status={response.status_code})"
                     )
                     return True
                 elif response.status_code not in (408, 429) and response.status_code < 500:
                     print(
-                        f"[HttpPublisher] Permanent failure for candidateId={candidate.candidateId} "
+                        f"[HttpPublisher] Permanent failure for candidateId={candidate_id} "
                         f"(request_id={request_id}, status={response.status_code})"
                     )
                     return False

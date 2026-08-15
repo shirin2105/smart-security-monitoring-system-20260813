@@ -54,7 +54,7 @@ export function CameraGrid({ cameras, events }: CameraGridProps) {
       if (video && telemetry && typeof telemetry.videoTime === 'number' && video.duration > 0 && !video.paused) {
         const targetTime = telemetry.videoTime % video.duration;
         const diff = Math.abs(video.currentTime - targetTime);
-        if (diff > 0.10) {
+        if (diff > 0.05) {
           video.currentTime = targetTime;
         }
       }
@@ -96,7 +96,7 @@ export function CameraGrid({ cameras, events }: CameraGridProps) {
               className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
             />
             <span className={devMode ? 'text-amber-600 dark:text-amber-400 font-bold' : ''}>
-              Dev Mode (Realtime Bbox)
+              Dev Mode (BBox Debug)
             </span>
           </label>
           <p className="font-mono text-xs text-gray-600 dark:text-gray-400">
@@ -127,8 +127,8 @@ export function CameraGrid({ cameras, events }: CameraGridProps) {
 
             const telemetry = telemetryMap?.[camera.id] ?? (telemetryMap as any)?.[`cam_${camera.id}`] ?? (telemetryMap as any)?.[`cam_0${camera.id}`];
 
-            // 1. Dùng telemetry realtime từ luồng CV (hiển thị tất cả người trong camera tại mọi thời điểm)
-            if (telemetry) {
+            // 1. Dùng telemetry realtime từ luồng CV (hiển thị tất cả đối tượng trong camera tại mọi thời điểm)
+            if (telemetry && telemetry.tracks && telemetry.tracks.length > 0) {
               const [frameW, frameH] = telemetry.frameSize || [1280, 720];
               const frameAspect = frameW / frameH;
               const containerAspect = 16 / 9;
@@ -148,7 +148,7 @@ export function CameraGrid({ cameras, events }: CameraGridProps) {
 
               return (
                 <>
-                  {(telemetry.tracks || []).map((track) => {
+                  {telemetry.tracks.map((track) => {
                     const [x1, y1, x2, y2] = track.bbox;
                     const isPercentage = x1 <= 1 && y1 <= 1 && x2 <= 1 && y2 <= 1;
 
@@ -162,10 +162,17 @@ export function CameraGrid({ cameras, events }: CameraGridProps) {
                     const widthPct = Math.max(0, Math.min(100 - leftPct, relW * renderWidthPct));
                     const heightPct = Math.max(0, Math.min(100 - topPct, relH * renderHeightPct));
 
+                    const isLuggage = track.className === 'luggage' || track.className === 'bag' || track.className === 'suitcase';
+                    const borderColor = isLuggage ? 'border-amber-500 bg-amber-500/20' : 'border-emerald-500 bg-emerald-500/20';
+                    const badgeColor = isLuggage ? 'bg-amber-600' : 'bg-emerald-600';
+                    const label = isLuggage
+                      ? `Hành lý #${track.trackId}`
+                      : `Người #${track.trackId} (${Math.round(track.confidence * 100)}%)`;
+
                     return (
                       <div
                         key={`track-${track.trackId}`}
-                        className="pointer-events-none absolute flex items-start border-2 border-emerald-500 bg-emerald-500/25 p-1 rounded-sm z-30 transition-all duration-100 ease-out"
+                        className={`pointer-events-none absolute border-2 ${borderColor} rounded-sm z-30 box-border`}
                         style={{
                           left: `${leftPct}%`,
                           top: `${topPct}%`,
@@ -173,8 +180,8 @@ export function CameraGrid({ cameras, events }: CameraGridProps) {
                           height: `${heightPct}%`,
                         }}
                       >
-                        <span className="rounded bg-emerald-600 px-1 font-mono text-[9px] font-bold uppercase tracking-wider text-white shadow-sm">
-                          Người #{track.trackId} ({Math.round(track.confidence * 100)}%)
+                        <span className={`absolute -top-4.5 left-0 rounded ${badgeColor} px-1 font-mono text-[9px] font-bold uppercase tracking-wider text-white shadow-sm whitespace-nowrap pointer-events-none`}>
+                          {label}
                         </span>
                       </div>
                     );
@@ -183,7 +190,7 @@ export function CameraGrid({ cameras, events }: CameraGridProps) {
               );
             }
 
-            // 2. Fallback sang active event bbox nếu không có telemetry
+            // 2. Fallback sang active event bbox nếu không có telemetry tracks
             if (active && active.bbox && active.bbox.length === 4) {
               const [x1, y1, x2, y2] = active.bbox;
               const isPercentage = x1 <= 100 && x2 <= 100 && y1 <= 100 && y2 <= 100 && x2 <= 1 && y2 <= 1;
@@ -219,20 +226,10 @@ export function CameraGrid({ cameras, events }: CameraGridProps) {
               );
             }
 
-            // 3. Fallback mock giả lập khi chưa có luồng telemetry CV
+            // 3. Dev mode active indicator khi không có track hay active event
             return (
-              <div
-                className="animate-bbox pointer-events-none absolute flex items-start border-2 border-amber-500 bg-amber-500/20 p-1 rounded-sm z-30"
-                style={{
-                  left: `${((camera.id * 15) % 50) + 10}%`,
-                  top: `${((camera.id * 20) % 40) + 15}%`,
-                  width: '35%',
-                  height: '45%',
-                }}
-              >
-                <span className="rounded bg-amber-600 px-1 font-mono text-[9px] font-bold uppercase tracking-wider text-white shadow-sm">
-                  {active ? EVENT_TYPE_LABEL[active.eventType] : 'Người: Phát hiện đối tượng'} (DEV Mode)
-                </span>
+              <div className="pointer-events-none absolute top-2 right-2 z-30 rounded bg-slate-900/80 border border-emerald-500/40 px-1.5 py-0.5 font-mono text-[9px] font-medium text-emerald-400">
+                DEV: 0 tracks
               </div>
             );
           };

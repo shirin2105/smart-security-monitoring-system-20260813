@@ -127,6 +127,39 @@ class CVWorker:
 
                 detections, _latency_ms = self.detector.detect(frame_data)
                 track_results = self.tracker.track(detections, frame_data)
+
+                # Gửi telemetry realtime (bounding box của tất cả track trong frame)
+                if self.publisher and hasattr(self.publisher, "publish_telemetry"):
+                    source_fps = frame_data.source_fps if frame_data.source_fps > 0 else 25.0
+                    media_time = (frame_data.frame_id - 1) / source_fps
+                    h, w = (frame_data.image.shape[0], frame_data.image.shape[1]) if frame_data.image is not None else (720, 1280)
+                    tracks_payload = [
+                        {
+                            "trackId": int(track.track_id),
+                            "className": str(getattr(track, "class_name", "person")),
+                            "confidence": float(getattr(track, "confidence", 1.0)),
+                            "bbox": [float(v) for v in track.bbox],
+                        }
+                        for track in track_results
+                    ]
+                    captured_ts = getattr(frame_data, "captured_at", None)
+                    if hasattr(captured_ts, "isoformat"):
+                        ts_str = captured_ts.isoformat()
+                    else:
+                        ts_str = str(captured_ts) if captured_ts else ""
+
+                    telemetry_payload = {
+                        "cameraId": self.camera_id,
+                        "timestamp": ts_str,
+                        "videoTime": media_time,
+                        "frameSize": [w, h],
+                        "tracks": tracks_payload,
+                    }
+                    try:
+                        self.publisher.publish_telemetry(telemetry_payload)
+                    except Exception:
+                        pass
+
                 active_snapshot = tuple(
                     self.track_store.update_track(track) for track in track_results
                 )
@@ -144,6 +177,14 @@ class CVWorker:
 
                 processed_count += 1
                 self.processed_frames = processed_count
+                if processed_count % 15 == 0:
+                    try:
+                        latest_zones = settings.zones
+                        for adapter in self.adapters:
+                            if hasattr(adapter, "reload_zones"):
+                                adapter.reload_zones(latest_zones)
+                    except Exception:
+                        pass
                 if max_frames is not None and processed_count >= max_frames:
                     break
         except BaseException as primary_error:

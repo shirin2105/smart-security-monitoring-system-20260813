@@ -27,6 +27,12 @@ class IntrusionLifecycleAdapter:
         self._active: set[tuple[int, str]] = set()
         self._last_facts: dict[tuple[int, str], tuple[Any, dict[str, Any]]] = {}
 
+    def reload_zones(self, zones_config: list[dict[str, Any]]) -> None:
+        new_zones = [z for z in zones_config
+                     if z.get("camera_id") == self.camera_id and z.get("enabled", True)]
+        if new_zones != self.zones:
+            self.zones = new_zones
+
     def evaluate(self, tracks: list[Any], frame_data: Any) -> list[EventSignal]:
         timestamp, now_s = frame_data.captured_at, _media_seconds(frame_data)
         persons = {track.track_id: track for track in tracks if track.class_name == "person"}

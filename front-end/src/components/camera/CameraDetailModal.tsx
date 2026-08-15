@@ -1,10 +1,12 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { VideoOff, X } from 'lucide-react';
 
-import { Camera, SecurityEvent } from '../../domain/types';
+import { api } from '../../api';
+import { Camera, CameraZone, EVENT_TYPE_LABEL, SecurityEvent } from '../../domain/types';
 import { EmptyState } from '../common/States';
 import { HealthDot, SeverityBadge, SourceBadge, StateBadge } from '../common/Badges';
+import { useEvents } from '../../realtime/EventsProvider';
 
 interface CameraDetailModalProps {
   camera: Camera;
@@ -12,8 +14,15 @@ interface CameraDetailModalProps {
   onClose: () => void;
 }
 
+const OPEN_STATES = ['OPEN', 'PENDING_REVIEW', 'ACKNOWLEDGED', 'CONFIRMED'];
+
 /** Chế độ xem chi tiết một camera — acceptance criteria của BAC-50. */
 export function CameraDetailModal({ camera, events, onClose }: CameraDetailModalProps) {
+  const [devMode, setDevMode] = useState<boolean>(true);
+  const [zones, setZones] = useState<CameraZone[]>([]);
+  const { telemetryMap } = useEvents();
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose();
@@ -21,6 +30,144 @@ export function CameraDetailModal({ camera, events, onClose }: CameraDetailModal
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [onClose]);
+
+  useEffect(() => {
+    api.getZones().then(setZones).catch((err) => {
+      console.error('Không thể tải cấu hình vùng Intrusion:', err);
+    });
+  }, []);
+
+  const camKey = camera.id <= 9 ? `cam_0${camera.id}` : `cam_${camera.id}`;
+  const cameraZone = zones.find(
+    (z) => z.cameraId === camKey || z.cameraId === `cam_${camera.id}` || z.cameraId === String(camera.id)
+  );
+
+  const telemetry =
+    telemetryMap?.[camera.id] ??
+    (telemetryMap as any)?.[`cam_${camera.id}`] ??
+    (telemetryMap as any)?.[`cam_0${camera.id}`];
+
+  useEffect(() => {
+    if (!devMode || !videoRef.current || !telemetry) return;
+    if (typeof telemetry.videoTime === 'number' && videoRef.current.duration > 0 && !videoRef.current.paused) {
+      const targetTime = telemetry.videoTime % videoRef.current.duration;
+      const diff = Math.abs(videoRef.current.currentTime - targetTime);
+      if (diff > 0.05) {
+        videoRef.current.currentTime = targetTime;
+      }
+    }
+  }, [devMode, telemetry]);
+
+  const activeEvent = events.find(
+    (event) => event.cameraId === camera.id && OPEN_STATES.includes(event.state)
+  );
+
+  const renderBbox = () => {
+    if (!devMode || camera.health === 'OFFLINE') return null;
+
+    if (telemetry && telemetry.tracks && telemetry.tracks.length > 0) {
+      const [frameW, frameH] = telemetry.frameSize || [1280, 720];
+      const frameAspect = frameW / frameH;
+      const containerAspect = 16 / 9;
+
+      let renderWidthPct = 100;
+      let renderHeightPct = 100;
+      let offsetXPct = 0;
+      let offsetYPct = 0;
+
+      if (frameAspect > containerAspect) {
+        renderHeightPct = (containerAspect / frameAspect) * 100;
+        offsetYPct = (100 - renderHeightPct) / 2;
+      } else if (frameAspect < containerAspect) {
+        renderWidthPct = (frameAspect / containerAspect) * 100;
+        offsetXPct = (100 - renderWidthPct) / 2;
+      }
+
+      return (
+        <>
+          {telemetry.tracks.map((track) => {
+            const [x1, y1, x2, y2] = track.bbox;
+            const isPercentage = x1 <= 1 && y1 <= 1 && x2 <= 1 && y2 <= 1;
+
+            const relX1 = isPercentage ? x1 : x1 / frameW;
+            const relY1 = isPercentage ? y1 : y1 / frameH;
+            const relW = isPercentage ? x2 - x1 : (x2 - x1) / frameW;
+            const relH = isPercentage ? y2 - y1 : (y2 - y1) / frameH;
+
+            const leftPct = offsetXPct + Math.max(0, Math.min(1, relX1)) * renderWidthPct;
+            const topPct = offsetYPct + Math.max(0, Math.min(1, relY1)) * renderHeightPct;
+            const widthPct = Math.max(0, Math.min(100 - leftPct, relW * renderWidthPct));
+            const heightPct = Math.max(0, Math.min(100 - topPct, relH * renderHeightPct));
+
+            const isLuggage = track.className === 'luggage' || track.className === 'bag' || track.className === 'suitcase';
+            const borderColor = isLuggage ? 'border-amber-500 bg-amber-500/20' : 'border-emerald-500 bg-emerald-500/20';
+            const badgeColor = isLuggage ? 'bg-amber-600' : 'bg-emerald-600';
+            const label = isLuggage
+              ? `Hành lý #${track.trackId}`
+              : `Người #${track.trackId} (${Math.round(track.confidence * 100)}%)`;
+
+            return (
+              <div
+                key={`modal-track-${track.trackId}`}
+                className={`pointer-events-none absolute border-2 ${borderColor} rounded-sm z-30 box-border`}
+                style={{
+                  left: `${leftPct}%`,
+                  top: `${topPct}%`,
+                  width: `${widthPct}%`,
+                  height: `${heightPct}%`,
+                }}
+              >
+                <span className={`absolute -top-4.5 left-0 rounded ${badgeColor} px-1 font-mono text-[9px] font-bold uppercase tracking-wider text-white shadow-sm whitespace-nowrap pointer-events-none`}>
+                  {label}
+                </span>
+              </div>
+            );
+          })}
+        </>
+      );
+    }
+
+    if (activeEvent && activeEvent.bbox && activeEvent.bbox.length === 4) {
+      const [x1, y1, x2, y2] = activeEvent.bbox;
+      const isPercentage = x1 <= 100 && x2 <= 100 && y1 <= 100 && y2 <= 100 && x2 <= 1 && y2 <= 1;
+      let style: React.CSSProperties;
+      if (isPercentage) {
+        style = {
+          left: `${x1 * 100}%`,
+          top: `${y1 * 100}%`,
+          width: `${(x2 - x1) * 100}%`,
+          height: `${(y2 - y1) * 100}%`,
+        };
+      } else {
+        const isHD = x2 > 640 || y2 > 480;
+        const width = isHD ? 1280 : 640;
+        const height = isHD ? 720 : 480;
+        style = {
+          left: `${Math.max(0, Math.min(100, (x1 / width) * 100))}%`,
+          top: `${Math.max(0, Math.min(100, (y1 / height) * 100))}%`,
+          width: `${Math.max(0, Math.min(100, ((x2 - x1) / width) * 100))}%`,
+          height: `${Math.max(0, Math.min(100, ((y2 - y1) / height) * 100))}%`,
+        };
+      }
+
+      return (
+        <div
+          className="animate-bbox pointer-events-none absolute flex items-start border-2 border-red-500 bg-red-500/20 p-1 rounded-sm z-30"
+          style={style}
+        >
+          <span className="rounded bg-red-600 px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider text-white shadow-sm">
+            {EVENT_TYPE_LABEL[activeEvent.eventType]}
+          </span>
+        </div>
+      );
+    }
+
+    return (
+      <div className="pointer-events-none absolute top-3 right-3 z-30 rounded bg-slate-900/80 border border-emerald-500/40 px-2 py-1 font-mono text-[10px] font-medium text-emerald-400">
+        DEV MODE: 0 tracks
+      </div>
+    );
+  };
 
   return (
     <div
@@ -41,13 +188,26 @@ export function CameraDetailModal({ camera, events, onClose }: CameraDetailModal
               <SourceBadge sourceType={camera.sourceType} />
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="rounded-lg bg-gray-100 dark:bg-gray-800 p-2 text-gray-500 dark:text-gray-400 transition-colors hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-            aria-label="Đóng"
-          >
-            <X className="h-4 w-4" aria-hidden />
-          </button>
+          <div className="flex items-center gap-4">
+            <label className="flex items-center gap-2 text-xs font-semibold cursor-pointer text-gray-700 dark:text-gray-300">
+              <input
+                type="checkbox"
+                checked={devMode}
+                onChange={(e) => setDevMode(e.target.checked)}
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className={devMode ? 'text-amber-600 dark:text-amber-400 font-bold' : ''}>
+                Dev Mode
+              </span>
+            </label>
+            <button
+              onClick={onClose}
+              className="rounded-lg bg-gray-100 dark:bg-gray-800 p-2 text-gray-500 dark:text-gray-400 transition-colors hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+              aria-label="Đóng"
+            >
+              <X className="h-4 w-4" aria-hidden />
+            </button>
+          </div>
         </div>
 
         <div className="relative flex aspect-video shrink-0 max-h-[50vh] items-center justify-center overflow-hidden bg-slate-950">
@@ -58,6 +218,7 @@ export function CameraDetailModal({ camera, events, onClose }: CameraDetailModal
             </div>
           ) : camera.previewUrl.match(/\.(mp4|webm|avi)(\?.*)?$/i) ? (
             <video
+              ref={videoRef}
               src={camera.previewUrl}
               autoPlay
               muted
@@ -68,6 +229,36 @@ export function CameraDetailModal({ camera, events, onClose }: CameraDetailModal
           ) : (
             <img src={camera.previewUrl} alt="" className="h-full w-full object-contain" />
           )}
+
+          {/* Intrusion Zone Overlay (hiển thị khi ở Dev Mode) */}
+          {devMode && cameraZone && cameraZone.polygon && cameraZone.polygon.length >= 3 && (
+            <svg
+              viewBox="0 0 1280 720"
+              preserveAspectRatio="none"
+              className="pointer-events-none absolute inset-0 h-full w-full z-20"
+            >
+              <polygon
+                points={cameraZone.polygon.map((p) => `${p[0]},${p[1]}`).join(' ')}
+                fill="rgba(245, 158, 11, 0.25)"
+                stroke="#f59e0b"
+                strokeWidth="3"
+                strokeDasharray="5 3"
+              />
+              <text
+                x={cameraZone.polygon[0][0] + 5}
+                y={cameraZone.polygon[0][1] + 20}
+                fill="#f59e0b"
+                fontSize="16"
+                fontWeight="bold"
+                className="font-mono drop-shadow-md select-none"
+              >
+                {cameraZone.name}
+              </text>
+            </svg>
+          )}
+
+          {/* Khung phát hiện (chỉ hiển thị ở Dev Mode) */}
+          {renderBbox()}
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-6">

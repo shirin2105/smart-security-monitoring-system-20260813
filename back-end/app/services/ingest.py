@@ -109,6 +109,20 @@ async def ingest_event_candidate(payload: dict) -> dict:
     try:
         existing = db.query(Incident).filter(Incident.candidate_id == candidate_id).first()
         if existing:
+            if existing.payload_hash == digest:
+                return _duplicate_result(existing, digest, db)
+            if payload.get("eventState") in ("UPDATE", "END"):
+                bbox_data = payload.get("bbox")
+                if bbox_data is not None:
+                    existing.bbox_json = json.dumps(bbox_data)
+                existing.payload_hash = digest
+                db.commit()
+                db.refresh(existing)
+                camera = db.query(Camera).filter(Camera.id == existing.camera_id).first()
+                incident_payload = _incident_payload(existing, camera.name if camera else f"Camera #{existing.camera_id}")
+                incident_payload["bbox"] = bbox_data
+                await manager.broadcast({"type": "UPDATE_ALERT", "incident": incident_payload})
+                return {"status": "ACCEPTED", "incident": incident_payload}
             return _duplicate_result(existing, digest, db)
 
         camera_id = map_camera_id(payload.get("cameraId", ""), db)
