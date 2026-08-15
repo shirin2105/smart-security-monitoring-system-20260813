@@ -1,0 +1,282 @@
+{
+  "benchmark_version": "phase11a-v1",
+  "gt_source": "CAVIAR XML + frozen runtime semantics",
+  "hardening": "crowd: central-ROI count, 4s hold, trigger after hold; intrusion/abandoned unchanged",
+  "clips": [
+    {
+      "clip_id": "Browse1",
+      "camera_id": "Browse1",
+      "video_path": "phase8_dataset\\videos\\Browse1.mpg",
+      "duration_s": 41.76,
+      "event_targets": [
+        "ZONE_INTRUSION"
+      ],
+      "tags": [
+        "positive",
+        "zone_intrusion"
+      ]
+    },
+    {
+      "clip_id": "Browse2",
+      "camera_id": "Browse2",
+      "video_path": "phase8_dataset\\videos\\Browse2.mpg",
+      "duration_s": 35.04,
+      "event_targets": [
+        "ZONE_INTRUSION"
+      ],
+      "tags": [
+        "positive",
+        "zone_intrusion"
+      ]
+    },
+    {
+      "clip_id": "Browse3",
+      "camera_id": "Browse3",
+      "video_path": "phase8_dataset\\videos\\Browse3.mpg",
+      "duration_s": 36.48,
+      "event_targets": [
+        "ZONE_INTRUSION"
+      ],
+      "tags": [
+        "positive",
+        "zone_intrusion"
+      ]
+    },
+    {
+      "clip_id": "Browse4",
+      "camera_id": "Browse4",
+      "video_path": "phase8_dataset\\videos\\Browse4.mpg",
+      "duration_s": 45.6,
+      "event_targets": [
+        "ZONE_INTRUSION"
+      ],
+      "tags": [
+        "positive",
+        "zone_intrusion"
+      ]
+    },
+    {
+      "clip_id": "LeftBag",
+      "camera_id": "LeftBag",
+      "video_path": "phase8_dataset\\videos\\LeftBag.mpg",
+      "duration_s": 57.6,
+      "event_targets": [
+        "ABANDONED_OBJECT",
+        "ZONE_INTRUSION"
+      ],
+      "tags": [
+        "abandoned_object",
+        "hard-small-object",
+        "positive",
+        "zone_intrusion"
+      ]
+    },
+    {
+      "clip_id": "LeftBag_AtChair",
+      "camera_id": "LeftBag_AtChair",
+      "video_path": "phase8_dataset\\videos\\LeftBag_AtChair.mpg",
+      "duration_s": 44.64,
+      "event_targets": [
+        "ABANDONED_OBJECT",
+        "ZONE_INTRUSION"
+      ],
+      "tags": [
+        "abandoned_object",
+        "hard-small-object",
+        "positive",
+        "zone_intrusion"
+      ]
+    },
+    {
+      "clip_id": "LeftBag_BehindChair",
+      "camera_id": "LeftBag_BehindChair",
+      "video_path": "phase8_dataset\\videos\\LeftBag_BehindChair.mpg",
+      "duration_s": 42.72,
+      "event_targets": [
+        "ZONE_INTRUSION"
+      ],
+      "tags": [
+        "hard-small-object",
+        "positive",
+        "zone_intrusion"
+      ]
+    },
+    {
+      "clip_id": "LeftBag_PickedUp",
+      "camera_id": "LeftBag_PickedUp",
+      "video_path": "phase8_dataset\\videos\\LeftBag_PickedUp.mpg",
+      "duration_s": 54.24,
+      "event_targets": [
+        "ABANDONED_OBJECT",
+        "ZONE_INTRUSION"
+      ],
+      "tags": [
+        "abandoned_object",
+        "hard-small-object",
+        "positive",
+        "zone_intrusion"
+      ]
+    },
+    {
+      "clip_id": "LeftBox",
+      "camera_id": "LeftBox",
+      "video_path": "phase8_dataset\\videos\\LeftBox.mpg",
+      "duration_s": 34.56,
+      "event_targets": [
+        "ABANDONED_OBJECT",
+        "ZONE_INTRUSION"
+      ],
+      "tags": [
+        "abandoned_object",
+        "hard-small-object",
+        "positive",
+        "zone_intrusion"
+      ]
+    },
+    {
+      "clip_id": "Meet_Crowd",
+      "camera_id": "Meet_Crowd",
+      "video_path": "phase8_dataset\\videos\\Meet_Crowd.mpg",
+      "duration_s": 19.68,
+      "event_targets": [
+        "ZONE_INTRUSION"
+      ],
+      "tags": [
+        "positive",
+        "zone_intrusion"
+      ]
+    },
+    {
+      "clip_id": "Meet_Split_3rdGuy",
+      "camera_id": "Meet_Split_3rdGuy",
+      "video_path": "phase8_dataset\\videos\\Meet_Split_3rdGuy.mpg",
+      "duration_s": 36.96,
+      "event_targets": [
+        "ZONE_INTRUSION"
+      ],
+      "tags": [
+        "positive",
+        "zone_intrusion"
+      ]
+    },
+    {
+      "clip_id": "Meet_WalkSplit",
+      "camera_id": "Meet_WalkSplit",
+      "video_path": "phase8_dataset\\videos\\Meet_WalkSplit.mpg",
+      "duration_s": 24.96,
+      "event_targets": [
+        "ZONE_INTRUSION"
+      ],
+      "tags": [
+        "positive",
+        "zone_intrusion"
+      ]
+    },
+    {
+      "clip_id": "Meet_WalkTogether1",
+      "camera_id": "Meet_WalkTogether1",
+      "video_path": "phase8_dataset\\videos\\Meet_WalkTogether1.mpg",
+      "duration_s": 28.32,
+      "event_targets": [
+        "ZONE_INTRUSION"
+      ],
+      "tags": [
+        "positive",
+        "zone_intrusion"
+      ]
+    },
+    {
+      "clip_id": "Meet_WalkTogether2",
+      "camera_id": "Meet_WalkTogether2",
+      "video_path": "phase8_dataset\\videos\\Meet_WalkTogether2.mpg",
+      "duration_s": 33.12,
+      "event_targets": [
+        "ZONE_INTRUSION"
+      ],
+      "tags": [
+        "positive",
+        "zone_intrusion"
+      ]
+    },
+    {
+      "clip_id": "Rest_InChair",
+      "camera_id": "Rest_InChair",
+      "video_path": "phase8_dataset\\videos\\Rest_InChair.mpg",
+      "duration_s": 40.32,
+      "event_targets": [
+        "ZONE_INTRUSION"
+      ],
+      "tags": [
+        "positive",
+        "zone_intrusion"
+      ]
+    },
+    {
+      "clip_id": "Walk1",
+      "camera_id": "Walk1",
+      "video_path": "phase8_dataset\\videos\\Walk1.mpg",
+      "duration_s": 24.48,
+      "event_targets": [
+        "ZONE_INTRUSION"
+      ],
+      "tags": [
+        "positive",
+        "zone_intrusion"
+      ]
+    },
+    {
+      "clip_id": "Walk2",
+      "camera_id": "Walk2",
+      "video_path": "phase8_dataset\\videos\\Walk2.mpg",
+      "duration_s": 42.24,
+      "event_targets": [
+        "ZONE_INTRUSION"
+      ],
+      "tags": [
+        "positive",
+        "zone_intrusion"
+      ]
+    },
+    {
+      "clip_id": "Walk3",
+      "camera_id": "Walk3",
+      "video_path": "phase8_dataset\\videos\\Walk3.mpg",
+      "duration_s": 55.2,
+      "event_targets": [
+        "ZONE_INTRUSION"
+      ],
+      "tags": [
+        "positive",
+        "zone_intrusion"
+      ]
+    },
+    {
+      "clip_id": "WalkByShop1cor",
+      "camera_id": "WalkByShop1cor",
+      "video_path": "phase8_dataset\\videos\\WalkByShop1cor.mpg",
+      "duration_s": 94.4,
+      "event_targets": [
+        "CROWD_THRESHOLD",
+        "ZONE_INTRUSION"
+      ],
+      "tags": [
+        "crowd_threshold",
+        "positive",
+        "zone_intrusion"
+      ]
+    },
+    {
+      "clip_id": "WalkByShop1front",
+      "camera_id": "WalkByShop1front",
+      "video_path": "phase8_dataset\\videos\\WalkByShop1front.mpg",
+      "duration_s": 94.4,
+      "event_targets": [
+        "ZONE_INTRUSION"
+      ],
+      "tags": [
+        "positive",
+        "zone_intrusion"
+      ]
+    }
+  ]
+}

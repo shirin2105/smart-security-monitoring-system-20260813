@@ -1,7 +1,7 @@
-from typing import Dict, Any, List, Optional, Tuple
-from app.common.schemas import TrackResult
+from typing import Any, Dict, List, Optional, Tuple
+
 from app.common.geometry import get_foot_point
-from app.common.time_utils import utc_now_iso
+from app.common.schemas import TrackResult
 
 
 class TrackState:
@@ -62,3 +62,7 @@ class TrackStore:
 
     def get_active_tracks(self) -> List[TrackState]:
         return list(self.tracks.values())
+
+    def reset(self) -> None:
+        """Discard camera-local state after a continuity-breaking source outage."""
+        self.tracks.clear()

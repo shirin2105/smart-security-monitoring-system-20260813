@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Callable
 import zlib
+from typing import Any, Callable
 
 import numpy as np
 
@@ -28,10 +28,14 @@ def _detections(xyxy, confidence, class_id):
 class ByteTrackMultiObjectTracker:
     """Camera-local ByteTrack state with strict class isolation."""
 
-    def __init__(self, camera_id: str, frame_rate: float = 5.0,
-                 tracker_factory: Callable[..., Any] | None = None,
-                 detections_factory: Callable[..., Any] | None = None,
-                 **config):
+    def __init__(
+        self,
+        camera_id: str,
+        frame_rate: float = 5.0,
+        tracker_factory: Callable[..., Any] | None = None,
+        detections_factory: Callable[..., Any] | None = None,
+        **config,
+    ):
         self.camera_id = camera_id
         self._camera_namespace = zlib.crc32(camera_id.encode("utf-8"))
         factory = tracker_factory or _default_tracker_factory
@@ -44,6 +48,9 @@ class ByteTrackMultiObjectTracker:
         }
         defaults.update(config)
         self._lost_track_buffer = max(0, int(defaults["lost_track_buffer"]))
+        self._tracker_factory = factory
+        self._tracker_config = defaults
+        self._frame_rate = frame_rate
         self._trackers = {cid: factory(frame_rate, **defaults) for cid in CLASS_IDS.values()}
         self._make_detections = detections_factory or _detections
         self._first_seen: dict[int, str] = {}
@@ -64,7 +71,8 @@ class ByteTrackMultiObjectTracker:
             if getattr(tracked, "tracker_id", None) is None:
                 continue
             for box, score, returned_cid, local_id in zip(
-                    tracked.xyxy, tracked.confidence, tracked.class_id, tracked.tracker_id):
+                tracked.xyxy, tracked.confidence, tracked.class_id, tracked.tracker_id
+            ):
                 if int(returned_cid) != cid:
                     raise RuntimeError(f"class contamination: tracker={cid}, output={returned_cid}")
                 if int(local_id) < 0:
@@ -74,18 +82,36 @@ class ByteTrackMultiObjectTracker:
                 global_id = (self._camera_namespace * 2 + cid) * ID_NAMESPACE + int(local_id)
                 first_seen = self._first_seen.setdefault(global_id, frame_data.captured_at)
                 self._last_returned_frame[global_id] = self._frame_index
-                results.append(TrackResult(track_id=global_id, class_name=name,
-                                           bbox=[float(v) for v in box], confidence=float(score),
-                                           first_seen_at=first_seen,
-                                           last_seen_at=frame_data.captured_at))
+                results.append(
+                    TrackResult(
+                        track_id=global_id,
+                        class_name=name,
+                        bbox=[float(v) for v in box],
+                        confidence=float(score),
+                        first_seen_at=first_seen,
+                        last_seen_at=frame_data.captured_at,
+                    )
+                )
         # ByteTrack may revive a lost ID for lost_track_buffer updates. Expire
         # metadata only after that continuity window has elapsed.
-        expired = [track_id for track_id, last_frame in self._last_returned_frame.items()
-                   if self._frame_index - last_frame > self._lost_track_buffer]
+        expired = [
+            track_id
+            for track_id, last_frame in self._last_returned_frame.items()
+            if self._frame_index - last_frame > self._lost_track_buffer
+        ]
         for track_id in expired:
             self._last_returned_frame.pop(track_id, None)
             self._first_seen.pop(track_id, None)
         return sorted(results, key=lambda item: item.track_id)
+
+    def reset(self) -> None:
+        """Start a new camera tracking session without touching detector state."""
+        self._trackers = {
+            cid: self._tracker_factory(self._frame_rate, **self._tracker_config) for cid in CLASS_IDS.values()
+        }
+        self._first_seen.clear()
+        self._last_returned_frame.clear()
+        self._frame_index = 0
 
     @staticmethod
     def _validate(detection: DetectionResult):

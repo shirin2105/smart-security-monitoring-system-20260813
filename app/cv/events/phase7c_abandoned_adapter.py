@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.cv.events.event_signal import EventSignal
+from app.cv.events.frame_time import frame_time_seconds
 from kaggle_pipeline.phase7c_kernel.phase7c_core import (
     OwnerConfig,
     Phase7CConfig,
@@ -13,19 +15,11 @@ from kaggle_pipeline.phase7c_kernel.phase7c_core import (
     point_to_bbox_distance,
 )
 
-from app.cv.events.event_signal import EventSignal
-
-
-def _media_seconds(frame_data: Any) -> float:
-    fps = max(float(frame_data.source_fps), 1e-9)
-    return max(0.0, float(frame_data.frame_id - 1) / fps)
-
 
 class Phase7CAbandonedAdapter:
     """Thin streaming adapter over the unchanged, production Phase7C reasoning core."""
 
-    def __init__(self, camera_id: str, config: dict[str, Any] | None = None,
-                 fps_hint: float = 5.0):
+    def __init__(self, camera_id: str, config: dict[str, Any] | None = None, fps_hint: float = 5.0):
         self.camera_id = camera_id
         cfg = config or {}
         self.config = Phase7CConfig(
@@ -50,17 +44,21 @@ class Phase7CAbandonedAdapter:
         self._history_seconds = max(30.0, longest_rule_s * 4.0)
 
     def evaluate(self, tracks: list[Any], frame_data: Any) -> list[EventSignal]:
-        now_s = _media_seconds(frame_data)
+        now_s = frame_time_seconds(frame_data)
         current = {track.track_id: track for track in tracks}
         for track in tracks:
             box = [float(value) for value in track.latest_bbox]
-            self._rows.append({
-                "frame_index": int(frame_data.frame_id), "timestamp_s": now_s,
-                "global_track_id": int(track.track_id), "class_name": track.class_name,
-                "bbox_xyxy": box,
-                "center_xy": [(box[0] + box[2]) / 2.0, (box[1] + box[3]) / 2.0],
-                "confidence": float(track.confidence),
-            })
+            self._rows.append(
+                {
+                    "frame_index": int(frame_data.frame_id),
+                    "timestamp_s": now_s,
+                    "global_track_id": int(track.track_id),
+                    "class_name": track.class_name,
+                    "bbox_xyxy": box,
+                    "center_xy": [(box[0] + box[2]) / 2.0, (box[1] + box[3]) / 2.0],
+                    "confidence": float(track.confidence),
+                }
+            )
         cutoff_s = now_s - self._history_seconds
         if cutoff_s > 0:
             self._rows = [row for row in self._rows if row["timestamp_s"] >= cutoff_s]
@@ -74,18 +72,27 @@ class Phase7CAbandonedAdapter:
             if physical_id in self._retired:
                 continue
             seen.add(physical_id)
-            bag = next((current.get(int(track_id))
-                        for track_id in reversed(event["source_track_ids"])
-                        if int(track_id) in current), None)
+            bag = next(
+                (
+                    current.get(int(track_id))
+                    for track_id in reversed(event["source_track_ids"])
+                    if int(track_id) in current
+                ),
+                None,
+            )
             owner = current.get(int(event["owner_person_track_id"]))
             owner_near = False
             if bag is not None and owner is not None:
                 owner_near = (
                     point_to_bbox_distance(
-                        [(bag.latest_bbox[0] + bag.latest_bbox[2]) / 2.0,
-                         (bag.latest_bbox[1] + bag.latest_bbox[3]) / 2.0],
+                        [
+                            (bag.latest_bbox[0] + bag.latest_bbox[2]) / 2.0,
+                            (bag.latest_bbox[1] + bag.latest_bbox[3]) / 2.0,
+                        ],
                         owner.latest_bbox,
-                    ) / bbox_diag(owner.latest_bbox) <= self.config.owner.near_norm
+                    )
+                    / bbox_diag(owner.latest_bbox)
+                    <= self.config.owner.near_norm
                 )
             if bag is None or owner_near:
                 if physical_id in self._active:
@@ -97,17 +104,27 @@ class Phase7CAbandonedAdapter:
             profiles = [profile for profile in profiles if profile]
             quality_score = min((float(p["rolling_good_ratio"]) for p in profiles), default=None)
             signal = EventSignal(
-                self.camera_id, "ABANDONED_OBJECT", physical_id, True,
-                frame_data.captured_at, now_s, float(event["association_score"]),
-                {"luggage": {"physical_id": physical_id,
-                              "source_track_ids": list(event["source_track_ids"]),
-                              "bbox_xyxy": list(bag.latest_bbox)},
-                 "owner": {"person_track_id": int(event["owner_person_track_id"])}},
-                {"stationary_duration_s": max(0.0, now_s - float(event["stationary_start_s"])),
-                 "owner_away_duration_s": max(0.0, now_s - float(event["owner_last_near_s"])),
-                 "owner_association_score": float(event["association_score"]),
-                 **({"luggage_quality_score": quality_score}
-                    if quality_score is not None else {})},
+                self.camera_id,
+                "ABANDONED_OBJECT",
+                physical_id,
+                True,
+                frame_data.captured_at,
+                now_s,
+                float(event["association_score"]),
+                {
+                    "luggage": {
+                        "physical_id": physical_id,
+                        "source_track_ids": list(event["source_track_ids"]),
+                        "bbox_xyxy": list(bag.latest_bbox),
+                    },
+                    "owner": {"person_track_id": int(event["owner_person_track_id"])},
+                },
+                {
+                    "stationary_duration_s": max(0.0, now_s - float(event["stationary_start_s"])),
+                    "owner_away_duration_s": max(0.0, now_s - float(event["owner_last_near_s"])),
+                    "owner_association_score": float(event["association_score"]),
+                    **({"luggage_quality_score": quality_score} if quality_score is not None else {}),
+                },
                 diagnostics={"source_core": "phase7c_core.infer_phase7c"},
             )
             self._active.add(physical_id)
@@ -132,7 +149,25 @@ class Phase7CAbandonedAdapter:
     def _end(self, physical_id: str, timestamp: str, now_s: float) -> EventSignal:
         previous = self._last_signals[physical_id]
         return EventSignal(
-            previous.camera_id, previous.event_type, previous.entity_key, False,
-            timestamp, now_s, previous.cv_confidence, previous.objects,
-            previous.evidence, previous.spatial, previous.media, previous.diagnostics,
+            previous.camera_id,
+            previous.event_type,
+            previous.entity_key,
+            False,
+            timestamp,
+            now_s,
+            previous.cv_confidence,
+            previous.objects,
+            previous.evidence,
+            previous.spatial,
+            previous.media,
+            previous.diagnostics,
         )
+
+    def reset(self) -> None:
+        """Discard temporal rows so offline time cannot contribute to owner-away dwell."""
+        self._rows.clear()
+        self._active.clear()
+        self._retired.clear()
+        self._last_signals.clear()
+        self._physical_ids.clear()
+        self._physical_counter = 0

@@ -139,6 +139,96 @@ the Phase 9 CV output boundary.
 
 ---
 
+## Phase 10B Realtime Performance
+
+Phase 10B optimizes realtime scheduling/performance for the unified CV runtime
+without retraining or adding events:
+
+```text
+RTSP/CCTV -> latest fresh frame -> RealtimeScheduler (fairness) -> AdaptiveInference
+           -> DEIMv2 (full640 | tile768_overlap20) -> ByteTrack -> shared TrackStore
+           -> intrusion / crowd / Phase7C abandoned -> CVEventManager -> cv-event-v1
+```
+
+Key components (all under `app/cv/runtime/`):
+- **Profiles** FAST / BALANCED / ACCURATE (production default **BALANCED**).
+- **`AdaptiveInferenceController`** sets target FPS + inference mode per camera
+  under a latency budget (preferred 500 / acceptable 1000 / overloaded 1500 ms).
+- **`RealtimeScheduler`** round-robin/weighted fairness with anti-starvation so
+  no camera is starved by a greedy peer; event-aware boost.
+- **Overload states** NORMAL / DEGRADED / OVERLOADED / RECOVERING with hysteresis.
+- **Freshness-first**: stale frames are dropped, never queued (no unbounded
+  backlog).
+- **`MetricsCollector`** per-camera and global metrics.
+
+Config lives in `configs/runtime_performance.yaml`; per-camera overrides use a
+`performance:` block. Deterministic benchmark: `scripts/phase10b_benchmark.py`.
+See [`reports/phase10b-final-report.md`](./reports/phase10b-final-report.md) and
+[`docs/phase10b/BASELINE.md`](./docs/phase10b/BASELINE.md). Phase 11 final
+benchmark is out of scope.
+
+---
+
+## Phase 11 Final CV Benchmark
+
+Phase 11 benchmarks the unified CV system at the **event level** for the three
+CV events (ZONE_INTRUSION / CROWD_THRESHOLD / ABANDONED_OBJECT), using the
+frozen Phase 10B runtime. It does not tune architecture or thresholds during
+the run.
+
+- **Evaluator** `app/evaluation/phase11_evaluator.py` + `phase11_schema.py`:
+  canonical `cv-event-v1` ingestion, lifecycle collapse (START/UPDATE/END → one
+  instance), one-to-one matching by clip/camera/event_type with per-event
+  temporal tolerance (intrusion ±2 s, crowd ±3 s, abandoned ±5 s), and
+  TP/FP/FN, Precision/Recall/F1 (micro + macro), false-alarms/hour, detection
+  delay (mean/median/P90/max), and duplicate rate.
+- **GT extractor** `app/evaluation/phase11_gt_extractor.py`: deterministic
+  event-level GT from CAVIAR trajectory XML (provisional/heuristic).
+- **Run scripts** `scripts/phase11_gt_manifest.py` (manifest + GT),
+  `scripts/phase11_infer.py` (real DEIMv2 GPU inference → `predictions_all.jsonl`),
+  `scripts/phase11_eval.py` (evaluation + report).
+
+Freeze and protocol: `docs/phase11/BENCHMARK_FREEZE.md`. Result summary in
+`artifacts/phase11/benchmark_report.md`. **Status: PARTIAL BENCHMARK** — the
+GT is provisional/heuristic (not frame-level visually verified), so absolute
+Precision/Recall are indicative. Real inference ran on an NVIDIA RTX 3050.
+Phase 11B tuning should only start once reliable GT is provisioned (Phase 12).
+
+---
+
+## Phase 11A GT Hardening & Data Validation
+
+Phase 11A hardens the Phase 11 GT before any tuning, without changing the
+model/hold/sampling/threshold.
+
+- **GT validator** `app/evaluation/phase11a_validate.py` + CLI
+  `evaluation/phase11a/validate_gt.py`: validates event type, manifest/clip,
+  camera consistency, timing order, uniqueness, clip duration, required zone,
+  and review status (only EXCLUDED clips skipped).
+- **Hardened GT** re-derives events with the frozen runtime semantics
+  (central-ROI crowd count, 4 s hold, trigger after hold) — fixing the Phase 11
+  crowd artifact. Versioned under `evaluation/phase11a/` (old GT untouched),
+  with `gt_changelog.csv`, `clip_review_status.csv`, `crowd_trace.csv`,
+  `abandoned_trace.csv`, `roi_review.csv`.
+- **Hardened rerun** `scripts/phase11a_eval.py` reuses the Phase 11 predictions
+  (runtime/commit/clip set unchanged) and emits `artifacts/phase11a/`
+  metrics, comparison and report.
+
+Key result: **CROWD_THRESHOLD recall 0 was a GT artifact** (wrong ROI/hold/
+trigger) — hardened crowd F1 0→0.67 (1/1 real event matched); ZONE_INTRUSION
+stable at 0.78; **ABANDONED_OBJECT recall 0 is real** — the detector finds
+high-confidence luggage but the Phase7C pipeline never emits an event
+(stationary/owner-association stage under 1/5 sampling). Overall micro F1
+0.648→0.752. Status: **PARTIAL GT HARDENING** (visual review pending — no
+vision capability in this environment). Evidence-backed recommendation:
+Phase 11B targeted at the abandoned pipeline, gated on visual GT + Phase7C
+stage instrumentation.
+
+
+
+
+---
+
 ### 2. Dành cho người dùng Linux (Ubuntu / Debian / Fedora...)
 
 #### Bước 1: Yêu cầu chuẩn bị

@@ -1,0 +1,5 @@
+clip_id,gt_event_id,luggage_detected,luggage_track_created,quality_passed,physical_stitch_ok,stationary_confirmed,owner_associated,owner_away_reached,event_emitted,failure_stage,evidence,notes
+LeftBag,GT-LeftBag-ABANDONED_OBJECT-1,YES,YES,PARTIAL,N/A,NO,NO,NO,NO,STATIONARY_LOGIC,detector finds high-conf luggage (max 0.45-0.68); no abandoned CVEvent emitted,Phase7C stationary/owner logic did not complete under 1/5 sampling
+LeftBag_AtChair,GT-LeftBag_AtChair-ABANDONED_OBJECT-1,YES,YES,PARTIAL,N/A,NO,NO,NO,NO,STATIONARY_LOGIC,detector finds high-conf luggage (max 0.45-0.68); no abandoned CVEvent emitted,Phase7C stationary/owner logic did not complete under 1/5 sampling
+LeftBag_PickedUp,GT-LeftBag_PickedUp-ABANDONED_OBJECT-1,YES,YES,PARTIAL,N/A,NO,NO,NO,NO,STATIONARY_LOGIC,detector finds high-conf luggage (max 0.45-0.68); no abandoned CVEvent emitted,Phase7C stationary/owner logic did not complete under 1/5 sampling
+LeftBox,GT-LeftBox-ABANDONED_OBJECT-1,YES,YES,PARTIAL,N/A,NO,NO,NO,NO,STATIONARY_LOGIC,detector finds high-conf luggage (max 0.45-0.68); no abandoned CVEvent emitted,Phase7C stationary/owner logic did not complete under 1/5 sampling
