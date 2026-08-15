@@ -27,6 +27,13 @@ class CrowdLifecycleAdapter:
         self._states: dict[str, CrowdZoneStateTracker] = {}
         self._last_facts: dict[str, dict[str, Any]] = {}
 
+    def _get_scaled_polygon(self, polygon: list[list[float]], frame_data: Any) -> list[list[float]]:
+        from app.common.geometry import scale_polygon_to_frame
+        if getattr(frame_data, "image", None) is not None:
+            h, w = frame_data.image.shape[:2]
+            return scale_polygon_to_frame(polygon, frame_width=w, frame_height=h)
+        return polygon
+
     def evaluate(self, tracks: list[Any], frame_data: Any) -> list[EventSignal]:
         from app.common.geometry import is_point_in_polygon
 
@@ -36,8 +43,9 @@ class CrowdLifecycleAdapter:
         signals = []
         for zone in self.zones:
             zone_id = str(zone["zone_id"])
+            scaled_polygon = self._get_scaled_polygon(zone["polygon"], frame_data)
             inside = {track.track_id: track for track in persons
-                      if is_point_in_polygon(track.latest_foot_point, zone["polygon"])}
+                      if is_point_in_polygon(track.latest_foot_point, scaled_polygon)}
             tracker = self._states.setdefault(zone_id, CrowdZoneStateTracker(
                 zone_id, self.threshold, self.hold_seconds, self.release_threshold
             ))

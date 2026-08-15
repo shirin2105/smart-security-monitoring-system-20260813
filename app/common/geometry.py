@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 try:
     from shapely.geometry import Point, Polygon
@@ -17,6 +17,40 @@ def get_foot_point(bbox: Tuple[float, float, float, float]) -> Tuple[float, floa
     foot_x = (x1 + x2) / 2.0
     foot_y = float(y2)
     return foot_x, foot_y
+
+
+def scale_polygon_to_frame(
+    polygon_pts: List[List[float]],
+    frame_width: Optional[int] = None,
+    frame_height: Optional[int] = None,
+    reference_width: float = 1280.0,
+    reference_height: float = 720.0,
+) -> List[List[float]]:
+    """
+    Scales polygon coordinates to match current frame dimensions.
+    Handles:
+    1. Normalized coordinates [0.0, 1.0] -> scales to (frame_width, frame_height).
+    2. Reference canvas coordinates (e.g. 1280x720 from UI) -> scales to (frame_width, frame_height).
+    3. If frame dimensions match reference or are None -> returns polygon_pts unchanged.
+    """
+    if not polygon_pts or frame_width is None or frame_height is None:
+        return polygon_pts
+
+    if frame_width <= 0 or frame_height <= 0:
+        return polygon_pts
+
+    max_x = max(float(p[0]) for p in polygon_pts)
+    max_y = max(float(p[1]) for p in polygon_pts)
+
+    if max_x <= 1.0 and max_y <= 1.0:
+        return [[float(p[0]) * frame_width, float(p[1]) * frame_height] for p in polygon_pts]
+
+    if frame_width == int(reference_width) and frame_height == int(reference_height):
+        return polygon_pts
+
+    scale_x = frame_width / float(reference_width)
+    scale_y = frame_height / float(reference_height)
+    return [[float(p[0]) * scale_x, float(p[1]) * scale_y] for p in polygon_pts]
 
 
 def is_point_in_polygon(point: Tuple[float, float], polygon_pts: List[List[float]]) -> bool:

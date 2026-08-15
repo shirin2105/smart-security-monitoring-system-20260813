@@ -15,15 +15,21 @@ class ZoneModel(BaseModel):
 
 def get_zones_file_path() -> Path:
     candidates = [
-        Path(__file__).resolve().parent.parent.parent.parent / "configs" / "zones.yaml",
         Path("/app/configs/zones.yaml"),
+        Path(__file__).resolve().parents[3] / "configs" / "zones.yaml",
         Path("configs/zones.yaml"),
         Path("../configs/zones.yaml"),
     ]
     for candidate in candidates:
         if candidate.exists():
             return candidate
-    default_path = Path(__file__).resolve().parent.parent.parent.parent / "configs" / "zones.yaml"
+    if Path("/app/configs").exists():
+        default_path = Path("/app/configs/zones.yaml")
+    else:
+        try:
+            default_path = Path(__file__).resolve().parents[3] / "configs" / "zones.yaml"
+        except (IndexError, ValueError):
+            default_path = Path("configs/zones.yaml")
     default_path.parent.mkdir(parents=True, exist_ok=True)
     return default_path
 

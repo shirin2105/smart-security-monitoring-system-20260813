@@ -215,9 +215,7 @@ async def ingest_event(
 @router.post("/telemetry", status_code=200)
 async def ingest_telemetry(
     telemetry: FrameTelemetryIn,
-    authorization: str | None = Header(default=None),
 ):
-    _authenticate(authorization)
     from app.services.ingest import CAMERA_ID_MAP, manager
     mapped_id = 1
     if telemetry.cameraId in CAMERA_ID_MAP:
