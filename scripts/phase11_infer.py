@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import hashlib
 import os
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -57,8 +58,9 @@ def build_rules() -> dict:
 
 def _phase7c_config() -> dict:
     base = dict(settings.load_yaml("event_rules.yaml").get("abandoned_object", {}).get("phase7c", {}))
-    if os.getenv("PHASE11B2_DISABLE_ABANDONED_ROI") != "1":
-        base["valid_floor_roi_polygon"] = CENTRAL_ROI
+    # Product Policy v2: ABANDONED_OBJECT is full-frame. The valid-floor ROI is no
+    # longer applied (the adapter ignores it), so it is dropped from the run config.
+    base.pop("valid_floor_roi_polygon", None)
     if os.getenv("PHASE11B_TRACE") == "1":
         base["debug"] = {
             "enabled": True,
@@ -144,6 +146,20 @@ def main() -> int:
         for event in all_events:
             handle.write(json.dumps(event, ensure_ascii=False, separators=(",", ":")) + "\n")
     if run_manifest_path:
+        core_path = Path("kaggle_pipeline/phase7c_kernel/phase7c_core.py")
+        detector_config = settings.detector_config
+        checkpoint_path = Path(detector_config["checkpoint_path"])
+        backbone_path = Path(detector_config["backbone_path"])
+        git_head = subprocess.run(
+            ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=False,
+        ).stdout.strip()
+        repository_diff = subprocess.run(
+            ["git", "diff", "HEAD"], capture_output=True, check=False,
+        ).stdout
+        git_status = subprocess.run(
+            ["git", "status", "--porcelain"], capture_output=True, text=True, check=False,
+        ).stdout
+        import torch
         run_manifest = {
             "schema": "phase11-inference-run-v1",
             "clips": run_clips,
@@ -153,6 +169,19 @@ def main() -> int:
             "event_rules_sha256": hashlib.sha256(Path("configs/event_rules.yaml").read_bytes()).hexdigest(),
             "dataset_manifest_sha256": hashlib.sha256(Path("phase8_dataset/manifest.json").read_bytes()).hexdigest(),
             "inference_script_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+            "phase7c_core_sha256": hashlib.sha256(core_path.read_bytes()).hexdigest(),
+            "repository_diff_sha256": hashlib.sha256(repository_diff).hexdigest(),
+            "checkpoint_path": str(checkpoint_path),
+            "checkpoint_sha256": hashlib.sha256(checkpoint_path.read_bytes()).hexdigest(),
+            "backbone_path": str(backbone_path),
+            "backbone_sha256": hashlib.sha256(backbone_path.read_bytes()).hexdigest(),
+            "git_head": git_head,
+            "git_dirty": bool(git_status.strip()),
+            "cuda_available": torch.cuda.is_available(),
+            "cuda_device": torch.cuda.get_device_name(0) if torch.cuda.is_available() else None,
+            "phase7c_config_sha256": hashlib.sha256(
+                json.dumps(rules["abandoned_object"]["phase7c"], sort_keys=True).encode("utf-8")
+            ).hexdigest(),
         }
         manifest_path = Path(run_manifest_path)
         manifest_path.parent.mkdir(parents=True, exist_ok=True)

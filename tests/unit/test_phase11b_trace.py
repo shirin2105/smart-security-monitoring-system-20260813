@@ -3,6 +3,8 @@ from unittest.mock import patch
 
 from app.common.schemas import FrameData
 from app.cv.events.phase7c_abandoned_adapter import Phase7CAbandonedAdapter
+from app.cv.events.phase7c_owner_association_trace import OWNER_ASSOC_FIELDS
+from app.cv.events.phase7c_placement_diagnostic_trace import PLACEMENT_DIAGNOSTIC_FIELDS
 from app.cv.track_store import TrackState
 
 
@@ -71,6 +73,11 @@ def test_event_emission_uses_source_tracks_when_diagnostic_ids_diverge(tmp_path)
                                 "candidates": [{"person_track_id": 3,
                                                 "candidate_bboxes": [[1, 2, 3, 4]],
                                                 "min_distance_norm": 0.0,
+                                                "inside_ratio": 0.7,
+                                                "near_ratio": 0.8,
+                                                "overlap_s": 1.2,
+                                                "candidate_eligible": True,
+                                                "candidate_selected": True,
                                                 "association_score": 0.8,
                                                 "first_seen_s": 0.0,
                                                 "last_seen_s": 2.0,
@@ -94,3 +101,39 @@ def test_event_emission_uses_source_tracks_when_diagnostic_ids_diverge(tmp_path)
     assert rows[1]["selected_owner_person_id"] == 3
     assert rows[1]["owner_selection_reason"] == "highest_association_score"
     assert rows[1]["owner_eventually_associated"] is True
+    assert rows[1]["owner_candidate_inside_ratios"] == [0.7]
+    assert rows[1]["owner_candidate_near_ratios"] == [0.8]
+    assert rows[1]["owner_candidate_overlap_seconds"] == [1.2]
+    assert rows[1]["owner_candidate_eligible"] == [True]
+    assert rows[1]["owner_candidate_selected"] == [True]
+    owner_rows = [json.loads(line) for line in (tmp_path / "clip-1-owner-association.jsonl").read_text().splitlines()]
+    assert len(owner_rows) == 1
+    assert set(owner_rows[0]) == OWNER_ASSOC_FIELDS
+    assert owner_rows[0]["person_track_id"] == 3
+    assert owner_rows[0]["candidate_selected"] is True
+
+
+def test_placement_sidecar_has_separate_versioned_schema(tmp_path):
+    from app.cv.events.phase7c_debug_trace import Phase7CDebugTrace
+
+    trace = Phase7CDebugTrace("clip-1", {
+        "enabled": True, "emit_trace_jsonl": True, "trace_output_dir": str(tmp_path),
+    })
+    owner = {"person_track_id": 3, "candidates": [{
+        "person_track_id": 3, "association_score": 0.3, "candidate_eligible": True,
+        "placement_transition": {
+            "evidence_sufficient": True, "placement_predicate_passed": True,
+            "sample_count": 6, "interval_count": 5, "duration_s": 1.0,
+            "bag_motion_norm": 0.4, "aligned_moving_ratio": 0.8,
+            "median_direction_cosine": 0.9, "relative_offset_spread_norm": 0.1,
+        },
+    }]}
+    from app.cv.events.phase7c_placement_diagnostic_trace import placement_candidate_rows
+    rows = placement_candidate_rows(
+        clip_id="clip-1", frame_id=1, time_s=0.2, physical_id="LUG_0001", owner=owner,
+    )
+
+    assert len(rows) == 1
+    assert set(rows[0]) == PLACEMENT_DIAGNOSTIC_FIELDS
+    assert rows[0]["schema"] == "placement-transition-diagnostic-v1"
+    assert rows[0]["placement_predicate_passed"] is True

@@ -30,11 +30,16 @@ def test_invalid_roi_is_rejected():
         resolve_roi_points([[0, 0], [2, 0], [1, 1]], "normalized", 384, 288)
 
 
-def test_frozen_default_and_diagnostic_event_specific_roi(monkeypatch):
+def test_phase7c_config_is_full_frame_without_roi(monkeypatch):
+    # Intrusion zones are preserved (zones are only for ZONE_INTRUSION).
     assert zones_for("clip")[0]["polygon"] == CENTRAL_ROI
-    assert _phase7c_config()["valid_floor_roi_polygon"] == CENTRAL_ROI
+    # Product Policy v2: ABANDONED_OBJECT is full-frame, so the valid-floor ROI is
+    # dropped from the abandoned run config.
+    cfg = _phase7c_config()
+    assert "valid_floor_roi_polygon" not in cfg
+    # PHASE11B2_DISABLE_ABANDONED_ROI is obsolete under Product Policy v2 (full-frame).
     monkeypatch.setenv("PHASE11B2_DISABLE_ABANDONED_ROI", "1")
-    assert _phase7c_config()["valid_floor_roi_polygon"] is None
+    assert "valid_floor_roi_polygon" not in _phase7c_config()
 
 
 @pytest.mark.parametrize(

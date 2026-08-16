@@ -11,9 +11,7 @@ from kaggle_pipeline.phase7c_kernel.phase7c_core import (
     QualityConfig,
     StationaryConfig,
     StitchConfig,
-    bbox_diag,
     infer_phase7c,
-    point_to_bbox_distance,
 )
 
 
@@ -23,15 +21,18 @@ class Phase7CAbandonedAdapter:
     def __init__(self, camera_id: str, config: dict[str, Any] | None = None, fps_hint: float = 5.0):
         self.camera_id = camera_id
         cfg = config or {}
+        self._debug_trace = Phase7CDebugTrace(camera_id, cfg.get("debug"))
         self.config = Phase7CConfig(
             quality=QualityConfig(**cfg.get("quality", {})),
             stitch=StitchConfig(**cfg.get("stitch", {})),
             stationary=StationaryConfig(**cfg.get("stationary", {})),
             owner=OwnerConfig(**cfg.get("owner", {})),
-            roi_polygon=cfg.get("valid_floor_roi_polygon"),
+            # Product Policy v2: ABANDONED_OBJECT uses the full camera frame. No
+            # valid-floor ROI is applied (roi_polygon is always None).
+            roi_polygon=None,
+            diagnostics_enabled=self._debug_trace.enabled,
         )
         self.fps_hint = float(fps_hint)
-        self._debug_trace = Phase7CDebugTrace(camera_id, cfg.get("debug"))
         self._rows: list[dict[str, Any]] = []
         self._active: set[str] = set()
         self._retired: set[str] = set()
@@ -83,20 +84,11 @@ class Phase7CAbandonedAdapter:
                 None,
             )
             owner = current.get(int(event["owner_person_track_id"]))
-            owner_near = False
-            if bag is not None and owner is not None:
-                owner_near = (
-                    point_to_bbox_distance(
-                        [
-                            (bag.latest_bbox[0] + bag.latest_bbox[2]) / 2.0,
-                            (bag.latest_bbox[1] + bag.latest_bbox[3]) / 2.0,
-                        ],
-                        owner.latest_bbox,
-                    )
-                    / bbox_diag(owner.latest_bbox)
-                    <= self.config.owner.near_norm
-                )
-            if bag is None or owner_near:
+            # Product Policy v2: the owner being visible anywhere in the camera view
+            # (returned or picking the bag up) blocks/ends the abandoned lifecycle.
+            # Merely standing far from the bag while still visible is NOT abandonment.
+            owner_visible = owner is not None
+            if bag is None or owner_visible:
                 if physical_id in self._active:
                     signals.append(self._end(physical_id, frame_data.captured_at, now_s))
                     self._active.remove(physical_id)

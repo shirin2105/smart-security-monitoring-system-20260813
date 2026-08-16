@@ -7,6 +7,9 @@ import re
 from pathlib import Path
 from typing import Any
 
+from app.cv.events.phase7c_owner_association_trace import owner_candidate_rows
+from app.cv.events.phase7c_placement_diagnostic_trace import placement_candidate_rows
+
 
 class Phase7CDebugTrace:
     """Emit one deterministic diagnostic row for each luggage/frame observation."""
@@ -17,12 +20,16 @@ class Phase7CDebugTrace:
         self.camera_id = camera_id
         safe_camera_id = re.sub(r"[^A-Za-z0-9_.-]", "_", camera_id)
         self.path = Path(config.get("trace_output_dir", "artifacts/phase11b/traces")) / f"{safe_camera_id}.jsonl"
+        self.owner_path = self.path.with_name(f"{safe_camera_id}-owner-association.jsonl")
+        self.placement_path = self.path.with_name(f"{safe_camera_id}-placement-diagnostics-v1.jsonl")
         self._seen: set[tuple[str, int]] = set()
         self._physical_ids: list[tuple[set[int], str]] = []
         self._physical_counter = 0
         if self.enabled:
             self.path.parent.mkdir(parents=True, exist_ok=True)
             self.path.write_text("", encoding="utf-8")
+            self.owner_path.write_text("", encoding="utf-8")
+            self.placement_path.write_text("", encoding="utf-8")
 
     def physical_id(self, track_id: int, result: dict[str, Any]) -> str:
         """Resolve trace identity without touching production adapter identity state."""
@@ -87,6 +94,26 @@ class Phase7CDebugTrace:
             "owner_candidate_bboxes": [item.get("candidate_bboxes", []) for item in owner_candidates],
             "owner_candidate_min_distances": [item.get("min_distance_norm") for item in owner_candidates],
             "owner_candidate_scores": [item.get("association_score") for item in owner_candidates],
+            "owner_candidate_inside_ratios": [item.get("inside_ratio") for item in owner_candidates],
+            "owner_candidate_near_ratios": [item.get("near_ratio") for item in owner_candidates],
+            "owner_candidate_proximity_ratios": [item.get("proximity_ratio") for item in owner_candidates],
+            "owner_candidate_overlap_seconds": [item.get("overlap_s") for item in owner_candidates],
+            "owner_candidate_temporal_overlap_ratios": [item.get("temporal_overlap_ratio") for item in owner_candidates],
+            "owner_candidate_score_components": [{
+                "inside": item.get("inside_score_component"),
+                "proximity": item.get("proximity_score_component"),
+                "near": item.get("near_score_component"),
+                "overlap": item.get("overlap_score_component"),
+            } for item in owner_candidates],
+            "owner_candidate_min_association_scores": [item.get("min_association_score") for item in owner_candidates],
+            "owner_candidate_eligible": [item.get("candidate_eligible") for item in owner_candidates],
+            "owner_candidate_selected": [item.get("candidate_selected") for item in owner_candidates],
+            "owner_candidate_confidences": [item.get("person_confidence") for item in owner_candidates],
+            "owner_candidate_min_distances_px": [item.get("min_distance_px") for item in owner_candidates],
+            "owner_candidate_present_before_stationary": [item.get("candidate_present_before_stationary") for item in owner_candidates],
+            "owner_candidate_present_at_stationary": [item.get("candidate_present_at_stationary") for item in owner_candidates],
+            "owner_candidate_present_after_stationary": [item.get("candidate_present_after_stationary") for item in owner_candidates],
+            "owner_candidate_track_fragmented": [item.get("person_track_fragmented") for item in owner_candidates],
             "owner_candidate_first_seen_s": [item.get("first_seen_s") for item in owner_candidates],
             "owner_candidate_last_seen_s": [item.get("last_seen_s") for item in owner_candidates],
             "owner_candidate_track_ages_s": [item.get("track_age_s") for item in owner_candidates],
@@ -104,6 +131,23 @@ class Phase7CDebugTrace:
         }
         with self.path.open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(row, sort_keys=True, separators=(",", ":")) + "\n")
+        candidate_rows = owner_candidate_rows(
+            clip_id=self.camera_id, frame_id=frame_id, time_s=time_s,
+            physical_id=physical_id, luggage_bbox=bbox, stationary=stationary, owner=owner,
+        )
+        if candidate_rows:
+            with self.owner_path.open("a", encoding="utf-8") as handle:
+                for candidate_row in candidate_rows:
+                    handle.write(json.dumps(candidate_row, sort_keys=True, separators=(",", ":")) + "\n")
+        placement_rows = placement_candidate_rows(
+            clip_id=self.camera_id, frame_id=frame_id, time_s=time_s,
+            physical_id=physical_id, owner=owner,
+        )
+        if placement_rows:
+            with self.placement_path.open("a", encoding="utf-8") as handle:
+                for placement_row in placement_rows:
+                    handle.write(json.dumps(placement_row, allow_nan=False, sort_keys=True,
+                                            separators=(",", ":")) + "\n")
 
     @staticmethod
     def _source_ids(result: dict[str, Any], track_id: int) -> list[int]:
