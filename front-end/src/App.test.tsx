@@ -117,12 +117,12 @@ describe('Điều hướng và phân quyền', () => {
     await screen.findByRole('region', { name: /Lưới camera giám sát/i });
 
     const video = document.querySelector<HTMLVideoElement>(
-      'video[src="/videos/camera-1-aboda-source.h264.mp4#t=40"]',
+      'video[src="/videos/camera-1-aboda-tracking.h264.mp4"]',
     );
     expect(video).not.toBeNull();
     if (!video) return;
 
-    video.currentTime = 53.8;
+    video.currentTime = 13.8;
     fireEvent.timeUpdate(video);
 
     expect(await screen.findByText('Cảnh báo vật thể bỏ quên')).toBeDefined();
