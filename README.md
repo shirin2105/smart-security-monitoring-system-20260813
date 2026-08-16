@@ -221,3 +221,63 @@ mới trong khi publish lặp ngay trong cùng lần chạy vẫn dùng đúng I
 CV thật chạy trong process `spawn` riêng (an toàn trên Windows). Timeout sẽ phát tín
 hiệu dừng, chờ grace period, rồi terminate và join dứt điểm trước khi báo lỗi; vì vậy
 không còn child nào có thể publish cảnh báo sau khi CLI đã trả failure.
+
+---
+
+## 📝 Sample Queries
+
+Sau khi hệ thống chạy (xem phần Docker Setup), dùng các ví dụ sau để thao tác
+với backend qua REST API và WebSocket. Thay `YOUR_TOKEN` bằng JWT trả về từ
+`/api/v1/auth/login`.
+
+### 1. Đăng nhập (lấy JWT)
+
+```bash
+curl -X POST http://localhost:8000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"guard","password":"guard123"}'
+# => {"user":{...},"token":"YOUR_TOKEN"}
+```
+
+### 2. Lấy danh sách sự cố (có filter)
+
+```bash
+curl "http://localhost:8000/api/v1/alerts?state=OPEN&cameraId=1" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+# => {"items":[{ "id":12, "eventType":"ABANDONED_OBJECT", "cameraName":"Camera Cổng Chính", ... }],"total":1}
+```
+
+### 3. Xác nhận sự cố (CONFIRM action)
+
+```bash
+curl -X POST http://localhost:8000/api/v1/alerts/12/actions \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"action":"CONFIRM","expectedVersion":1,"reason":"Đã xác nhận vật thể bỏ quên qua camera"}'
+# => {"id":12,"state":"CONFIRMED","version":2,"actions":[...]}
+```
+
+### 4. Lắng nghe cảnh báo thời gian thực (WebSocket)
+
+```javascript
+const ws = new WebSocket("ws://localhost:8000/ws/alerts");
+ws.onmessage = (e) => {
+  const event = JSON.parse(e.data);
+  console.log("Cảnh báo mới:", event.eventType, event.cameraName, event.description);
+};
+// => Cảnh báo mới: ABANDONED_OBJECT Camera Cổng Chính Phát hiện hành lý bị bỏ quên...
+```
+
+Hoặc dùng `wscat`:
+
+```bash
+wscat -c "ws://localhost:8000/ws/alerts" -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+### 5. Phát sự cố giả lập (SIMULATE)
+
+```bash
+curl -X POST http://localhost:8000/api/v1/alerts/simulate \
+  -H "Authorization: Bearer YOUR_TOKEN"
+# => 202 Accepted — sinh 1 sự cố ngẫu nhiên đẩy qua WebSocket
+```
