@@ -10,6 +10,7 @@ import {
   StateBadge,
 } from '../components/common/Badges';
 import { EmptyState, ErrorState, LoadingState } from '../components/common/States';
+import { EvidenceMedia } from '../components/common/EvidenceMedia';
 import { HitlActionBar } from '../components/hitl/HitlActionBar';
 import { SEVERITY_LABEL } from '../domain/types';
 import { useAsync } from '../hooks/useAsync';
@@ -67,10 +68,11 @@ export function IncidentDetailPage() {
 
           {artifactUsable ? (
             <div className="relative flex aspect-video max-h-[500px] w-full items-center justify-center overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800 bg-slate-950 shadow-sm">
-              <img
-                src={event.artifact!.url}
-                alt={`Ảnh bằng chứng đã che mặt của sự cố #${event.id}`}
-                className="h-full w-full object-cover"
+              <EvidenceMedia
+                artifact={event.artifact!}
+                description={`sự cố #${event.id}`}
+                className="h-full w-full object-contain"
+                controls
               />
             </div>
           ) : (

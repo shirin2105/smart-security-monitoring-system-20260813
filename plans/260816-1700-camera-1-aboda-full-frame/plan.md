@@ -13,11 +13,12 @@ Camera 1 plays the reviewed ABODA abandoned-object clip in the dashboard grid an
 ## Implementation
 
 1. Publish the ABODA MP4 under the frontend static assets.
-2. Re-render the same source window with real DEIMv2 + ByteTrack overlays and no fixed annotation.
-3. Point mock Camera 1 at that asset.
+2. Encode the clean full source as browser-compatible H.264 without overlays.
+3. Point mock Camera 1 at the clean source starting at 40 s.
 4. Render Camera 1 video with `object-contain` in the grid and modal.
 5. Verify frontend tests and production build.
-6. In mock demo mode, emit the Phase7C abandoned event at 13.75 s and show a toast.
+6. In mock demo mode, emit the Phase7C abandoned event at source time 53.75 s.
+7. Build the evidence view at runtime from the full source using a ±6 s window.
 
 ## Acceptance
 

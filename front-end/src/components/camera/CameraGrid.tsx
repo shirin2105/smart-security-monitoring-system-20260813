@@ -15,14 +15,17 @@ interface CameraGridProps {
 /** Event còn "sống" trên camera — dùng để vẽ khung cảnh báo lên tile. */
 const OPEN_STATES = ['OPEN', 'PENDING_REVIEW', 'ACKNOWLEDGED', 'CONFIRMED'];
 
-const CAMERA_ONE_ABANDONED_AT_S = 13.75;
+const CAMERA_ONE_DEMO_START_S = 40;
+const CAMERA_ONE_ABANDONED_AT_S = 53.75;
 
 export function CameraGrid({ cameras, events, onCameraOneAbandoned }: CameraGridProps) {
   const [selected, setSelected] = useState<Camera | null>(null);
   const cameraOneAlertFired = useRef(false);
 
   const syncCameraOneTimeline = (video: HTMLVideoElement) => {
-    if (video.currentTime < 1) cameraOneAlertFired.current = false;
+    if (video.currentTime < CAMERA_ONE_DEMO_START_S + 1) {
+      cameraOneAlertFired.current = false;
+    }
     if (
       video.currentTime >= CAMERA_ONE_ABANDONED_AT_S &&
       !cameraOneAlertFired.current
@@ -101,7 +104,7 @@ export function CameraGrid({ cameras, events, onCameraOneAbandoned }: CameraGrid
                     <VideoOff className="h-8 w-8" aria-hidden />
                     <span className="font-mono text-[11px] font-semibold">KHÔNG CÓ TÍN HIỆU</span>
                   </div>
-                ) : camera.previewUrl.match(/\.(mp4|webm|avi)(\?.*)?$/i) ? (
+                ) : camera.previewUrl.match(/\.(mp4|webm|avi)([?#].*)?$/i) ? (
                   <video
                     src={camera.previewUrl}
                     autoPlay

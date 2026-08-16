@@ -92,6 +92,12 @@ export function triggerCameraOneAbandonedDemo(): void {
     },
     false,
   );
+  created.artifact = {
+    url: '/videos/camera-1-aboda-source.h264.mp4',
+    redactionStatus: 'COMPLETE',
+    clipStartS: 47.75,
+    clipEndS: 59.75,
+  };
   events = [created, ...events];
   emit(created, 'created');
 }

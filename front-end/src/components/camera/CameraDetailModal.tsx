@@ -56,7 +56,7 @@ export function CameraDetailModal({ camera, events, onClose }: CameraDetailModal
               <VideoOff className="h-10 w-10" aria-hidden />
               <span className="font-mono text-xs font-semibold">CAMERA MẤT KẾT NỐI</span>
             </div>
-          ) : camera.previewUrl.match(/\.(mp4|webm|avi)(\?.*)?$/i) ? (
+          ) : camera.previewUrl.match(/\.(mp4|webm|avi)([?#].*)?$/i) ? (
             <video
               src={camera.previewUrl}
               autoPlay

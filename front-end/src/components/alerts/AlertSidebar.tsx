@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Bell, CheckCircle2, Clock, Filter } from 'lucide-react';
 
 import { SecurityEvent } from '../../domain/types';
+import { EvidenceMedia } from '../common/EvidenceMedia';
 import { EmptyState, ErrorState, LoadingState } from '../common/States';
 import {
   AiGeneratedBadge,
@@ -154,10 +155,11 @@ function AlertCard({ event }: { event: SecurityEvent }) {
       </div>
 
       {event.artifact?.redactionStatus === 'COMPLETE' && event.artifact.url && (
-        <img
-          src={event.artifact.url}
-          alt={`Ảnh bằng chứng sự cố #${event.id}`}
+        <EvidenceMedia
+          artifact={event.artifact}
+          description={`sự cố #${event.id}`}
           className="mb-2 h-28 w-full rounded-lg border border-gray-200 dark:border-gray-800 object-cover shadow-sm"
+          autoPlay
         />
       )}
 

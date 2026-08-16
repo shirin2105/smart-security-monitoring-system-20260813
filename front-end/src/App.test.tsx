@@ -117,18 +117,19 @@ describe('Điều hướng và phân quyền', () => {
     await screen.findByRole('region', { name: /Lưới camera giám sát/i });
 
     const video = document.querySelector<HTMLVideoElement>(
-      'video[src="/videos/camera-1-aboda-tracking.h264.mp4"]',
+      'video[src="/videos/camera-1-aboda-source.h264.mp4#t=40"]',
     );
     expect(video).not.toBeNull();
     if (!video) return;
 
-    video.currentTime = 13.8;
+    video.currentTime = 53.8;
     fireEvent.timeUpdate(video);
 
     expect(await screen.findByText('Cảnh báo vật thể bỏ quên')).toBeDefined();
     expect(
       (await screen.findAllByText(/chủ sở hữu đã rời khỏi khu vực giám sát/i)).length,
     ).toBeGreaterThan(0);
+    expect(screen.getByLabelText(/Video bằng chứng sự cố #/i)).toBeDefined();
   });
 
   it('Bảo vệ không thấy mục Điểm nóng và bị chặn khi vào thẳng URL', async () => {
