@@ -32,7 +32,7 @@ export const MOCK_CAMERAS: Camera[] = [
     location: 'Cổng A — Tầng 1',
     health: 'HEALTHY',
     sourceType: 'SIMULATED',
-    previewUrl: PREVIEW(1),
+    previewUrl: '/videos/camera-1-aboda-tracking.h264.mp4',
   },
   {
     id: 2,

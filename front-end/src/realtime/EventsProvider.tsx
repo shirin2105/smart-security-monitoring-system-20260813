@@ -18,6 +18,7 @@ import {
 import { api } from '../api';
 import { useAuth } from '../auth/AuthContext';
 import { SecurityEvent } from '../domain/types';
+import { useToast } from '../hooks/useToast';
 import { StreamStatus, useAlertStream } from './useAlertStream';
 
 /** Số event giữ trong feed realtime của dashboard. */
@@ -52,6 +53,7 @@ function mergeById(list: SecurityEvent[], incoming: SecurityEvent): SecurityEven
 
 export function EventsProvider({ children }: { children: ReactNode }) {
   const { user, reportApiError } = useAuth();
+  const { warning } = useToast();
   const [events, setEvents] = useState<SecurityEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
@@ -82,6 +84,20 @@ export function EventsProvider({ children }: { children: ReactNode }) {
     setRevision((value) => value + 1);
   }, []);
 
+  const handleEventCreated = useCallback(
+    (event: SecurityEvent) => {
+      upsert(event);
+      if (
+        event.sourceType === 'SIMULATED' &&
+        event.cameraId === 1 &&
+        event.eventType === 'ABANDONED_OBJECT'
+      ) {
+        warning('Cảnh báo vật thể bỏ quên', `${event.cameraName}: ${event.description}`);
+      }
+    },
+    [upsert, warning],
+  );
+
   const refetchOne = useCallback(
     async (eventId: number) => {
       try {
@@ -99,7 +115,7 @@ export function EventsProvider({ children }: { children: ReactNode }) {
   userRef.current = user;
 
   const { status: streamStatus } = useAlertStream({
-    onEventCreated: upsert,
+    onEventCreated: handleEventCreated,
     onEventUpdated: refetchOne,
     onReconcile: () => {
       // Chỉ tải khi đã đăng nhập — tránh gọi API rồi nhận 401 ở màn login.

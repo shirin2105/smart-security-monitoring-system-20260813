@@ -1,4 +1,4 @@
-import { api } from '../api';
+import { api, triggerCameraOneAbandonedDemo } from '../api';
 import { AlertSidebar } from '../components/alerts/AlertSidebar';
 import { CameraGrid } from '../components/camera/CameraGrid';
 import { ErrorState, LoadingState } from '../components/common/States';
@@ -17,7 +17,11 @@ export function DashboardPage() {
       ) : cameras.error != null ? (
         <ErrorState error={cameras.error} onRetry={cameras.reload} />
       ) : (
-        <CameraGrid cameras={cameras.data ?? []} events={events} />
+        <CameraGrid
+          cameras={cameras.data ?? []}
+          events={events}
+          onCameraOneAbandoned={triggerCameraOneAbandonedDemo}
+        />
       )}
 
       <AlertSidebar events={events} loading={loading} error={error} onRetry={reload} />

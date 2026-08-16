@@ -6,7 +6,7 @@
  * hoặc route bảo vệ không chuyển hướng.
  */
 
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -98,6 +98,37 @@ describe('Điều hướng và phân quyền', () => {
     await waitFor(() =>
       expect(screen.getByRole('region', { name: /Lưới camera giám sát/i })).toBeDefined(),
     );
+  });
+
+  it('phát cảnh báo bỏ quên khi Camera 1 tới mốc Phase7C trong video demo', async () => {
+    localStorage.setItem(TOKEN_STORAGE_KEY, 'mock-token-guard');
+    localStorage.setItem(
+      USER_STORAGE_KEY,
+      JSON.stringify({
+        id: 1,
+        username: 'guard',
+        fullName: 'Bảo Vệ Nguyễn Văn A',
+        role: 'GUARD',
+        cameraScope: [],
+      }),
+    );
+
+    renderAt('/');
+    await screen.findByRole('region', { name: /Lưới camera giám sát/i });
+
+    const video = document.querySelector<HTMLVideoElement>(
+      'video[src="/videos/camera-1-aboda-tracking.h264.mp4"]',
+    );
+    expect(video).not.toBeNull();
+    if (!video) return;
+
+    video.currentTime = 13.8;
+    fireEvent.timeUpdate(video);
+
+    expect(await screen.findByText('Cảnh báo vật thể bỏ quên')).toBeDefined();
+    expect(
+      (await screen.findAllByText(/chủ sở hữu đã rời khỏi khu vực giám sát/i)).length,
+    ).toBeGreaterThan(0);
   });
 
   it('Bảo vệ không thấy mục Điểm nóng và bị chặn khi vào thẳng URL', async () => {

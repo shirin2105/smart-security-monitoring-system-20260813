@@ -63,7 +63,7 @@ export function CameraDetailModal({ camera, events, onClose }: CameraDetailModal
               muted
               loop
               playsInline
-              className="h-full w-full object-cover"
+              className={`h-full w-full ${camera.id === 1 ? 'object-contain' : 'object-cover'}`}
             />
           ) : (
             <img src={camera.previewUrl} alt="" className="h-full w-full object-cover" />

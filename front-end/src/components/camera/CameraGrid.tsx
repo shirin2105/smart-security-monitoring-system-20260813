@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Maximize2, ShieldAlert, Video, VideoOff } from 'lucide-react';
 
 import { Camera, SecurityEvent } from '../../domain/types';
@@ -9,13 +9,28 @@ import { CameraDetailModal } from './CameraDetailModal';
 interface CameraGridProps {
   cameras: Camera[];
   events: SecurityEvent[];
+  onCameraOneAbandoned?: () => void;
 }
 
 /** Event còn "sống" trên camera — dùng để vẽ khung cảnh báo lên tile. */
 const OPEN_STATES = ['OPEN', 'PENDING_REVIEW', 'ACKNOWLEDGED', 'CONFIRMED'];
 
-export function CameraGrid({ cameras, events }: CameraGridProps) {
+const CAMERA_ONE_ABANDONED_AT_S = 13.75;
+
+export function CameraGrid({ cameras, events, onCameraOneAbandoned }: CameraGridProps) {
   const [selected, setSelected] = useState<Camera | null>(null);
+  const cameraOneAlertFired = useRef(false);
+
+  const syncCameraOneTimeline = (video: HTMLVideoElement) => {
+    if (video.currentTime < 1) cameraOneAlertFired.current = false;
+    if (
+      video.currentTime >= CAMERA_ONE_ABANDONED_AT_S &&
+      !cameraOneAlertFired.current
+    ) {
+      cameraOneAlertFired.current = true;
+      onCameraOneAbandoned?.();
+    }
+  };
 
   const activeFor = (cameraId: number) =>
     events.find(
@@ -93,7 +108,16 @@ export function CameraGrid({ cameras, events }: CameraGridProps) {
                     muted
                     loop
                     playsInline
-                    className="h-full w-full object-cover opacity-85 transition-transform duration-500 group-hover:scale-105"
+                    onTimeUpdate={
+                      camera.id === 1
+                        ? (event) => syncCameraOneTimeline(event.currentTarget)
+                        : undefined
+                    }
+                    className={`h-full w-full opacity-85 ${
+                      camera.id === 1
+                        ? 'object-contain'
+                        : 'object-cover transition-transform duration-500 group-hover:scale-105'
+                    }`}
                   />
                 ) : (
                   <img
