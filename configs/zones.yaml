@@ -3,14 +3,14 @@ zones:
   camera_id: cam_01
   name: Test Zone
   polygon:
-  - - 704
-    - 711
-  - - 893
-    - 474
-  - - 1088
-    - 495
-  - - 1143
-    - 716
+  - - 10
+    - 10
+  - - 100
+    - 10
+  - - 100
+    - 100
+  - - 10
+    - 100
   enabled: true
 - zone_id: lobby_area
   camera_id: cam_02

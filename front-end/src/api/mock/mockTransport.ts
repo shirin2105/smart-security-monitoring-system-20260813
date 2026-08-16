@@ -28,7 +28,7 @@ let mockZones: CameraZone[] = [
     zoneId: 'restricted_gate',
     cameraId: 'cam_01',
     name: 'Khu vực hạn chế Cổng A',
-    polygon: [[50, 100], [590, 100], [590, 440], [50, 440]],
+    polygon: [[50, 80], [600, 80], [600, 700], [50, 700]],
     enabled: true,
   },
   {

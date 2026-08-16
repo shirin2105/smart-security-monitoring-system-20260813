@@ -44,4 +44,22 @@ describe('geometry helper', () => {
     // Right half bbox [0.7, 0.1, 0.9, 0.5] -> norm foot (0.8, 0.5) -> (1024, 360) -> outside
     expect(isTrackInZone([0.7, 0.1, 0.9, 0.5], 1280, 720, polygon)).toBe(false);
   });
+
+  it('isTrackInZone detects bounding box touching/overlapping polygon edges', () => {
+    const polygon: [number, number][] = [
+      [200, 200],
+      [400, 200],
+      [400, 400],
+      [200, 400],
+    ];
+
+    // Bounding box overlapping left edge (e.g. foot is at 180, 300 which is outside, but right edge penetrates polygon)
+    expect(isTrackInZone([150, 250, 250, 350], 1280, 720, polygon)).toBe(true);
+
+    // Bounding box completely containing a polygon vertex
+    expect(isTrackInZone([190, 190, 210, 210], 1280, 720, polygon)).toBe(true);
+
+    // Bounding box completely outside (teleported/outside)
+    expect(isTrackInZone([500, 500, 600, 600], 1280, 720, polygon)).toBe(false);
+  });
 });
