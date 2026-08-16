@@ -20,7 +20,7 @@
 
 ---
 
-## 2. Minh Chứng Đánh Giá: 5 Test Cases Manual Với Output LLM Thực Tế (Không Mock)
+## 2. Minh Chứng Đánh Giá: 5 Test Cases AI Agent Với Output LLM Thực Tế (Không Mock)
 
 Dưới đây là 5 test case được thực thi qua pipeline AI Agent thực tế (`AssessmentRunner` + LangGraph `_workflow.py`), sử dụng mô hình LLM bên ngoài **`upstage/solar-pro4`** kết nối qua OpenAI-compatible chat API, lưu trữ tại [`artifacts/backend_events/`](file:///D:/Coding/P-176/artifacts/backend_events/).
 
@@ -212,7 +212,19 @@ Dưới đây là 5 test case được thực thi qua pipeline AI Agent thực t
 
 ---
 
-## 3. Kết Quả Kiểm Thử Video Thực Tế (CV Real-Video Regression)
+## 3. Minh Chứng Kiểm Thử Tích Hợp Hệ Thống & Giao Diện (End-to-End System Tests)
+
+| Mã test | Kịch bản kiểm thử (Scenario) | Các bước thực hiện & Kỳ vọng | Kết quả thực tế | Trạng thái |
+|:---:|---|---|---|:---:|
+| **SYS-01** | **Khởi động hệ thống (Docker Compose)** | Chạy `docker compose up --build -d`. Backend (`:8000`), Frontend (`:5173`), Postgres (`:5432`) đạt trạng thái healthy. | `backend`: GET /health $\rightarrow$ 200 OK<br/>`frontend`: Nginx :5173 OK<br/>`postgres`: 5432 ready | ✅ **PASS** |
+| **SYS-02** | **Cửa sổ phát lại clip vật thể bỏ quên (23s window)** | Kiểm tra `mockTransport.ts` (Center 53.75s). Kỳ vọng: `clipStartS=33.75`, `clipEndS=56.75` (−20s / +3s = 23s). | Vitest `EvidenceMedia.test.tsx` (2/2 pass) xác nhận seek đúng `clipStartS` và dừng tại `clipEndS`. | ✅ **PASS** |
+| **SYS-03** | **Phát hiện & Rebroadcast qua WebSocket** | Đặt `EVENT_INGEST_TOKEN`, chạy `demo_cli.py`, subscribe `/ws/alerts`. | Nhận thông điệp JSON sự cố `ABANDONED_OBJECT` trên WebSocket tức thời. | ✅ **PASS** |
+| **SYS-04** | **Cơ chế Fallback xác định khi LLM mất kết nối** | Ngắt API key hoặc giả lập lỗi mạng LLM. | Tự động kích hoạt deterministic fallback, gán mức cảnh báo an toàn mà không sập hệ thống. | ✅ **PASS** |
+| **SYS-05** | **Xác nhận sự cố qua REST API (CONFIRM)** | `POST /api/v1/alerts/{id}/acknowledge` từ tài khoản bảo vệ. | Trạng thái chuyển `pending` $\rightarrow$ `acknowledged`, broadcast `ALERT_UPDATED` qua WebSocket. | ✅ **PASS** |
+
+---
+
+## 4. Kết Quả Kiểm Thử Video Thực Tế (CV Real-Video Regression)
 
 Dựa trên báo cáo chi tiết tại [`reports/phase9-real-video-regression.md`](file:///D:/Coding/P-176/reports/phase9-real-video-regression.md):
 
@@ -227,19 +239,20 @@ Dựa trên báo cáo chi tiết tại [`reports/phase9-real-video-regression.md
 
 ---
 
-## 4. Kết Quả Kiểm Thử Tự Động (Automated Test Suite)
+## 5. Kết Quả Kiểm Thử Tự Động (Automated Test Suite)
 
-- **Tổng số bài test đã thu thập:** **308 tests**
+- **Tổng số bài test tự động:** **308 tests** (Backend + CV + Agent) & **Vitest Unit Tests** (Frontend)
 - **Cấu trúc kiểm thử:**
   - `tests/unit/`: Kiểm thử đơn vị các adapter (`test_phase7c_production_adapter.py`, `test_privacy_redaction.py`, `test_stationary.py`...)
   - `tests/contracts/`: Kiểm thử tính toàn vẹn của schema và hợp đồng dữ liệu giữa CV, Backend và AI Agent.
   - `tests/integration/`: Kiểm thử luồng tích hợp end-to-end từ ingest đến WebSocket broadcast.
   - `tests/test_agents/`: Kiểm thử LangGraph workflow, timeout handling và fallback policy.
   - `back-end/tests/`: Kiểm thử FastAPI endpoints, database models và assessment worker.
+  - `front-end/src/`: Vitest smoke test router, role permissions và evidence media playback.
 
 ---
 
-## 5. Kết Luận & Đánh Giá Chung
+## 6. Kết Luận & Đánh Giá Chung
 
 Hệ thống **Smart Security Monitoring System** đã hoàn toàn thỏa mãn các tiêu chí kỹ thuật cốt lõi của **Gate G2 — MVP**:
 1. Luồng xử lý end-to-end hoàn chỉnh: Video $\rightarrow$ CV Object Detection $\rightarrow$ Ingest API $\rightarrow$ LangGraph AI Agent $\rightarrow$ Real LLM Evaluation $\rightarrow$ WebSocket Broadcast $\rightarrow$ Web Dashboard.
