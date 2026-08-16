@@ -242,4 +242,83 @@ def test_zones_api():
     assert res_post.json()["zone_id"] == "test_zone_01"
 
 
+def test_ingest_cvevent_v1_payload():
+    cvevent = {
+        "schema_version": "cv-event-v1",
+        "event_id": "cam_01-ZONE_INTRUSION-test-000001",
+        "event_type": "ZONE_INTRUSION",
+        "event_state": "START",
+        "camera_id": "cam_01",
+        "event_time": "2026-08-11T08:00:00Z",
+        "event_time_s": 2.5,
+        "cv_confidence": 0.92,
+        "objects": {
+            "persons": [{"track_id": 1, "bbox_xyxy": [100.0, 150.0, 200.0, 350.0]}]
+        },
+        "evidence": {
+            "zone_id": "test_zone_01",
+            "inside_duration_s": 2.5
+        },
+        "spatial": {
+            "zone_id": "test_zone_01"
+        },
+        "media": None,
+        "diagnostics": None
+    }
+    response = client.post(
+        "/api/v1/events/ingest",
+        headers=INGEST_HEADERS,
+        json=cvevent,
+    )
+    assert response.status_code == 201
+    assert response.json()["status"] == "ACCEPTED"
+    assert response.json()["incident"]["event_type"] == "xam_nhap"
+    assert response.json()["incident"]["severity"] == "critical"
 
+
+def test_ingest_cvevent_v1_lifecycle_update_accepted():
+    event_id = "cam_01-ZONE_INTRUSION-lifecycle-000001"
+    start_event = {
+        "schema_version": "cv-event-v1",
+        "event_id": event_id,
+        "event_type": "ZONE_INTRUSION",
+        "event_state": "START",
+        "camera_id": "cam_01",
+        "event_time": "2026-08-11T08:00:00Z",
+        "event_time_s": 2.0,
+        "cv_confidence": 0.90,
+        "objects": {
+            "persons": [{"track_id": 1, "bbox_xyxy": [100.0, 150.0, 200.0, 350.0]}]
+        },
+        "evidence": {
+            "zone_id": "test_zone_01",
+            "inside_duration_s": 2.0,
+        },
+        "spatial": {"zone_id": "test_zone_01"},
+        "media": None,
+        "diagnostics": None,
+    }
+    update_event = {
+        **start_event,
+        "event_state": "UPDATE",
+        "event_time": "2026-08-11T08:00:01Z",
+        "event_time_s": 3.0,
+        "objects": {
+            "persons": [{"track_id": 1, "bbox_xyxy": [110.0, 160.0, 210.0, 360.0]}]
+        },
+        "evidence": {
+            "zone_id": "test_zone_01",
+            "inside_duration_s": 3.0,
+        },
+    }
+
+    res_start = client.post("/api/v1/events/ingest", headers=INGEST_HEADERS, json=start_event)
+    assert res_start.status_code == 201
+    assert res_start.json()["status"] == "ACCEPTED"
+    incident_id = res_start.json()["incident"]["id"]
+
+    res_update = client.post("/api/v1/events/ingest", headers=INGEST_HEADERS, json=update_event)
+    assert res_update.status_code == 201
+    assert res_update.json()["status"] == "ACCEPTED"
+    assert res_update.json()["incident"]["id"] == incident_id
+    assert res_update.json()["incident"]["bbox"] == [110.0, 160.0, 210.0, 360.0]

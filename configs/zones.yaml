@@ -16,14 +16,14 @@ zones:
   camera_id: cam_02
   name: Khu vực sảnh
   polygon:
-  - - 50
-    - 50
-  - - 1200
-    - 50
-  - - 1200
-    - 700
-  - - 50
-    - 700
+  - - 8
+    - 342
+  - - 336
+    - 340
+  - - 368
+    - 699
+  - - 14
+    - 706
   enabled: true
 - zone_id: fence_west
   camera_id: cam_03

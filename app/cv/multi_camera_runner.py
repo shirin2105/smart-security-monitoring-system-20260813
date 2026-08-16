@@ -25,6 +25,7 @@ class LockedDetector:
 class MultiCameraRunner:
     def __init__(self, camera_configs: Iterable[dict] | None = None, max_workers: int = 6,
                  detector: Any | None = None, worker_factory: Callable[..., Any] = CVWorker,
+                 publisher: Any | None = None, publisher_factory: Callable[[str], Any] | None = None,
                  loop: bool = True, realtime: bool = True):
         self.camera_configs = list(camera_configs if camera_configs is not None else settings.cameras)
         self.max_workers = max(1, min(int(max_workers), 6))
@@ -32,6 +33,8 @@ class MultiCameraRunner:
         shared = detector if detector is not None else DEIMv2Detector(**model_cfg)
         self.detector = LockedDetector(shared)
         self.worker_factory = worker_factory
+        self.publisher = publisher
+        self.publisher_factory = publisher_factory
         self.loop = loop
         self.realtime = realtime
 
@@ -40,16 +43,27 @@ class MultiCameraRunner:
         results: dict[str, dict] = {}
 
         def execute(cfg: dict):
+            cam_pub = None
+            if self.publisher_factory is not None:
+                cam_pub = self.publisher_factory(cfg["camera_id"])
+            elif self.publisher is not None:
+                cam_pub = self.publisher
+
+            kwargs: dict[str, Any] = {
+                "camera_id": cfg["camera_id"],
+                "source_uri": cfg.get("source_uri"),
+                "detector": self.detector,
+            }
+            if cam_pub is not None:
+                kwargs["publisher"] = cam_pub
+
             try:
-                worker = self.worker_factory(camera_id=cfg["camera_id"], source_uri=cfg.get("source_uri"),
-                                             detector=self.detector, loop=self.loop, realtime=self.realtime)
+                worker = self.worker_factory(**kwargs, loop=self.loop, realtime=self.realtime)
             except TypeError:
                 try:
-                    worker = self.worker_factory(camera_id=cfg["camera_id"], source_uri=cfg.get("source_uri"),
-                                                 detector=self.detector, loop=self.loop)
+                    worker = self.worker_factory(**kwargs, loop=self.loop)
                 except TypeError:
-                    worker = self.worker_factory(camera_id=cfg["camera_id"], source_uri=cfg.get("source_uri"),
-                                                 detector=self.detector)
+                    worker = self.worker_factory(**kwargs)
             return worker.run(max_frames=max_frames)
 
         with ThreadPoolExecutor(max_workers=min(self.max_workers, max(1, len(enabled)))) as pool:
