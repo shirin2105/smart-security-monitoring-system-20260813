@@ -10,6 +10,8 @@ Usage:
 from __future__ import annotations
 
 import json
+import hashlib
+import os
 import sys
 import time
 from pathlib import Path
@@ -55,7 +57,14 @@ def build_rules() -> dict:
 
 def _phase7c_config() -> dict:
     base = dict(settings.load_yaml("event_rules.yaml").get("abandoned_object", {}).get("phase7c", {}))
-    base["valid_floor_roi_polygon"] = CENTRAL_ROI
+    if os.getenv("PHASE11B2_DISABLE_ABANDONED_ROI") != "1":
+        base["valid_floor_roi_polygon"] = CENTRAL_ROI
+    if os.getenv("PHASE11B_TRACE") == "1":
+        base["debug"] = {
+            "enabled": True,
+            "emit_trace_jsonl": True,
+            "trace_output_dir": os.getenv("PHASE11B_TRACE_DIR", "artifacts/phase11b/traces"),
+        }
     return base
 
 
@@ -83,7 +92,16 @@ def zones_for(clip_id: str) -> list[dict]:
 
 
 def main() -> int:
+    out = Path(os.getenv("PHASE11_OUTPUT_PATH", "artifacts/phase11/predictions_all.jsonl"))
+    run_manifest_path = os.getenv("PHASE11_RUN_MANIFEST_PATH")
+    evidence_paths = [out] + ([Path(run_manifest_path)] if run_manifest_path else [])
+    existing = [str(path) for path in evidence_paths if path.exists()]
+    if existing:
+        raise FileExistsError(f"refusing to overwrite inference evidence: {existing}")
     clips = sorted(CLIP_DIR.glob("*.mpg"))
+    selected = {name for name in os.getenv("PHASE11_CLIP_NAMES", "").split(",") if name}
+    if selected:
+        clips = [clip for clip in clips if clip.stem in selected]
     if not clips:
         print("no clips found", file=sys.stderr)
         return 1
@@ -91,6 +109,7 @@ def main() -> int:
     detector = DEIMv2Detector(**settings.detector_config)
     rules = build_rules()
     all_events: list[dict] = []
+    run_clips: list[dict] = []
     started = time.monotonic()
 
     for clip in clips:
@@ -108,16 +127,37 @@ def main() -> int:
         worker.run()
         elapsed = time.monotonic() - t0
         all_events.extend(publisher.events)
+        run_clips.append({
+            "clip_id": clip_id,
+            "source_sha256": hashlib.sha256(clip.read_bytes()).hexdigest(),
+            "processed_frames": worker.processed_frames,
+            "lifecycle_records": len(publisher.events),
+            "completed": True,
+        })
         n_starts = sum(1 for e in publisher.events if e.get("event_state") == "START")
         print(f"  {clip_id:26s} frames={worker.processed_frames:5d} "
               f"events={len(publisher.events):3d} starts={n_starts:2d} "
               f"elapsed={elapsed:.1f}s", flush=True)
 
-    out = Path("artifacts/phase11/predictions_all.jsonl")
     out.parent.mkdir(parents=True, exist_ok=True)
-    with out.open("w", encoding="utf-8") as handle:
+    with out.open("x", encoding="utf-8") as handle:
         for event in all_events:
             handle.write(json.dumps(event, ensure_ascii=False, separators=(",", ":")) + "\n")
+    if run_manifest_path:
+        run_manifest = {
+            "schema": "phase11-inference-run-v1",
+            "clips": run_clips,
+            "phase7c_valid_floor_roi_polygon": rules["abandoned_object"]["phase7c"].get("valid_floor_roi_polygon"),
+            "predictions_path": str(out),
+            "predictions_sha256": hashlib.sha256(out.read_bytes()).hexdigest(),
+            "event_rules_sha256": hashlib.sha256(Path("configs/event_rules.yaml").read_bytes()).hexdigest(),
+            "dataset_manifest_sha256": hashlib.sha256(Path("phase8_dataset/manifest.json").read_bytes()).hexdigest(),
+            "inference_script_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+        }
+        manifest_path = Path(run_manifest_path)
+        manifest_path.parent.mkdir(parents=True, exist_ok=True)
+        with manifest_path.open("x", encoding="utf-8") as handle:
+            handle.write(json.dumps(run_manifest, indent=2))
     print(f"TOTAL lifecycle records: {len(all_events)} -> {out}")
     print(f"total elapsed: {time.monotonic() - started:.1f}s")
     return 0

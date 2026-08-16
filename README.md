@@ -192,7 +192,10 @@ Freeze and protocol: `docs/phase11/BENCHMARK_FREEZE.md`. Result summary in
 `artifacts/phase11/benchmark_report.md`. **Status: PARTIAL BENCHMARK** — the
 GT is provisional/heuristic (not frame-level visually verified), so absolute
 Precision/Recall are indicative. Real inference ran on an NVIDIA RTX 3050.
-Phase 11B tuning should only start once reliable GT is provisioned (Phase 12).
+Phase 11B-FINAL later closed its in-scope evaluation work without tuning: all four
+candidate positives require authoritative human/product adjudication, leaving zero
+trusted positives. The frozen `CENTRAL_ROI` policy remains unchanged; Phase 12 is not
+authorized or ready.
 
 ---
 
@@ -220,9 +223,10 @@ stable at 0.78; **ABANDONED_OBJECT recall 0 is real** — the detector finds
 high-confidence luggage but the Phase7C pipeline never emits an event
 (stationary/owner-association stage under 1/5 sampling). Overall micro F1
 0.648→0.752. Status: **PARTIAL GT HARDENING** (visual review pending — no
-vision capability in this environment). Evidence-backed recommendation:
-Phase 11B targeted at the abandoned pipeline, gated on visual GT + Phase7C
-stage instrumentation.
+vision capability in this environment). Phase 11B-FINAL subsequently completed its
+in-scope evaluation with status **ROI_POLICY_UNRESOLVED**: four positives remain
+human-required, zero trusted positives exist, and no targeted fix or Phase 12 work is
+authorized. See `artifacts/phase11b_final/phase11b_final_report_v4.md`.
 
 
 

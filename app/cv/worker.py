@@ -432,6 +432,14 @@ class CVWorker:
                     raise ValueError(f"abandoned_object.phase7c.{section}.{key} is out of range")
                 if key in ratio_fields and value > 1:
                     raise ValueError(f"abandoned_object.phase7c.{section}.{key} must be <= 1")
+        debug = config.get("debug", {})
+        if not isinstance(debug, dict):
+            raise ValueError("abandoned_object.phase7c.debug must be an object")
+        for key in ("enabled", "emit_trace_jsonl"):
+            if key in debug and not isinstance(debug[key], bool):
+                raise ValueError(f"abandoned_object.phase7c.debug.{key} must be boolean")
+        if "trace_output_dir" in debug and not isinstance(debug["trace_output_dir"], str):
+            raise ValueError("abandoned_object.phase7c.debug.trace_output_dir must be a string")
         roi = config.get("valid_floor_roi_polygon")
         if roi is not None and (
             not isinstance(roi, list)

@@ -109,3 +109,42 @@ def test_one_physical_luggage_emits_at_most_one_candidate():
     assert result["summary"]["physical_luggage_objects"] == 1
     assert len(result["events"]) == 1
     assert result["events"][0]["source_track_ids"] == [2_000_001, 2_000_002]
+
+
+def test_owner_report_records_candidates_and_explicit_rejection_reason():
+    rows = carried_then_stationary(owner_stays_until=49)
+    result = infer_phase7c(rows, compact_config(), fps_hint=10)
+
+    report = result["owner_associations"][0]
+    assert report["rejection_reason"] is None
+    assert report["history_window_start_s"] < report["history_window_end_s"]
+    candidate = report["candidates"][0]
+    assert candidate["person_track_id"] == 1_000_001
+    assert candidate["first_seen_s"] == 0.0
+    assert candidate["last_seen_s"] == 4.9
+    assert candidate["min_distance_norm"] == 0.0
+    assert candidate["association_score"] >= 0.6
+
+
+def test_owner_report_explains_score_below_threshold():
+    rows = carried_then_stationary(owner_stays_until=-1)
+    for frame in range(50):
+        rows.append(row(frame, "person", 1_000_003, (100 + frame, 140), size=(30, 30)))
+    result = infer_phase7c(rows, compact_config(), fps_hint=10)
+
+    report = result["owner_associations"][0]
+    assert report["person_track_id"] is None
+    assert report["rejection_reason"] == "CANDIDATE_SCORE_BELOW_THRESHOLD"
+    assert report["candidates"][0]["near_ratio"] > 0
+
+
+def test_owner_precheck_explains_roi_rejection_before_association():
+    rows = carried_then_stationary(owner_stays_until=49)
+    cfg = compact_config()
+    cfg.roi_polygon = [[0, 0], [50, 0], [50, 50], [0, 50]]
+
+    result = infer_phase7c(rows, cfg, fps_hint=10)
+
+    assert result["owner_associations"] == []
+    assert result["owner_prechecks"][0]["eligible"] is False
+    assert result["owner_prechecks"][0]["rejection_reason"] == "LUGGAGE_OUTSIDE_VALID_FLOOR_ROI"

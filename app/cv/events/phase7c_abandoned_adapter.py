@@ -4,6 +4,7 @@ from typing import Any
 
 from app.cv.events.event_signal import EventSignal
 from app.cv.events.frame_time import frame_time_seconds
+from app.cv.events.phase7c_debug_trace import Phase7CDebugTrace
 from kaggle_pipeline.phase7c_kernel.phase7c_core import (
     OwnerConfig,
     Phase7CConfig,
@@ -30,6 +31,7 @@ class Phase7CAbandonedAdapter:
             roi_polygon=cfg.get("valid_floor_roi_polygon"),
         )
         self.fps_hint = float(fps_hint)
+        self._debug_trace = Phase7CDebugTrace(camera_id, cfg.get("debug"))
         self._rows: list[dict[str, Any]] = []
         self._active: set[str] = set()
         self._retired: set[str] = set()
@@ -130,6 +132,24 @@ class Phase7CAbandonedAdapter:
             self._active.add(physical_id)
             self._last_signals[physical_id] = signal
             signals.append(signal)
+        if self._debug_trace.enabled:
+            emitted_source_ids = {
+                int(track_id)
+                for event in result.get("events", [])
+                for track_id in event.get("source_track_ids", [])
+            }
+            for track in tracks:
+                if track.class_name != "luggage":
+                    continue
+                physical_id = self._debug_trace.physical_id(int(track.track_id), result)
+                self._debug_trace.emit(
+                    frame_id=int(frame_data.frame_id),
+                    time_s=now_s,
+                    physical_id=physical_id,
+                    track=track,
+                    result=result,
+                    event_emitted=int(track.track_id) in emitted_source_ids,
+                )
         for physical_id in self._active - seen:
             signals.append(self._end(physical_id, frame_data.captured_at, now_s))
             self._active.remove(physical_id)

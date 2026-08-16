@@ -1,5 +1,20 @@
 # Project Changelog
 
+## 2026-08-16
+
+### Verification notes
+
+- Completed Phase 11B-FINAL in-scope evaluation without changing code, thresholds,
+  ROI policy, or Phase 12 scope. All four candidate positives remain
+  `AMBIGUOUS_NEEDS_HUMAN`; trusted positives: 0; positive metrics not computable.
+- Frozen `CENTRAL_ROI` negative safety run completed 15/15 clips and 443 canonical
+  prediction rows with zero `ABANDONED_OBJECT` START events. Focused tests passed
+  12/12. Analyzer correctly failed closed with exit 2 and
+  `ROI_POLICY_UNRESOLVED`.
+- Blocker owner: human/product owner. Unblock path: adjudicate each candidate as
+  `IN_POLICY`, `OUT_OF_POLICY`, or `MISLABELED`. No targeted fix and no Phase 12
+  readiness claim.
+
 ## 2026-08-14
 
 ### Added

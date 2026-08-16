@@ -11,6 +11,10 @@ crowd:
 
 abandoned_object:
   phase7c:
+    debug:
+      enabled: false
+      emit_trace_jsonl: false
+      trace_output_dir: artifacts/phase11b/traces
     valid_floor_roi_polygon: null
     quality:
       window_s: 2.0

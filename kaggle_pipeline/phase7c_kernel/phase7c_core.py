@@ -109,6 +109,11 @@ class OwnerAssociation:
     overlap_frames: int
     overlap_s: float
     owner_last_near_s: Optional[float]
+    candidates: List[dict] = field(default_factory=list)
+    rejection_reason: Optional[str] = None
+    selection_reason: Optional[str] = None
+    history_window_start_s: Optional[float] = None
+    history_window_end_s: Optional[float] = None
 
 
 @dataclass
@@ -476,16 +481,22 @@ def associate_owner(
         if float(r["timestamp_s"]) <= stationary_run.start_s
     ]
     bag_by_frame = {int(r["frame_index"]): r for r in bag_rows}
+    history_end_s = float(stationary_run.start_s)
+    # Report the exact history used by the unchanged production scorer.
+    history_start_s = float(physical.rows[0]["timestamp_s"])
 
     best = None
+    candidates = []
 
     for person_id, prs in person_tracks.items():
         prof = quality_profiles.get(person_id)
-        if prof is None or not prof.passed or prof.class_name != "person":
+        if prof is None or prof.class_name != "person":
             continue
 
         person_by_frame = {int(r["frame_index"]): r for r in prs}
         distances = []
+        candidate_bboxes = []
+        overlap_times = []
 
         for frame_idx, bag_r in bag_by_frame.items():
             person_r = person_by_frame.get(frame_idx)
@@ -497,25 +508,16 @@ def associate_owner(
             )
             d_norm = d / bbox_diag(person_r["bbox_xyxy"])
             distances.append(float(d_norm))
-
-        if not distances:
-            continue
+            candidate_bboxes.append([float(v) for v in person_r["bbox_xyxy"]])
+            overlap_times.append(float(person_r["timestamp_s"]))
 
         overlap_frames = len(distances)
         overlap_s = overlap_frames / max(fps_hint, 1e-9)
-        if overlap_s < cfg.min_overlap_s:
-            continue
-
         arr = np.asarray(distances, dtype=np.float64)
-        inside_ratio = float(np.mean(arr <= 1e-9))
-        near_ratio = float(np.mean(arr <= cfg.near_norm))
+        inside_ratio = float(np.mean(arr <= 1e-9)) if len(arr) else 0.0
+        near_ratio = float(np.mean(arr <= cfg.near_norm)) if len(arr) else 0.0
         overlap_term = min(overlap_s / 3.0, 1.0)
-
-        score = (
-            0.65 * inside_ratio
-            + 0.25 * near_ratio
-            + 0.10 * overlap_term
-        )
+        score = 0.65 * inside_ratio + 0.25 * near_ratio + 0.10 * overlap_term
 
         item = {
             "person_track_id": int(person_id),
@@ -524,12 +526,34 @@ def associate_owner(
             "near_ratio": near_ratio,
             "overlap_frames": int(overlap_frames),
             "overlap_s": float(overlap_s),
+            "quality_pass": bool(prof.passed),
+            "first_seen_s": min(overlap_times) if overlap_times else None,
+            "last_seen_s": max(overlap_times) if overlap_times else None,
+            "track_age_s": max(overlap_times) - min(overlap_times) if overlap_times else 0.0,
+            "min_distance_norm": float(np.min(arr)) if len(arr) else None,
+            # Keep diagnostic evidence bounded for long tracks.
+            "candidate_bboxes": candidate_bboxes[-5:],
         }
+        candidates.append(item)
 
+        if not prof.passed or overlap_s < cfg.min_overlap_s:
+            continue
         if best is None or item["association_score"] > best["association_score"]:
             best = item
 
     if best is None or best["association_score"] < cfg.min_association_score:
+        if not candidates:
+            reason = "NO_PERSON_CANDIDATES"
+        elif not any(item["quality_pass"] for item in candidates):
+            reason = "CANDIDATE_TRACK_TOO_SHORT"
+        elif not any(item["overlap_frames"] for item in candidates):
+            reason = "OWNER_HISTORY_NOT_AVAILABLE"
+        elif not any(item["overlap_s"] >= cfg.min_overlap_s for item in candidates):
+            reason = "CANDIDATE_TRACK_TOO_SHORT"
+        elif not any(item["near_ratio"] > 0 or item["inside_ratio"] > 0 for item in candidates):
+            reason = "NO_PERSON_WITHIN_DISTANCE"
+        else:
+            reason = "CANDIDATE_SCORE_BELOW_THRESHOLD"
         return OwnerAssociation(
             physical_id=physical.physical_id,
             person_track_id=None,
@@ -539,6 +563,10 @@ def associate_owner(
             overlap_frames=int(best["overlap_frames"]) if best else 0,
             overlap_s=float(best["overlap_s"]) if best else 0.0,
             owner_last_near_s=None,
+            candidates=candidates,
+            rejection_reason=reason,
+            history_window_start_s=history_start_s,
+            history_window_end_s=history_end_s,
         )
 
     owner_id = int(best["person_track_id"])
@@ -567,6 +595,10 @@ def associate_owner(
         overlap_frames=int(best["overlap_frames"]),
         overlap_s=float(best["overlap_s"]),
         owner_last_near_s=last_near,
+        candidates=candidates,
+        selection_reason="highest_association_score",
+        history_window_start_s=history_start_s,
+        history_window_end_s=history_end_s,
     )
 
 
@@ -599,6 +631,7 @@ def infer_phase7c(
     events: List[AbandonedCandidate] = []
     physical_reports = []
     owner_reports = []
+    owner_prechecks = []
     timeline_rows = []
 
     event_counter = 1
@@ -631,11 +664,34 @@ def infer_phase7c(
             # Final event location must be inside ROI if an ROI is configured.
             row_for_roi = nearest_row_at_or_after(physical.rows, run.confirmed_at_s)
             if row_for_roi is None:
+                owner_prechecks.append({
+                    "physical_id": physical.physical_id,
+                    "stationary_start_s": float(run.start_s),
+                    "stationary_confirmed_s": float(run.confirmed_at_s),
+                    "eligible": False,
+                    "rejection_reason": "NO_LUGGAGE_ROW_AT_STATIONARY_CONFIRM",
+                })
                 continue
             x1, y1, x2, y2 = map(float, row_for_roi["bbox_xyxy"])
             bottom_center = ((x1 + x2) / 2.0, y2)
             if not point_in_polygon(bottom_center, cfg.roi_polygon):
+                owner_prechecks.append({
+                    "physical_id": physical.physical_id,
+                    "stationary_start_s": float(run.start_s),
+                    "stationary_confirmed_s": float(run.confirmed_at_s),
+                    "eligible": False,
+                    "rejection_reason": "LUGGAGE_OUTSIDE_VALID_FLOOR_ROI",
+                    "luggage_bottom_center": [float(v) for v in bottom_center],
+                })
                 continue
+            owner_prechecks.append({
+                "physical_id": physical.physical_id,
+                "stationary_start_s": float(run.start_s),
+                "stationary_confirmed_s": float(run.confirmed_at_s),
+                "eligible": True,
+                "rejection_reason": None,
+                "luggage_bottom_center": [float(v) for v in bottom_center],
+            })
 
             owner = associate_owner(
                 physical,
@@ -758,6 +814,7 @@ def infer_phase7c(
         "summary": summary,
         "quality_report": quality_report,
         "physical_luggage": physical_reports,
+        "owner_prechecks": owner_prechecks,
         "owner_associations": owner_reports,
         "events": [asdict(e) for e in events],
         "timeline": timeline_rows,
