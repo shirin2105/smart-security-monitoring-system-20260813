@@ -40,6 +40,6 @@ abandoned_object:
     owner:
       near_norm: 0.5
       min_overlap_s: 0.7
-      min_association_score: 0.6
+      min_association_score: 0.45
       away_hold_s: 5.0
       placement_window_s: 3.0

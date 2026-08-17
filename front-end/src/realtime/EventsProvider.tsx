@@ -17,6 +17,7 @@ import {
 
 import { api } from '../api';
 import { useAuth } from '../auth/AuthContext';
+import { useToast } from '../hooks/useToast';
 import { CameraTelemetry, SecurityEvent } from '../domain/types';
 import { StreamStatus, useAlertStream } from './useAlertStream';
 
@@ -53,6 +54,7 @@ function mergeById(list: SecurityEvent[], incoming: SecurityEvent): SecurityEven
 
 export function EventsProvider({ children }: { children: ReactNode }) {
   const { user, reportApiError } = useAuth();
+  const { warning, error: toastError } = useToast();
   const [events, setEvents] = useState<SecurityEvent[]>([]);
   const [telemetryMap, setTelemetryMap] = useState<Record<number, CameraTelemetry>>({});
   const [loading, setLoading] = useState(true);
@@ -91,6 +93,27 @@ export function EventsProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  const handleEventCreated = useCallback(
+    (event: SecurityEvent) => {
+      upsert(event);
+      const titleMap: Record<string, string> = {
+        ABANDONED_OBJECT: 'Cảnh báo vật thể bỏ quên',
+        ZONE_INTRUSION: 'Cảnh báo xâm nhập khu vực',
+        CROWD_THRESHOLD: 'Cảnh báo tụ tập đám đông',
+        SUSPECTED_FALL: 'Cảnh báo té ngã',
+        COVERAGE_DEGRADED: 'Cảnh báo suy giảm vùng phủ',
+      };
+      const title = titleMap[event.eventType] || 'Phát hiện sự kiện an ninh';
+      const isUrgent = event.effectiveSeverity === 'CRITICAL' || event.effectiveSeverity === 'HIGH';
+      if (isUrgent) {
+        toastError(title, `${event.cameraName}: ${event.description}`);
+      } else {
+        warning(title, `${event.cameraName}: ${event.description}`);
+      }
+    },
+    [upsert, warning, toastError],
+  );
+
   const refetchOne = useCallback(
     async (eventId: number) => {
       try {
@@ -108,7 +131,7 @@ export function EventsProvider({ children }: { children: ReactNode }) {
   userRef.current = user;
 
   const { status: streamStatus } = useAlertStream({
-    onEventCreated: upsert,
+    onEventCreated: handleEventCreated,
     onEventUpdated: refetchOne,
     onTelemetryReceived: handleTelemetry,
     onReconcile: () => {
