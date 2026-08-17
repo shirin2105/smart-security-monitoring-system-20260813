@@ -205,7 +205,7 @@ class EvidenceClipPublisher(CVEventPublisher):
                 with httpx.Client(timeout=self.timeout_seconds) as client:
                     response = client.post(self.endpoint_url, json=payload, headers=headers)
                 if 200 <= response.status_code < 300:
-                    print(f"[EvidenceClip] Published candidateId={payload['candidateId']} -> {response.status_code}")
+                    print(f"[EvidenceClip] Published candidateId={payload['candidateId']} -> {response.status_code}", flush=True)
                     try:
                         incident = response.json().get("incident") or {}
                         incident_id = incident.get("id")
@@ -215,11 +215,11 @@ class EvidenceClipPublisher(CVEventPublisher):
                         pass
                     return None
                 if response.status_code not in (408, 429) and response.status_code < 500:
-                    print(f"[EvidenceClip] Permanent failure candidateId={payload['candidateId']}: {response.status_code}")
+                    print(f"[EvidenceClip] Permanent failure candidateId={payload['candidateId']}: {response.status_code}", flush=True)
                     return None
-                print(f"[EvidenceClip] Attempt {attempt}/{self.max_retries} HTTP {response.status_code}")
+                print(f"[EvidenceClip] Attempt {attempt}/{self.max_retries} HTTP {response.status_code}", flush=True)
             except httpx.TransportError as exc:
-                print(f"[EvidenceClip] Attempt {attempt}/{self.max_retries} error: {type(exc).__name__}")
+                print(f"[EvidenceClip] Attempt {attempt}/{self.max_retries} error: {type(exc).__name__}", flush=True)
             if attempt < self.max_retries:
                 time.sleep(0.2 * (2 ** (attempt - 1)))
         return None

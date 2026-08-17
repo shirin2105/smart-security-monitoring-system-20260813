@@ -58,7 +58,7 @@ class StationaryConfig:
 class OwnerConfig:
     near_norm: float = 0.50
     min_overlap_s: float = 0.70
-    min_association_score: float = 0.60
+    min_association_score: float = 0.45
     away_hold_s: float = 5.0
     placement_window_s: float = 3.0
 

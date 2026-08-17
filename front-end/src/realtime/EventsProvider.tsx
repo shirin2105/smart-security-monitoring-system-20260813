@@ -53,7 +53,7 @@ function mergeById(list: SecurityEvent[], incoming: SecurityEvent): SecurityEven
 
 export function EventsProvider({ children }: { children: ReactNode }) {
   const { user, reportApiError } = useAuth();
-  const { warning } = useToast();
+  const { warning, error: toastError } = useToast();
   const [events, setEvents] = useState<SecurityEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
@@ -87,15 +87,22 @@ export function EventsProvider({ children }: { children: ReactNode }) {
   const handleEventCreated = useCallback(
     (event: SecurityEvent) => {
       upsert(event);
-      if (
-        event.sourceType === 'SIMULATED' &&
-        event.cameraId === 1 &&
-        event.eventType === 'ABANDONED_OBJECT'
-      ) {
-        warning('Cảnh báo vật thể bỏ quên', `${event.cameraName}: ${event.description}`);
+      const titleMap: Record<string, string> = {
+        ABANDONED_OBJECT: 'Cảnh báo vật thể bỏ quên',
+        ZONE_INTRUSION: 'Cảnh báo xâm nhập khu vực',
+        CROWD_THRESHOLD: 'Cảnh báo tụ tập đám đông',
+        SUSPECTED_FALL: 'Cảnh báo té ngã',
+        COVERAGE_DEGRADED: 'Cảnh báo suy giảm vùng phủ',
+      };
+      const title = titleMap[event.eventType] || 'Phát hiện sự kiện an ninh';
+      const isUrgent = event.effectiveSeverity === 'CRITICAL' || event.effectiveSeverity === 'HIGH';
+      if (isUrgent) {
+        toastError(title, `${event.cameraName}: ${event.description}`);
+      } else {
+        warning(title, `${event.cameraName}: ${event.description}`);
       }
     },
-    [upsert, warning],
+    [upsert, warning, toastError],
   );
 
   const refetchOne = useCallback(
