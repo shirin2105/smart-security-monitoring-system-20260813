@@ -60,6 +60,7 @@ class OwnerConfig:
     min_overlap_s: float = 0.70
     min_association_score: float = 0.60
     away_hold_s: float = 5.0
+    placement_window_s: float = 3.0
 
 
 @dataclass
@@ -483,15 +484,19 @@ def associate_owner(
     fps_hint: float = 30.0,
     diagnostics_enabled: bool = False,
 ) -> OwnerAssociation:
-    # Use bag history up to the start of the long stationary run.
+    physical_luggage_first_seen_s = float(physical.rows[0]["timestamp_s"])
+    history_end_s = float(stationary_run.start_s)
+    history_start_s = max(
+        physical_luggage_first_seen_s,
+        history_end_s - float(cfg.placement_window_s),
+    )
+
+    # Use bag history within placement window [history_start_s, history_end_s]
     bag_rows = [
         r for r in physical.rows
-        if float(r["timestamp_s"]) <= stationary_run.start_s
+        if history_start_s <= float(r["timestamp_s"]) <= history_end_s
     ]
     bag_by_frame = {int(r["frame_index"]): r for r in bag_rows}
-    history_end_s = float(stationary_run.start_s)
-    # Report the exact history used by the unchanged production scorer.
-    history_start_s = float(physical.rows[0]["timestamp_s"])
 
     best = None
     candidates = []
@@ -533,7 +538,7 @@ def associate_owner(
         arr = np.asarray(distances, dtype=np.float64)
         inside_ratio = float(np.mean(arr <= 1e-9)) if len(arr) else 0.0
         near_ratio = float(np.mean(arr <= cfg.near_norm)) if len(arr) else 0.0
-        overlap_term = min(overlap_s / 3.0, 1.0)
+        overlap_term = min(overlap_s / max(cfg.placement_window_s, 1e-9), 1.0)
         min_distance_norm = float(np.min(arr)) if len(arr) else None
         proximity_ratio = (
             max(0.0, 1.0 - min_distance_norm / max(cfg.near_norm, 1e-9))
