@@ -134,9 +134,11 @@ def test_owner_report_records_candidates_and_explicit_rejection_reason():
     report = result["owner_associations"][0]
     assert report["rejection_reason"] is None
     assert report["history_window_start_s"] < report["history_window_end_s"]
+    assert report["history_window_start_s"] == 2.3
+    assert report["history_window_end_s"] == 5.3
     candidate = report["candidates"][0]
     assert candidate["person_track_id"] == 1_000_001
-    assert candidate["first_seen_s"] == 0.0
+    assert candidate["first_seen_s"] == 2.3
     assert candidate["last_seen_s"] == 4.9
     assert candidate["min_distance_norm"] == 0.0
     assert candidate["association_score"] >= 0.6
@@ -205,3 +207,77 @@ def test_owner_precheck_full_frame_ignores_roi():
     assert result["owner_associations"]
     assert result["owner_prechecks"][0]["eligible"] is True
     assert result["owner_prechecks"][0]["rejection_reason"] is None
+
+
+def test_placement_window_distant_history_outside_window_does_not_dilute_score():
+    rows = []
+    fps = 10
+    for frame in range(70):
+        # Luggage is moving across scene, person is far away
+        rows.append(row(frame, "person", 1_000_001, (300, 300), size=(60, 100), fps=fps))
+        rows.append(row(frame, "luggage", 2_000_001, (100 + frame * 3.0, 170), size=(24, 30), fps=fps))
+    for frame in range(70, 100):
+        # Person carries luggage closely during placement
+        center = (100 + frame * 3.0, 150)
+        rows.append(row(frame, "person", 1_000_001, center, size=(60, 100), fps=fps))
+        rows.append(row(frame, "luggage", 2_000_001, (center[0], 170), size=(24, 30), fps=fps))
+    for frame in range(103, 160):
+        # Luggage stationary at final position, owner absent
+        rows.append(row(frame, "luggage", 2_000_002, (100 + 100 * 3.0, 170), size=(28, 34), fps=fps))
+
+    result = infer_phase7c(rows, compact_config(), fps_hint=fps)
+    report = result["owner_associations"][0]
+    assert report["person_track_id"] == 1_000_001
+    assert report["rejection_reason"] is None
+    assert report["association_score"] >= 0.60
+    assert report["history_window_end_s"] - report["history_window_start_s"] == 3.0
+
+
+def test_placement_window_uses_observations_in_3s_before_stationary_start():
+    rows = carried_then_stationary(owner_stays_until=49)
+    result = infer_phase7c(rows, compact_config(), fps_hint=10)
+    report = result["owner_associations"][0]
+    assert report["history_window_start_s"] == 2.3
+    assert report["history_window_end_s"] == 5.3
+    cand = report["candidates"][0]
+    assert cand["first_seen_s"] == 2.3
+    assert cand["last_seen_s"] == 4.9
+
+
+def test_placement_window_does_not_precede_luggage_first_seen():
+    rows = []
+    fps = 10
+    for frame in range(15, 31):
+        center = (100 + frame, 150)
+        rows.append(row(frame, "person", 1_000_001, center, size=(60, 100), fps=fps))
+        rows.append(row(frame, "luggage", 2_000_001, (center[0], 170), size=(24, 30), fps=fps))
+    for frame in range(33, 100):
+        rows.append(row(frame, "luggage", 2_000_002, (130, 170), size=(28, 34), fps=fps))
+
+    result = infer_phase7c(rows, compact_config(), fps_hint=fps)
+    report = result["owner_associations"][0]
+    assert report["history_window_start_s"] == 1.5
+    assert report["history_window_end_s"] == 3.3
+    assert report["person_track_id"] == 1_000_001
+
+
+def test_placement_window_weights_and_threshold_preserved():
+    cfg = compact_config()
+    assert cfg.owner.min_association_score == 0.60
+    assert cfg.owner.placement_window_s == 3.0
+
+    rows_below = carried_then_stationary(owner_stays_until=-1)
+    for frame in range(50):
+        rows_below.append(row(frame, "person", 1_000_003, (100 + frame, 140), size=(30, 30)))
+    res_below = infer_phase7c(rows_below, cfg, fps_hint=10)
+    rep_below = res_below["owner_associations"][0]
+    assert rep_below["person_track_id"] is None
+    assert rep_below["association_score"] < 0.60
+    assert rep_below["rejection_reason"] == "CANDIDATE_SCORE_BELOW_THRESHOLD"
+
+    rows_above = carried_then_stationary(owner_stays_until=49)
+    res_above = infer_phase7c(rows_above, cfg, fps_hint=10)
+    rep_above = res_above["owner_associations"][0]
+    assert rep_above["person_track_id"] == 1_000_001
+    assert rep_above["association_score"] >= 0.60
+    assert rep_above["rejection_reason"] is None

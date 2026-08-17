@@ -46,3 +46,4 @@ abandoned_object:
       min_overlap_s: 0.7
       min_association_score: 0.6
       away_hold_s: 5.0
+      placement_window_s: 3.0
