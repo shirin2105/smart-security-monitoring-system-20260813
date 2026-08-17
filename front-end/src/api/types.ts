@@ -41,6 +41,13 @@ export interface LoginResult {
   token: string;
 }
 
+/** Live-loop clock đăng ký bởi CV producer — để web đồng bộ playhead camera. */
+export interface StreamClockEntry {
+  camera_id: number;
+  epoch: number;
+  duration: number;
+}
+
 /**
  * Hợp đồng duy nhất mà UI biết tới. Có hai implementation: HTTP thật và mock
  * in-memory. Nhờ vậy BAC-49→54 phát triển và demo được khi backend chưa xong.
@@ -54,6 +61,7 @@ export interface ApiTransport {
   postAction(id: number, payload: ActionPayload): Promise<SecurityEvent>;
   getAuditLog(): Promise<EventAction[]>;
   triggerSimulation(): Promise<void>;
+  getStreamClock(): Promise<StreamClockEntry[]>;
 }
 
 export const DEFAULT_PAGE_SIZE = 10;

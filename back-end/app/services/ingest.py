@@ -61,6 +61,21 @@ def _payload_hash(payload: dict) -> str:
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
+def _parse_dt(value) -> datetime | None:
+    """Parse an ISO timestamp from a JSON payload into a tz-aware datetime."""
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value
+    try:
+        parsed = datetime.fromisoformat(str(value))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=UTC)
+    return parsed
+
+
 def assessment_snapshot(payload: dict, camera_id: int) -> dict:
     """Return only policy-approved, non-identifying event metadata."""
     observations = payload["observations"]
@@ -94,6 +109,9 @@ def _incident_payload(incident: Incident, camera_name: str) -> dict:
         "status": incident.status,
         "source": incident.source,
         "created_at": incident.created_at.isoformat(),
+        "detected_at": incident.detected_at.isoformat() if incident.detected_at else None,
+        "artifact_url": incident.artifact_url,
+        "redaction_status": incident.redaction_status,
     }
 
 
@@ -110,6 +128,8 @@ async def ingest_event_candidate(payload: dict) -> dict:
         canonical_event_type = payload["eventType"]
         event_type = map_event_type(canonical_event_type)
         severity = EVENT_SEVERITY_MAP[canonical_event_type]
+        artifact = payload.get("artifact") or {}
+        detected_at = _parse_dt(payload.get("detectedAt"))
         incident = Incident(
             camera_id=camera_id,
             event_type=event_type,
@@ -120,6 +140,9 @@ async def ingest_event_candidate(payload: dict) -> dict:
             candidate_id=candidate_id,
             payload_hash=digest,
             created_at=datetime.now(UTC),
+            detected_at=detected_at,
+            artifact_url=artifact.get("uri"),
+            redaction_status=artifact.get("redactionStatus", "PENDING"),
         )
         db.add(incident)
         db.flush()
@@ -141,6 +164,29 @@ async def ingest_event_candidate(payload: dict) -> dict:
         incident_payload["bbox"] = None
         await manager.broadcast({"type": "NEW_ALERT", "incident": incident_payload})
         return {"status": "ACCEPTED", "incident": incident_payload}
+    finally:
+        db.close()
+
+
+async def mark_incident_artifact_ready(incident_id: int, uri: str, redaction_status: str) -> dict | None:
+    """Attach a rendered evidence clip to an already-posted incident and notify listeners.
+
+    Used by the CV producer to publish the alert immediately (artifact PENDING,
+    no clip) and then backfill the cut video once ffmpeg finishes.
+    """
+    db = SessionLocal()
+    try:
+        incident = db.query(Incident).filter(Incident.id == incident_id).first()
+        if incident is None:
+            return None
+        incident.artifact_url = uri
+        incident.redaction_status = redaction_status
+        db.commit()
+        db.refresh(incident)
+        camera = db.query(Camera).filter(Camera.id == incident.camera_id).first()
+        incident_payload = _incident_payload(incident, camera.name if camera else f"Camera #{incident.camera_id}")
+        await manager.broadcast({"type": "ALERT_UPDATED", "incident_id": incident.id})
+        return incident_payload
     finally:
         db.close()
 

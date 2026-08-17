@@ -6,7 +6,7 @@
  * hoặc route bảo vệ không chuyển hướng.
  */
 
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -100,7 +100,7 @@ describe('Điều hướng và phân quyền', () => {
     );
   });
 
-  it('phát cảnh báo bỏ quên khi Camera 1 tới mốc Phase7C trong video demo', async () => {
+  it('màn hình không còn phụ thuộc trigger timeline cứng', async () => {
     localStorage.setItem(TOKEN_STORAGE_KEY, 'mock-token-guard');
     localStorage.setItem(
       USER_STORAGE_KEY,
@@ -114,22 +114,40 @@ describe('Điều hướng và phân quyền', () => {
     );
 
     renderAt('/');
-    await screen.findByRole('region', { name: /Lưới camera giám sát/i });
 
+    // Lưới camera + video demo vẫn render bình thường (không cần script bắn alert).
+    await screen.findByRole('region', { name: /Lưới camera giám sát/i });
     const video = document.querySelector<HTMLVideoElement>(
       'video[src="/videos/camera-1-aboda-tracking.h264.mp4"]',
     );
     expect(video).not.toBeNull();
-    if (!video) return;
 
-    video.currentTime = 13.8;
-    fireEvent.timeUpdate(video);
+    // Hàng chờ cảnh báo realtime luôn hiện diện — cảnh báo tới từ luồng, không
+    // phải từ một mốc thời gian cứng trên video.
+    expect(screen.getByRole('complementary', { name: /Hàng chờ cảnh báo/i })).toBeDefined();
+  });
 
-    expect(await screen.findByText('Cảnh báo vật thể bỏ quên')).toBeDefined();
-    expect(
-      (await screen.findAllByText(/chủ sở hữu đã rời khỏi khu vực giám sát/i)).length,
-    ).toBeGreaterThan(0);
-    expect(screen.getByLabelText(/Video bằng chứng sự cố #/i)).toBeDefined();
+  it('chi tiết sự cố phát video bằng chứng đã cắt (20s trước → 3s sau)', async () => {
+    localStorage.setItem(TOKEN_STORAGE_KEY, 'mock-token-manager');
+    localStorage.setItem(
+      USER_STORAGE_KEY,
+      JSON.stringify({
+        id: 2,
+        username: 'manager',
+        fullName: 'Quản Lý Trần Văn B',
+        role: 'MANAGER',
+        cameraScope: [],
+      }),
+    );
+
+    renderAt('/incidents/103');
+
+    // Bằng chứng là video clip (không phải ảnh) — EvidenceMedia render <video>.
+    const evidence = await screen.findByLabelText(/Video bằng chứng sự cố #103/i);
+    expect(evidence).toBeDefined();
+    const video = evidence.closest('video');
+    expect(video).not.toBeNull();
+    expect(video?.getAttribute('src')).toContain('/videos/camera-1-aboda-tracking.h264.mp4');
   });
 
   it('Bảo vệ không thấy mục Điểm nóng và bị chặn khi vào thẳng URL', async () => {

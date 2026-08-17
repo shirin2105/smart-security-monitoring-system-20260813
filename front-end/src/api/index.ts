@@ -6,21 +6,12 @@
 import { User } from '../domain/types';
 import { USE_MOCK } from './config';
 import { httpTransport, setTokenGetter } from './httpTransport';
-import {
-  mockTransport,
-  setMockActorGetter,
-  triggerCameraOneAbandonedDemo as triggerMockCameraOneAbandonedDemo,
-} from './mock/mockTransport';
+import { mockTransport, setMockActorGetter } from './mock/mockTransport';
 import { ApiTransport } from './types';
 
 export const api: ApiTransport = USE_MOCK ? mockTransport : httpTransport;
 
 export const isMockMode = USE_MOCK;
-
-/** Chỉ dùng cho timeline demo; production nhận event qua WebSocket. */
-export function triggerCameraOneAbandonedDemo(): void {
-  if (USE_MOCK) triggerMockCameraOneAbandonedDemo();
-}
 
 /** AuthContext gọi một lần khi khởi động để tầng API biết token/actor hiện tại. */
 export function bindAuth(

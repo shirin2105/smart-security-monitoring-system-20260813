@@ -1,4 +1,4 @@
-import { api, triggerCameraOneAbandonedDemo } from '../api';
+import { api } from '../api';
 import { AlertSidebar } from '../components/alerts/AlertSidebar';
 import { CameraGrid } from '../components/camera/CameraGrid';
 import { ErrorState, LoadingState } from '../components/common/States';
@@ -20,7 +20,6 @@ export function DashboardPage() {
         <CameraGrid
           cameras={cameras.data ?? []}
           events={events}
-          onCameraOneAbandoned={triggerCameraOneAbandonedDemo}
         />
       )}
 

@@ -5,6 +5,7 @@ import { VideoOff, X } from 'lucide-react';
 import { Camera, SecurityEvent } from '../../domain/types';
 import { EmptyState } from '../common/States';
 import { HealthDot, SeverityBadge, SourceBadge, StateBadge } from '../common/Badges';
+import { LiveCameraVideo } from './LiveCameraVideo';
 
 interface CameraDetailModalProps {
   camera: Camera;
@@ -57,12 +58,9 @@ export function CameraDetailModal({ camera, events, onClose }: CameraDetailModal
               <span className="font-mono text-xs font-semibold">CAMERA MẤT KẾT NỐI</span>
             </div>
           ) : camera.previewUrl.match(/\.(mp4|webm|avi)([?#].*)?$/i) ? (
-            <video
+            <LiveCameraVideo
+              cameraId={camera.id}
               src={camera.previewUrl}
-              autoPlay
-              muted
-              loop
-              playsInline
               className={`h-full w-full ${camera.id === 1 ? 'object-contain' : 'object-cover'}`}
             />
           ) : (

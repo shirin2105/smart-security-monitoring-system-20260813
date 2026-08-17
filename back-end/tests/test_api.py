@@ -1,3 +1,5 @@
+import json
+import math
 import os
 
 TEST_DB_PATH = "./test_security_monitoring.db"
@@ -117,6 +119,38 @@ def test_ingest_event_candidate_type_mapping():
     assert incident["camera_id"] == 2
 
 
+def test_ingest_persists_detected_at_and_artifact():
+    """Live-CV alert carries video-timeline detectedAt + cut evidence clip URL."""
+    payload = candidate_payload("evt-evidence-001", event_type="ABANDONED_OBJECT")
+    payload["detectedAt"] = "2026-01-01T00:00:13.750Z"
+    payload["firstSeenAt"] = "2026-01-01T00:00:13.750Z"
+    payload["lastSeenAt"] = "2026-01-01T00:00:13.750Z"
+    payload["artifact"] = {
+        "available": True,
+        "contentType": "video/mp4",
+        "redactionStatus": "COMPLETE",
+        "uri": "/evidence/evt-evidence-001.mp4",
+    }
+    response = client.post(
+        "/api/v1/events/ingest",
+        headers={**INGEST_HEADERS, "Idempotency-Key": payload["candidateId"]},
+        json=payload,
+    )
+    assert response.status_code == 201
+    incident = response.json()["incident"]
+    assert incident["detected_at"].startswith("2026-01-01T00:00:13.75")
+    assert incident["artifact_url"] == "/evidence/evt-evidence-001.mp4"
+    assert incident["redaction_status"] == "COMPLETE"
+
+    # Re-read via REST list — fields must round-trip to the frontend.
+    alerts = {inc["id"]: inc for inc in client.get("/api/v1/alerts").json()}
+    persisted = alerts[incident["id"]]
+    assert persisted["detected_at"].startswith("2026-01-01T00:00:13.75")
+    assert persisted["artifact_url"] == "/evidence/evt-evidence-001.mp4"
+    assert persisted["redaction_status"] == "COMPLETE"
+
+
+
 def test_ingest_requires_matching_bearer_token():
     payload = candidate_payload("evt-auth")
     assert client.post("/api/v1/events/ingest", json=payload).status_code == 401
@@ -219,5 +253,80 @@ def test_ingest_rejects_unbounded_or_malformed_assessment_metadata():
         {**base, "modelVersion": "bad version with spaces"},
     ]
     for payload in cases:
-        response = client.post("/api/v1/events/ingest", headers=INGEST_HEADERS, json=payload)
-        assert response.status_code == 422
+        # httpx refuses to serialize non-finite floats, so the unbounded case is
+        # sent as a raw JSON body (Infinity) �?" the server must reject it with 422.
+        if isinstance(payload.get("confidence"), float) and not math.isfinite(payload["confidence"]):
+            body = json.dumps(payload, allow_nan=True)
+            response = client.post(
+                "/api/v1/events/ingest",
+                headers={**INGEST_HEADERS, "Content-Type": "application/json"},
+                content=body,
+            )
+        else:
+            response = client.post("/api/v1/events/ingest", headers=INGEST_HEADERS, json=payload)
+        assert response.status_code == 422, response.text
+
+
+def test_ingest_artifact_ready_backfills_clip_after_alert():
+    """Alert posted immediately (PENDING) then the rendered clip is attached."""
+    payload = candidate_payload("evt-backfill-001", event_type="ABANDONED_OBJECT")
+    payload["artifact"] = {"available": False, "redactionStatus": "PENDING"}
+    ingest = client.post("/api/v1/events/ingest", headers=INGEST_HEADERS, json=payload)
+    assert ingest.status_code == 201
+    incident_id = ingest.json()["incident"]["id"]
+    assert ingest.json()["incident"]["redaction_status"] == "PENDING"
+    assert ingest.json()["incident"]["artifact_url"] is None
+
+    clip_url = f"/evidence/evt-backfill-001.mp4"
+    ready = client.post(
+        f"/api/v1/events/{incident_id}/artifact-ready",
+        headers=INGEST_HEADERS,
+        json={"uri": clip_url, "redactionStatus": "COMPLETE"},
+    )
+    assert ready.status_code == 200
+    incident = ready.json()
+    assert incident["artifact_url"] == clip_url
+    assert incident["redaction_status"] == "COMPLETE"
+
+
+def test_ingest_artifact_ready_requires_auth_and_existing_incident():
+    ready = client.post(
+        "/api/v1/events/999999/artifact-ready",
+        headers=INGEST_HEADERS,
+        json={"uri": "/evidence/x.mp4", "redactionStatus": "COMPLETE"},
+    )
+    assert ready.status_code == 404
+    unauth = client.post(
+        "/api/v1/events/1/artifact-ready",
+        json={"uri": "/evidence/x.mp4", "redactionStatus": "COMPLETE"},
+    )
+    assert unauth.status_code == 401
+
+
+def test_stream_clock_register_and_list():
+    post = client.post(
+        "/api/v1/stream/clock",
+        headers=INGEST_HEADERS,
+        json={"cameraId": "cam_02", "epoch": 1234.5, "duration": 73.0},
+    )
+    assert post.status_code == 200
+    assert post.json()["camera_id"] == 2
+    clocks = client.get("/api/v1/stream/clock").json()
+    entry = next((clock for clock in clocks if clock["camera_id"] == 2), None)
+    assert entry is not None
+    assert entry["epoch"] == 1234.5
+    assert entry["duration"] == 73.0
+
+
+def test_stream_clock_requires_auth_and_valid_camera():
+    unauth = client.post(
+        "/api/v1/stream/clock",
+        json={"cameraId": "cam_01", "epoch": 1.0, "duration": 10.0},
+    )
+    assert unauth.status_code == 401
+    unknown = client.post(
+        "/api/v1/stream/clock",
+        headers=INGEST_HEADERS,
+        json={"cameraId": "cam_999", "epoch": 1.0, "duration": 10.0},
+    )
+    assert unknown.status_code == 422

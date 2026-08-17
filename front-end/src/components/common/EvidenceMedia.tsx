@@ -21,6 +21,8 @@ export function EvidenceMedia({
 }: EvidenceMediaProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
+  if (!artifact.url) return null;
+
   if (!VIDEO_PATTERN.test(artifact.url)) {
     return <img src={artifact.url} alt={`Ảnh bằng chứng ${description}`} className={className} />;
   }

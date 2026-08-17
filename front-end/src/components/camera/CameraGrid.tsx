@@ -1,36 +1,22 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { Maximize2, ShieldAlert, Video, VideoOff } from 'lucide-react';
 
 import { Camera, SecurityEvent } from '../../domain/types';
 import { EmptyState } from '../common/States';
 import { HealthDot, SourceBadge } from '../common/Badges';
 import { CameraDetailModal } from './CameraDetailModal';
+import { LiveCameraVideo } from './LiveCameraVideo';
 
 interface CameraGridProps {
   cameras: Camera[];
   events: SecurityEvent[];
-  onCameraOneAbandoned?: () => void;
 }
 
 /** Event còn "sống" trên camera — dùng để vẽ khung cảnh báo lên tile. */
 const OPEN_STATES = ['OPEN', 'PENDING_REVIEW', 'ACKNOWLEDGED', 'CONFIRMED'];
 
-const CAMERA_ONE_ABANDONED_AT_S = 13.75;
-
-export function CameraGrid({ cameras, events, onCameraOneAbandoned }: CameraGridProps) {
+export function CameraGrid({ cameras, events }: CameraGridProps) {
   const [selected, setSelected] = useState<Camera | null>(null);
-  const cameraOneAlertFired = useRef(false);
-
-  const syncCameraOneTimeline = (video: HTMLVideoElement) => {
-    if (video.currentTime < 1) cameraOneAlertFired.current = false;
-    if (
-      video.currentTime >= CAMERA_ONE_ABANDONED_AT_S &&
-      !cameraOneAlertFired.current
-    ) {
-      cameraOneAlertFired.current = true;
-      onCameraOneAbandoned?.();
-    }
-  };
 
   const activeFor = (cameraId: number) =>
     events.find(
@@ -102,17 +88,9 @@ export function CameraGrid({ cameras, events, onCameraOneAbandoned }: CameraGrid
                     <span className="font-mono text-[11px] font-semibold">KHÔNG CÓ TÍN HIỆU</span>
                   </div>
                 ) : camera.previewUrl.match(/\.(mp4|webm|avi)([?#].*)?$/i) ? (
-                  <video
+                  <LiveCameraVideo
+                    cameraId={camera.id}
                     src={camera.previewUrl}
-                    autoPlay
-                    muted
-                    loop
-                    playsInline
-                    onTimeUpdate={
-                      camera.id === 1
-                        ? (event) => syncCameraOneTimeline(event.currentTarget)
-                        : undefined
-                    }
                     className={`h-full w-full opacity-85 ${
                       camera.id === 1
                         ? 'object-contain'

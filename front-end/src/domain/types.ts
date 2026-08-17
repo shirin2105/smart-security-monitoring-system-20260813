@@ -64,7 +64,7 @@ export interface Camera {
 }
 
 export interface EventArtifact {
-  url: string;
+  url?: string;
   redactionStatus: RedactionStatus;
   /** Optional evidence window within a full source video. */
   clipStartS?: number;

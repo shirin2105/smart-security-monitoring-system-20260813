@@ -139,4 +139,8 @@ export const httpTransport: ApiTransport = {
   async triggerSimulation(): Promise<void> {
     await request('/api/v1/alerts/simulate', { method: 'POST' });
   },
+
+  async getStreamClock() {
+    return request('/api/v1/stream/clock');
+  },
 };

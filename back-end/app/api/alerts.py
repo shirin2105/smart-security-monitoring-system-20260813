@@ -24,6 +24,9 @@ class IncidentResponse(BaseModel):
     status: str
     source: str = "SIMULATOR"
     created_at: datetime
+    detected_at: datetime | None = None
+    artifact_url: str | None = None
+    redaction_status: str = "PENDING"
 
 class AuditLogResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -48,7 +51,10 @@ def get_incidents(db: Session = Depends(get_db)):
             "description": inc.description,
             "status": inc.status,
             "source": inc.source,
-            "created_at": inc.created_at
+            "created_at": inc.created_at,
+            "detected_at": inc.detected_at,
+            "artifact_url": inc.artifact_url,
+            "redaction_status": inc.redaction_status,
         })
     return results
 

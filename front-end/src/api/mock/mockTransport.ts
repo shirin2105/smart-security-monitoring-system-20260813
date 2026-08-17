@@ -11,7 +11,7 @@ import { ActionType, EventAction, SecurityEvent, User } from '../../domain/types
 import { allowedActions, reasonRequired } from '../../domain/permissions';
 import { ApiError } from '../errors';
 import { applyQuery } from '../query';
-import { ActionPayload, ApiTransport, IncidentQuery, LoginResult } from '../types';
+import { ActionPayload, ApiTransport, IncidentQuery, LoginResult, StreamClockEntry } from '../types';
 import { MOCK_CAMERAS, MOCK_EVENTS, MOCK_USERS, SIMULATION_TEMPLATES } from './fixtures';
 
 /* --------------------------------- state ------------------------------------ */
@@ -247,5 +247,9 @@ export const mockTransport: ApiTransport = {
 
     events = [created, ...events];
     emit(created, 'created');
+  },
+
+  async getStreamClock(): Promise<StreamClockEntry[]> {
+    return [];
   },
 };

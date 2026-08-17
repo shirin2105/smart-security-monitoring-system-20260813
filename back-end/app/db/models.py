@@ -43,6 +43,9 @@ class Incident(Base):
     candidate_id = Column(String(255), nullable=True, unique=True, index=True)
     payload_hash = Column(String(64), nullable=True)
     created_at = Column(DateTime, default=utc_now, nullable=False)
+    detected_at = Column(DateTime, nullable=True)
+    artifact_url = Column(String(2048), nullable=True)
+    redaction_status = Column(String(20), nullable=False, default="PENDING")
 
     camera = relationship("Camera", back_populates="incidents")
     audit_logs = relationship("AuditLog", back_populates="incident")

@@ -165,7 +165,7 @@ function AlertCard({ event }: { event: SecurityEvent }) {
 
       {event.artifact && event.artifact.redactionStatus !== 'COMPLETE' && (
         <p className="mb-2 rounded-lg border border-gray-200 dark:border-gray-800 bg-slate-50 dark:bg-gray-950/60 p-2 text-[11px] leading-relaxed text-gray-500">
-          Ảnh bằng chứng không khả dụng — chưa che mặt xong nên hệ thống không hiển thị.
+          Video bằng chứng chưa sẵn sàng — đang xử lý, sẽ hiển thị ngay khi hoàn tất.
         </p>
       )}
 

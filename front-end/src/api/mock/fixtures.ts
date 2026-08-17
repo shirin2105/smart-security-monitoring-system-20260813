@@ -150,7 +150,12 @@ export const MOCK_EVENTS: SecurityEvent[] = [
     sourceType: 'SIMULATED',
     detectedAt: minutesAgo(15),
     version: 2,
-    artifact: { url: PREVIEW(2), redactionStatus: 'COMPLETE' },
+    artifact: {
+      url: '/videos/camera-1-aboda-tracking.h264.mp4',
+      redactionStatus: 'COMPLETE',
+      clipStartS: 13.75,
+      clipEndS: 16.75,
+    },
     actions: [
       {
         id: 9001,

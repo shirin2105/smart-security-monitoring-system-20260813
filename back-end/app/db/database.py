@@ -86,7 +86,7 @@ def init_db_and_seed():
         if db.query(Camera).count() == 0:
             cameras_seed = [
                 Camera(id=1, name="Camera Cổng Chính", location="Cổng A - Tầng 1", stream_url="/media/walking_people_browser.webm", status="online", source="CV"),
-                Camera(id=2, name="Camera Sảnh Chờ", location="Sảnh Tòa Nhà - Tầng 1", stream_url="/media/people_detection.mp4", status="online", source="CV"),
+                Camera(id=2, name="Camera Sảnh Chờ", location="Sảnh Tòa Nhà - Tầng 1", stream_url="/media/aboda-video1.mp4", status="online", source="CV"),
                 Camera(id=3, name="Camera Hàng Rào Tây", location="Khu Vực Hàng Rào - Phía Tây", stream_url="/media/pets2006_3.mp4", status="warning", source="SIMULATOR"),
                 Camera(id=4, name="Camera Phòng Server", location="Khai Thác Kỹ Thuật - Tầng Hầm", stream_url="/media/aban3.mp4", status="online", source="SIMULATOR"),
                 Camera(id=5, name="Camera Bãi Xe B1", location="Bãi Xe Ô Tô - Tầng B1", stream_url="/media/store-aisle-detection.mp4", status="online", source="SIMULATOR"),
@@ -112,6 +112,14 @@ def _ensure_incident_ingest_columns():
             connection.execute(text("ALTER TABLE incidents ADD COLUMN candidate_id VARCHAR(255)"))
         if "payload_hash" not in columns:
             connection.execute(text("ALTER TABLE incidents ADD COLUMN payload_hash VARCHAR(64)"))
+        if "detected_at" not in columns:
+            connection.execute(text("ALTER TABLE incidents ADD COLUMN detected_at DATETIME"))
+        if "artifact_url" not in columns:
+            connection.execute(text("ALTER TABLE incidents ADD COLUMN artifact_url VARCHAR(2048)"))
+        if "redaction_status" not in columns:
+            connection.execute(
+                text("ALTER TABLE incidents ADD COLUMN redaction_status VARCHAR(20) NOT NULL DEFAULT 'PENDING'")
+            )
         connection.execute(
             text("CREATE UNIQUE INDEX IF NOT EXISTS ix_incidents_candidate_id ON incidents (candidate_id)")
         )

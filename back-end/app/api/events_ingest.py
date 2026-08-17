@@ -8,7 +8,12 @@ import os
 from datetime import datetime
 from typing import Literal
 
-from app.services.ingest import CandidateReferenceError, IdempotencyConflict, ingest_event_candidate
+from app.services.ingest import (
+    CandidateReferenceError,
+    IdempotencyConflict,
+    ingest_event_candidate,
+    mark_incident_artifact_ready,
+)
 from fastapi import APIRouter, Header, HTTPException, Response
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -100,3 +105,29 @@ async def ingest_event(
     if result["status"] == "DUPLICATE_IGNORED":
         response.status_code = 200
     return result
+
+
+class ArtifactReadyBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    uri: str = Field(min_length=1, max_length=2048)
+    redactionStatus: Literal["COMPLETE", "FAILED"] = "COMPLETE"
+
+
+@router.post("/{incident_id}/artifact-ready", status_code=200)
+async def mark_artifact_ready(
+    incident_id: int,
+    body: ArtifactReadyBody,
+    authorization: str | None = Header(default=None),
+):
+    """Backfill the rendered evidence clip onto an incident posted earlier.
+
+    The CV producer posts the alert immediately (PENDING artifact), renders the
+    clip with ffmpeg, then calls this endpoint so the video appears in the
+    already-shown notification.
+    """
+    _authenticate(authorization)
+    incident = await mark_incident_artifact_ready(incident_id, body.uri, body.redactionStatus)
+    if incident is None:
+        raise HTTPException(status_code=404, detail="Không tìm thấy sự cố")
+    return incident
