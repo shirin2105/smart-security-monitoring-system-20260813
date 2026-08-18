@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from app.common.enums import IntrusionState
-from app.common.geometry import is_point_in_polygon
+from app.common.geometry import is_point_in_polygon, scale_polygon_to_frame
 from app.common.time_utils import calculate_duration_seconds
 from app.cv.events.event_signal import EventSignal
 from app.events.temporal_state import TrackIntrusionStateTracker
@@ -22,10 +22,24 @@ class IntrusionLifecycleAdapter:
         self.camera_id = camera_id
         self.zones = [z for z in zones_config
                       if z.get("camera_id") == camera_id and z.get("enabled", True)]
-        self.dwell_seconds = float(rules_config.get("intrusion", {}).get("dwell_seconds", 2.0))
+        intrusion_cfg = rules_config.get("intrusion", {})
+        self.dwell_seconds = float(intrusion_cfg.get("dwell_seconds", 1.0))
+        self.exit_grace_seconds = float(intrusion_cfg.get("exit_grace_seconds", 0.5))
         self._states: dict[tuple[int, str], TrackIntrusionStateTracker] = {}
         self._active: set[tuple[int, str]] = set()
         self._last_facts: dict[tuple[int, str], tuple[Any, dict[str, Any]]] = {}
+
+    def reload_zones(self, zones_config: list[dict[str, Any]]) -> None:
+        new_zones = [z for z in zones_config
+                     if z.get("camera_id") == self.camera_id and z.get("enabled", True)]
+        if new_zones != self.zones:
+            self.zones = new_zones
+
+    def _get_scaled_polygon(self, polygon: list[list[float]], frame_data: Any) -> list[list[float]]:
+        if getattr(frame_data, "image", None) is not None:
+            h, w = frame_data.image.shape[:2]
+            return scale_polygon_to_frame(polygon, frame_width=w, frame_height=h)
+        return polygon
 
     def evaluate(self, tracks: list[Any], frame_data: Any) -> list[EventSignal]:
         timestamp, now_s = frame_data.captured_at, _media_seconds(frame_data)
@@ -37,9 +51,10 @@ class IntrusionLifecycleAdapter:
                 key = (track.track_id, str(zone["zone_id"]))
                 observed.add(key)
                 state = self._states.setdefault(
-                    key, TrackIntrusionStateTracker(track.track_id, self.dwell_seconds)
+                    key, TrackIntrusionStateTracker(track.track_id, self.dwell_seconds, self.exit_grace_seconds)
                 )
-                if is_point_in_polygon(track.latest_foot_point, zone["polygon"]):
+                scaled_polygon = self._get_scaled_polygon(zone["polygon"], frame_data)
+                if is_point_in_polygon(track.latest_foot_point, scaled_polygon):
                     lifecycle = state.update_inside(timestamp)
                     if lifecycle == IntrusionState.INTRUSION_ACTIVE:
                         duration = calculate_duration_seconds(state.entered_zone_at, timestamp)
@@ -50,13 +65,23 @@ class IntrusionLifecycleAdapter:
                                                     timestamp, now_s, facts))
                 else:
                     was_active = key in self._active
-                    state.update_outside()
-                    if was_active:
-                        signals.append(self._end(key, timestamp, now_s))
+                    lifecycle = state.update_outside(timestamp)
+                    if lifecycle == IntrusionState.EXITED:
+                        if was_active:
+                            signals.append(self._end(key, timestamp, now_s))
+                        self._reset(key)
+                    elif lifecycle == IntrusionState.OUTSIDE:
+                        self._reset(key)
+        for key in list(self._active - observed):
+            state = self._states.get(key)
+            if state:
+                lifecycle = state.update_outside(timestamp)
+                if lifecycle == IntrusionState.EXITED:
+                    signals.append(self._end(key, timestamp, now_s))
                     self._reset(key)
-        for key in self._active - observed:
-            signals.append(self._end(key, timestamp, now_s))
-            self._reset(key)
+            else:
+                signals.append(self._end(key, timestamp, now_s))
+                self._reset(key)
         return signals
 
     @staticmethod

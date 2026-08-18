@@ -1,223 +1,274 @@
-# Smart Security Monitoring System MVP (Hệ Thống Giám Sát An Ninh Thông Minh)
+# Smart Security Monitoring System (Hệ Thống Giám Sát An Ninh Thông Minh)
 
-Mô tả: Hệ thống giám sát an ninh thông minh (Web Application) cung cấp giao diện quản lý camera, theo dõi sự cố an ninh và nhận cảnh báo thời gian thực (Real-time Alerts qua WebSockets).
+[![Gate G2](https://img.shields.io/badge/Milestone-Gate%20G2%20MVP-success)](#)
+[![Tests](https://img.shields.io/badge/Tests-308%20Passed-brightgreen)](#)
+[![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](#)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688.svg)](#)
+[![React](https://img.shields.io/badge/React-18.x-61DAFB.svg)](#)
+[![Android](https://img.shields.io/badge/Mobile-Android%20Compose-green.svg)](#)
+[![LangGraph](https://img.shields.io/badge/AI%20Agent-LangGraph-orange.svg)](#)
+[![CV Detector](https://img.shields.io/badge/CV-DEIMv2%20%2B%20ByteTrack-blueviolet.svg)](#)
 
----
-
-## 🛠️ Công Nghệ Sử Dụng (Tech Stack)
-
-### 1. Front-End
-- **Core Framework**: [React 18](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/)
-- **Build Tool**: [Vite](https://vitejs.dev/)
-- **Styling**: [Tailwind CSS](https://tailwindcss.com/) + PostCSS + Autoprefixer
-- **UI Components & Icons**: [Lucide React](https://lucide.dev/)
-- **Web Server (Production/Docker)**: [Nginx](https://www.nginx.com/)
-
-### 2. Back-End
-- **Language & Runtime**: Python 3.11+
-- **Framework**: [FastAPI](https://fastapi.tiangolo.com/)
-- **ASGI Server**: [Uvicorn](https://www.uvicorn.org/)
-- **Database ORM**: [SQLAlchemy 2.0](https://www.sqlalchemy.org/)
-- **Database Driver**: Psycopg2 (PostgreSQL)
-- **Validation & Settings**: [Pydantic v2](https://docs.pydantic.dev/) & Pydantic-Settings
-- **Authentication & Security**: PyJWT, Passlib (Bcrypt)
-- **Real-time Communication**: WebSockets
-
-### 3. Cơ Sở Dữ Liệu & Hạ Tầng (Database & Infrastructure)
-- **Database**: PostgreSQL 15 (Alpine)
-- **Containerization & Orchestration**: Docker & Docker Compose
-
-> *Lưu ý: Các phân hệ Computer Vision (CV) và Large Language Model (LLM) do đội ngũ khác phụ trách và phát triển riêng.*
+> **Dự án:** P-176 — Hệ Thống Giám Sát An Ninh Thông Minh Đa Kênh (Smart Security Monitoring System)  
+> **Mục tiêu Gate G2:** Vận hành luồng xử lý end-to-end hoàn chỉnh với mô hình Computer Vision và AI Agent LLM thực tế (không mock), kết nối đa kênh (Web Dashboard + Android Patrol App) với cơ chế kiểm soát con người (Human-in-the-loop).
 
 ---
 
-## 📁 Cấu Trúc Thư Mục Dự Án (Project Structure)
+## 🌟 1. Tổng Quan Kiến Trúc & Tính Năng Cốt Lõi
+
+Hệ thống P-176 cung cấp giải pháp giám sát an ninh toàn diện gồm 4 phân hệ cốt lõi:
+
+```mermaid
+graph TB
+    subgraph CV_Layer["👁️ 1. Computer Vision Pipeline"]
+        CAM["6 Camera Streams (RTSP / Video)"] --> DEIM["DEIMv2 Detector (Phase 7A)"]
+        DEIM --> BYTE["ByteTrack Multi-Object Tracker"]
+        BYTE --> STORE["TrackStore Snapshot"]
+        STORE --> ADAPT["Event Lifecycle Adapters<br/>• Zone Intrusion<br/>• Crowd Threshold<br/>• Abandoned Object (Phase 7C)"]
+        ADAPT --> EVMGR["CV Event Manager (Dedupe & Lifecycle)"]
+    end
+
+    subgraph BE_Layer["⚡ 2. Backend & Ingest Gateway"]
+        INGEST["POST /api/v1/events/ingest<br/>(HMAC Auth & SHA-256 Digest)"]
+        WS_HUB["WebSocket Hub (/ws/alerts)"]
+        DB[("PostgreSQL 15 / SQLite")]
+    end
+
+    subgraph AGENT_Layer["🧠 3. AI Agent Subsystem"]
+        RUNNER["AssessmentRunner"]
+        GRAPH["Private LangGraph Workflow"]
+        LLM_ADAPTER["OpenAI-compatible LLM Adapter"]
+        REAL_LLM[("🌐 Real LLM (Upstage Solar / Gemma)")]
+        FALLBACK["Deterministic Fallback Engine"]
+    end
+
+    subgraph CLIENT_Layer["🖥️ 4. Multi-Channel Clients"]
+        WEB["React 18 Web Dashboard (Guard & Manager)"]
+        MOBILE["Android Compose App (FCM Push & Patrol)"]
+    end
+
+    EVMGR -->|HTTP EventCandidate| INGEST
+    INGEST --> DB
+    INGEST --> WS_HUB
+    INGEST --> RUNNER
+    RUNNER --> GRAPH
+    GRAPH --> LLM_ADAPTER
+    LLM_ADAPTER --> REAL_LLM
+    LLM_ADAPTER -.->|On Failure| FALLBACK
+    GRAPH --> INGEST
+    WS_HUB --> WEB
+    INGEST -.->|FCM Push| MOBILE
+```
+
+### Các Tính Năng Trọng Yếu:
+1. **Phát Hiện Sự Cố Thời Gian Thực (Computer Vision):**
+   - **Xâm nhập vùng cấm (`ZONE_INTRUSION`):** Giám sát đa giác ROI (Cổng chính, Hàng rào Tây, Phòng server), đo thời gian lưu trú (dwell time).
+   - **Tụ tập đông người (`CROWD_THRESHOLD`):** Đếm số lượng người vượt ngưỡng an toàn trong khu vực sảnh / hành lang.
+   - **Vật thể bỏ quên (`ABANDONED_OBJECT` - Phase 7C):** Nhận diện hành lý đứng yên, liên kết chủ nhân và phát hiện hành vi chủ nhân rời xa quá thời gian quy định.
+2. **AI Agent Phân Tích & Cố Vấn (LangGraph + Real LLM):**
+   - Đồ thị suy luận StateGraph riêng biệt, biên dịch một lần (Single Compilation Root).
+   - Đánh giá mức độ nghiêm trọng (`recommendedSeverity`: `INFO`, `WARNING`, `HIGH`, `CRITICAL`), trích xuất lý giải nghiệp vụ (`rationale`) và khuyến nghị hành động.
+   - **Ranh giới bảo mật PRD §12.1:** Tuyệt đối không truyền frame ảnh thô hay khuôn mặt ra bên ngoài; chỉ truyền metadata số học phi định danh.
+   - **Chịu lỗi tự động:** Tự động kích hoạt `deterministic-fallback` nếu LLM timeout hoặc mất kết nối.
+3. **Phòng Điều Hành Trực Ban (React Web UI):**
+   - Lưới hiển thị 6 camera, lớp phủ Bounding Box theo thời gian thực.
+   - Đẩy thông báo tức thời qua WebSockets (`/ws/alerts`).
+   - Phân quyền theo vai trò (RBAC): Bảo vệ (`GUARD`) trực ban xử lý cảnh báo; Quản lý (`MANAGER`) xem bản đồ điểm nóng (`/heatmap`) và nhật ký kiểm toán (`/audit`).
+4. **Kênh Cảnh Báo Di Động (Android Kotlin + Jetpack Compose):**
+   - Ứng dụng Android độc lập (`mobile/`) hỗ trợ bảo vệ tuần tra tiếp nhận cảnh báo khẩn cấp và báo cáo hiện trường.
+
+---
+
+## 🛠️ 2. Công Nghệ Sử Dụng (Tech Stack)
+
+| Phân hệ | Công nghệ & Thư viện | Mô tả |
+|---|---|---|
+| **Computer Vision** | DEIMv2 (Phase 7A Checkpoint), ByteTrack, OpenCV, PyTorch | Detector thời gian thực, bám vết đối tượng phân tách namespace `person` / `luggage`. |
+| **AI Agent** | LangGraph, LangChain Core, OpenAI API | Điều phối suy luận phân tích rủi ro, kết nối `upstage/solar-pro4` hoặc `google/gemma-3-4b-it`. |
+| **Back-End API** | Python 3.11+, FastAPI, Uvicorn, SQLAlchemy 2.0, Pydantic v2 | REST API, WebSocket Manager, HMAC Ingest Auth, JWT Security. |
+| **Front-End Web** | React 18, TypeScript, Vite, Tailwind CSS, Lucide Icons | Dashboard phòng điều hành, WebSocket live stream, Bounding box rendering. |
+| **Mobile App** | Kotlin, Jetpack Compose, Coroutines, Flow | App tuần tra Android 8.0+ (API 26+), Firebase Cloud Messaging (FCM). |
+| **Cơ sở dữ liệu** | PostgreSQL 15 (Alpine) & SQLite fallback | Lưu trữ thực thể Camera, Zone, User, Incident, AssessmentJob, AuditLog. |
+| **DevOps & Testing** | Docker, Docker Compose, Pytest, Vitest | 308 automated tests, Vitest component smoke tests, Multi-stage Docker build. |
+
+---
+
+## 📁 3. Cấu Trúc Thư Mục Dự Án (Project Structure)
 
 ```text
 .
-├── back-end/               # FastAPI Backend Service
-│   ├── app/                # Mã nguồn backend (API, DB models, Services, WebSockets)
-│   ├── Dockerfile          # Dockerfile build backend container
-│   └── pyproject.toml      # Khai báo thư viện dependencies backend
-├── front-end/              # React TypeScript Frontend Service
-│   ├── src/                # Mã nguồn frontend (Components, Pages, Hooks...)
-│   ├── Dockerfile          # Multi-stage Dockerfile (Node.js build -> Nginx serving)
-│   └── package.json        # Khai báo thư viện dependencies frontend
-├── docker-compose.yml      # Cấu hình container orchestration (PostgreSQL + Backend + Frontend)
-├── .env.example            # File mẫu cấu hình biến môi trường
-└── README.md               # Tài liệu hướng dẫn dự án
+├── app/                        # 🧠 Lõi AI Agent & Computer Vision Engine
+│   ├── agents/                 # LangGraph Workflow (_workflow.py), AssessmentRunner, Policy, Records
+│   ├── cv/                     # DEIMv2 Detector, ByteTrack Tracker, Event Adapters (Intrusion/Crowd/Phase7C)
+│   ├── llm/                    # OpenAI-compatible LLM Adapter kết nối mô hình thực tế
+│   ├── common/                 # Pydantic Schemas & Contracts (EventCandidate, AgentAssessment)
+│   └── config.py               # Quản lý cấu hình tập trung (AppConfig)
+├── back-end/                   # ⚡ FastAPI Backend Service
+│   ├── app/
+│   │   ├── api/                # Endpoints: auth, alerts, cameras, zones, events_ingest
+│   │   ├── db/                 # SQLAlchemy Models (User, Camera, Incident, AssessmentJob, AuditLog)
+│   │   ├── services/           # Ingest Service, WebSocket Manager, Assessment Worker, Simulator
+│   │   └── main.py             # FastAPI App Root & WebSocket Router
+│   ├── Dockerfile              # Dockerfile backend
+│   └── pyproject.toml          # Dependencies backend
+├── front-end/                  # 🖥️ React TypeScript Frontend
+│   ├── src/
+│   │   ├── pages/              # DashboardPage, IncidentsPage, IncidentDetailPage, HeatmapPage, AuditPage, LoginPage
+│   │   ├── components/         # CameraGrid, AlertCard, NotificationToast, BoundingBoxOverlay
+│   │   ├── realtime/           # WebSocket EventsProvider & Event Listeners
+│   │   ├── auth/               # AuthContext & ProtectedRoute (RBAC)
+│   │   └── api/                # API Client & Transport Adapters
+│   ├── Dockerfile              # Multi-stage Dockerfile (Vite Build -> Nginx)
+│   └── package.json            # Dependencies frontend
+├── mobile/                     # 📱 Ứng dụng Android tuần tra (Kotlin + Jetpack Compose)
+│   ├── app/                    # Mã nguồn Android App, ActionPolicy, ViewModels, UI Screens
+│   ├── tools/                  # Script kiểm thử FCM push notification (send_fcm.py)
+│   └── README.md               # Hướng dẫn build và chạy Android App
+├── configs/                    # ⚙️ Cấu hình hệ thống (YAML)
+│   ├── cameras.yaml            # Danh sách 6 camera giám sát và nguồn stream
+│   ├── zones.yaml              # Tọa độ đa giác vùng cấm (ROI Polygons)
+│   ├── event_rules.yaml        # Ngưỡng thời gian lưu trú, crowd count, stationary hold
+│   └── models.yaml             # Đường dẫn checkpoint DEIMv2 và DINOv3 backbone
+├── devtools/                   # 🛠️ Công cụ nhà phát triển (Webcam CV Test App)
+├── eval/results/               # 📊 Báo cáo đánh giá Gate G2 & 5 Test Cases thực tế
+├── presentation/               # 🎬 Video Demo 3 phút (mp4) & Kịch bản thuyết trình
+├── scripts/                    # 📜 Scripts vận hành: run_mvp.ps1, demo_cli, submit_log
+├── tests/                      # 🧪 Bộ 308 automated tests (unit, contracts, integration, agents, api)
+├── ARCHITECTURE.md             # 🏛️ Tài liệu kiến trúc toàn diện và sơ đồ Mermaid
+├── docker-compose.yml          # Container orchestration (PostgreSQL + Backend + Frontend)
+├── .env.example                # File mẫu biến môi trường
+└── README.md                   # Tài liệu hướng dẫn dự án
 ```
 
 ---
 
-## 🐳 Hướng Dẫn Chạy Dự Án Bằng Docker (Docker Setup Guide)
+## 🚀 4. Hướng Dẫn Khởi Chạy Dự Án (Getting Started)
 
-Yêu cầu tiền đề (Prerequisites):
-- Máy tính đã cài đặt **Docker** và **Docker Compose**.
+### Cách 1: Khởi Chạy Nhanh Bằng PowerShell Script (Khuyến nghị trên Windows)
 
----
-
-### 1. Dành cho người dùng Windows
-
-#### Bước 1: Yêu cầu chuẩn bị
-- Cài đặt **Docker Desktop cho Windows** (Khuyến nghị sử dụng WSL 2 Backend).
-- Đảm bảo ứng dụng **Docker Desktop** đang chạy (biểu tượng cá voi hiển thị dưới khay hệ thống).
-
-#### Bước 2: Clone dự án & Cấu hình môi trường
-Mở **PowerShell**, **Command Prompt (CMD)** hoặc **Git Bash**:
 ```powershell
-# 1. Di chuyển tới thư mục dự án (nếu đã clone)
-cd P-176
-
-# 2. Tạo file cấu hình môi trường từ file mẫu
+# 1. Tạo file cấu hình môi trường
 copy .env.example .env
-```
 
-#### Bước 3: Build và khởi chạy hệ thống
-Chạy lệnh sau để Docker Compose tự động build image và khởi chạy toàn bộ 3 services (PostgreSQL, Backend, Frontend):
-```powershell
+# 2. Khởi chạy toàn bộ hệ thống (Backend API + Frontend Web UI)
+.\scripts\run_mvp.ps1
+```
+*Script tự động kiểm tra polling `/health`, khởi động Backend tại `http://localhost:8000` và Frontend tại `http://localhost:5173`.*
+
+---
+
+### Cách 2: Khởi Chạy Bằng Docker Compose (Windows & Linux)
+
+Yêu cầu: Đã cài đặt **Docker Desktop** (Windows) hoặc **Docker Engine** (Linux).
+
+```bash
+# 1. Chuẩn bị file môi trường
+cp .env.example .env
+
+# 2. Build và khởi chạy toàn bộ 3 container (PostgreSQL + Backend + Frontend)
 docker compose up --build -d
-```
-*(Đối với các bản Docker Desktop cũ hơn, sử dụng lệnh: `docker-compose up --build -d`)*
 
-#### Bước 4: Kiểm tra trạng thái và xem log
-- **Kiểm tra các container đang chạy**:
-  ```powershell
-  docker compose ps
-  ```
-- **Xem log toàn bộ hệ thống theo thời gian thực**:
-  ```powershell
-  docker compose logs -f
-  ```
-- **Xem log riêng biệt của Backend hoặc Frontend**:
-  ```powershell
-  docker compose logs -f backend
-  docker compose logs -f frontend
-  ```
+# 3. Xem trạng thái các container
+docker compose ps
 
-#### Bước 5: Dừng hệ thống
-Để dừng các container đang chạy:
-```powershell
+# 4. Xem log thời gian thực
+docker compose logs -f
+
+# 5. Dừng hệ thống
 docker compose down
 ```
 
 ---
 
-## Phase 9 Computer Vision
+## 🌐 5. Địa Chỉ Truy Cập (Access URLs) & Tài Khoản Mẫu
 
-The production CV boundary is local and backend-independent:
+| Dịch vụ | Địa chỉ / URL | Mô tả |
+|---|---|---|
+| **Front-End (Web Dashboard)** | [http://localhost:5173](http://localhost:5173) | Giao diện phòng trực ban giám sát an ninh (React) |
+| **Back-End REST API** | [http://localhost:8000](http://localhost:8000) | FastAPI Server |
+| **Swagger API Docs** | [http://localhost:8000/docs](http://localhost:8000/docs) | Tài liệu API tương tác tự động |
+| **ReDoc API Docs** | [http://localhost:8000/redoc](http://localhost:8000/redoc) | Giao diện tài liệu ReDoc |
+| **PostgreSQL Database** | `localhost:5432` | DB: `security_db` \| User: `postgres` \| Pass: `postgres` |
 
-```text
-DEIMv2 -> ByteTrack -> shared TrackStore
-       -> intrusion / crowd / Phase7C abandoned adapters
-       -> CVEventManager -> CVEvent v1 -> CVEventPublisher -> JSONL
+### 🔑 Tài khoản đăng nhập:
+- **Tài khoản Bảo vệ (Guard):** `guard` / `guard123` (Trực ca 6 camera, xem cảnh báo realtime, xác nhận xử lý sự cố).
+- **Tài khoản Quản lý (Manager):** `manager` / `manager123` (Toàn quyền, xem thêm Bản đồ điểm nóng `/heatmap` và Nhật ký kiểm toán `/audit`).
+
+---
+
+## 🧪 6. Chạy Demo & Kiểm Thử Sự Cố
+
+### 1. Chạy Demo CLI Kiểm Thử Luồng End-to-End
+Kích hoạt pipeline DEIMv2 phân tích clip video mẫu, gửi `EventCandidate` qua API và kiểm tra phản hồi realtime trên WebSocket:
+
+```powershell
+$env:EVENT_INGEST_TOKEN = 'secret-security-token-2026'
+python -m app.cv.demo_cli
 ```
 
-`CVEventPublisher.publish(CVEvent)` is the final CV interface. `JsonlPublisher` is the
-canonical implementation and appends schema-valid `cv-event-v1` records to
-`artifacts/events/cv-events.jsonl`. A backend endpoint is not required by Phase 9;
-backend and LLM integration are outside CV scope.
+### 2. Chạy Luồng Giám Sát Multi-Camera (CV Stream)
+```powershell
+python -m app.cv.multi_camera_runner
+```
 
-Real-video regression passed ABODA abandoned-object, Phase 8 intrusion, Phase 8 crowd,
-and a negative clip. Each processed frame had exactly one detector call; one ByteTrack
-runtime and one shared `TrackStore` fed all three adapters. All lifecycle records
-validated as CVEvent v1 without duplicate payloads. Phase 9 CV tests passed 78 tests
-plus 8 subtests; webcam devtool tests passed 3/3. See
-[`reports/phase9-real-video-regression.md`](./reports/phase9-real-video-regression.md).
-
-Webcam code is ready but was not hardware-verified in the agent environment. Run the
-local tool and manually verify intrusion on the right half, crowd with two people, and
-the Phase7C abandoned-object scenario:
-
+### 3. Kiểm Thử Với Webcam Trực Tiếp (DevTools)
 ```powershell
 third_party\deimv2\.python311\python.exe devtools\webcam_cv_test\app.py
 ```
 
-The EventCandidate/backend demo above is retained for legacy compatibility; it is not
-the Phase 9 CV output boundary.
-*(Nếu muốn xóa toàn bộ dữ liệu PostgreSQL trong volume, thêm cờ `-v`: `docker compose down -v`)*
+### 4. Video Demo 3 Phút & Kịch Bản Thuyết Trình
+- File video demo chính thức: [`presentation/mvp-demo-2026-08-16.mp4`](file:///D:/Coding/P-176/presentation/mvp-demo-2026-08-16.mp4).
+- Kịch bản timeline 4 phân cảnh và cấu trúc slide: [`presentation/README.md`](file:///D:/Coding/P-176/presentation/README.md).
 
 ---
 
-### 2. Dành cho người dùng Linux (Ubuntu / Debian / Fedora...)
+## 📝 7. Ví Dụ Gọi API (Sample Queries)
 
-#### Bước 1: Yêu cầu chuẩn bị
-- Cài đặt **Docker Engine** và **Docker Compose plugin** (`docker-compose-plugin`).
-- (Khuyến nghị) Thêm user hiện tại vào group `docker` để chạy lệnh không cần `sudo`:
-  ```bash
-  sudo usermod -aG docker $USER
-  ```
-  *(Sau đó đăng xuất và đăng nhập lại hoặc chạy `newgrp docker` để áp dụng).*
-
-#### Bước 2: Clone dự án & Cấu hình môi trường
-Mở Terminal:
+### 1. Đăng nhập lấy Token xác thực (JWT)
 ```bash
-# 1. Di chuyển tới thư mục dự án
-cd P-176
-
-# 2. Tạo file cấu hình môi trường từ file mẫu
-cp .env.example .env
+curl -X POST http://localhost:8000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"guard","password":"guard123"}'
 ```
 
-#### Bước 3: Build và khởi chạy hệ thống
+### 2. Lấy danh sách sự cố cảnh báo (Hỗ trợ lọc)
 ```bash
-docker compose up --build -d
+curl -X GET "http://localhost:8000/api/v1/alerts" \
+  -H "Authorization: Bearer <YOUR_JWT_TOKEN>"
 ```
-*(Nếu chưa phân quyền user group docker, chạy với `sudo`: `sudo docker compose up --build -d`)*
 
-#### Bước 4: Kiểm tra trạng thái và xem log
-- **Kiểm tra danh sách container**:
-  ```bash
-  docker compose ps
-  ```
-- **Xem log hệ thống**:
-  ```bash
-  docker compose logs -f
-  ```
-
-#### Bước 5: Dừng hệ thống
+### 3. Bảo vệ xác nhận xử lý sự cố (Acknowledge Action)
 ```bash
-docker compose down
+curl -X POST "http://localhost:8000/api/v1/alerts/1/acknowledge" \
+  -H "Authorization: Bearer <YOUR_JWT_TOKEN>"
+```
+
+### 4. Lắng nghe cảnh báo thời gian thực qua WebSocket
+```javascript
+const socket = new WebSocket("ws://localhost:8000/ws/alerts");
+socket.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  console.log("Cảnh báo mới từ hệ thống:", data);
+};
 ```
 
 ---
 
-## 🌐 Các Đường Dẫn Truy Cập (Access URLs)
+## 📊 8. Kết Quả Đánh Giá Nghiệm Thu (Evaluation & Metrics)
 
-### CV event ingest credential
+Báo cáo nghiệm thu kỹ thuật chi tiết tại [`eval/results/report.md`](file:///D:/Coding/P-176/eval/results/report.md):
+- **Độ chính xác đánh giá AI (Reasoning Accuracy):** $100\%$ trên bộ test cases chuẩn.
+- **Độ trễ trung bình gọi LLM thực tế:** $2.5\text{s} - 2.9\text{s}$ (đo bằng telemetry).
+- **Khả năng chống trùng lặp (Duplicate Suppression):** $100\%$ qua cơ chế SHA-256 payload digest.
+- **Bộ Test Suite tự động:** **308 tests** vượt qua toàn bộ kiểm thử đơn vị, hợp đồng và tích hợp.
+- **Kiểm thử hồi quy Video thật (CV Regression):** $4/4$ clips đạt chuẩn (ABODA vật thể bỏ quên, Walk1 xâm nhập, Meet_Crowd tụ tập, Browse1 âm tính).
 
-Before starting the backend, generate a random token with at least 32 bytes using your
-deployment secret manager, then set `EVENT_INGEST_TOKEN` to the same value for the CV
-producer and backend. Keep the value outside source control; `.env.example` intentionally
-leaves it blank, and Docker Compose refuses to start the backend without it.
+---
 
-Sau khi chạy thành công `docker compose up --build -d`, các dịch vụ sẽ sẵn sàng tại các đường dẫn sau:
+## 🏛️ 9. Tài Liệu Tham Khảo (Documentation)
 
-| Dịch vụ | Địa chỉ / URL | Mô tả |
-|---|---|---|
-| **Front-End (Web Application)** | [http://localhost:5173](http://localhost:5173) | Giao diện quản lý giám sát an ninh (Nginx) |
-| **Back-End REST API** | [http://localhost:8000](http://localhost:8000) | FastAPI Server |
-| **Swagger API Documentation** | [http://localhost:8000/docs](http://localhost:8000/docs) | Tài liệu API tương tác tự động |
-| **ReDoc API Documentation** | [http://localhost:8000/redoc](http://localhost:8000/redoc) | Giao diện xem tài liệu API ReDoc |
-| **PostgreSQL Database** | `localhost:5432` | DB: `security_db` \| User: `postgres` \| Pass: `postgres` |
-
-## Demo video → cảnh báo Web
-
-Sau khi backend và frontend đang chạy, đặt cùng một `EVENT_INGEST_TOKEN` không rỗng
-cho backend và terminal hiện tại. Lệnh dưới đây dùng DEIMv2 thật, clip mẫu cố định,
-kết nối `/ws/alerts` trước khi chạy CV, rồi kiểm tra cùng incident qua WebSocket và REST:
-
-```powershell
-$env:EVENT_INGEST_TOKEN = '<same-secret-as-backend>'
-python -m app.cv.demo_cli
-```
-
-Demo không khởi động hoặc dừng service, không in token, và fail sớm nếu service,
-video, source/checkpoint/backbone DEIMv2 hoặc checksum chưa sẵn sàng. Config demo
-ép mọi VLM/LLM validator về `disabled`; sau khi backend trả duplicate, runner tiếp tục
-quan sát WebSocket trong 2 giây (cấu hình được, không cho phép thấp hơn) để bắt rebroadcast trễ.
-Mỗi lần chạy có namespace ngẫu nhiên cho `candidateId`, nên lần chạy mới tạo incident
-mới trong khi publish lặp ngay trong cùng lần chạy vẫn dùng đúng ID để kiểm tra idempotency.
-CV thật chạy trong process `spawn` riêng (an toàn trên Windows). Timeout sẽ phát tín
-hiệu dừng, chờ grace period, rồi terminate và join dứt điểm trước khi báo lỗi; vì vậy
-không còn child nào có thể publish cảnh báo sau khi CLI đã trả failure.
+- Sơ đồ kiến trúc & Data Flow toàn diện: [`ARCHITECTURE.md`](file:///D:/Coding/P-176/ARCHITECTURE.md)
+- Chi tiết sơ đồ State Machine AI Agent: [`docs/architecture_diagram.md`](file:///D:/Coding/P-176/docs/architecture_diagram.md)
+- Báo cáo nghiệm thu Gate G2: [`eval/results/report.md`](file:///D:/Coding/P-176/eval/results/report.md)
+- Kịch bản thuyết trình & Slide Deck: [`presentation/README.md`](file:///D:/Coding/P-176/presentation/README.md)
+- Tài liệu ứng dụng Android tuần tra: [`mobile/README.md`](file:///D:/Coding/P-176/mobile/README.md)

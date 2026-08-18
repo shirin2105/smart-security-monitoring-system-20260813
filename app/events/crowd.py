@@ -1,8 +1,8 @@
 from enum import Enum
-from typing import List, Dict, Any, Optional, Set
+from typing import List, Dict, Any, Optional
 from app.common.enums import EventType, SourceEngine
 from app.common.schemas import EventCandidate, ObservationData, FrameData
-from app.common.geometry import is_point_in_polygon
+from app.common.geometry import is_point_in_polygon, scale_polygon_to_frame
 from app.common.time_utils import calculate_duration_seconds, utc_now_iso
 from app.events.base import BaseEventEngine
 from app.events.dedupe import EventDedupeManager
@@ -88,9 +88,11 @@ class CrowdEventEngine(BaseEventEngine):
         # Filter person tracks
         person_tracks = [t for t in tracks if t.class_name == "person"]
 
+        img_h, img_w = (frame_data.image.shape[:2]) if frame_data.image is not None else (None, None)
+
         for zone in self.zones:
             z_id = zone["zone_id"]
-            polygon_pts = zone["polygon"]
+            polygon_pts = scale_polygon_to_frame(zone["polygon"], frame_width=img_w, frame_height=img_h)
 
             if z_id not in self.zone_trackers:
                 self.zone_trackers[z_id] = CrowdZoneStateTracker(

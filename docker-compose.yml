@@ -47,6 +47,7 @@ services:
       - EVENT_INGEST_TOKEN=dummy
     volumes:
       - ./tests/clips:/app/tests/clips
+      - ./configs:/app/configs
     depends_on:
       db-init:
         condition: service_completed_successfully

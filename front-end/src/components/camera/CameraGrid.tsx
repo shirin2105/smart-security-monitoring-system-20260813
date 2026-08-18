@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Edit3, ShieldAlert, Video, VideoOff } from 'lucide-react';
 
 import { Grid } from '@astryxdesign/core/Grid';
@@ -10,7 +10,8 @@ import { Button } from '@astryxdesign/core/Button';
 import { AspectRatio } from '@astryxdesign/core/AspectRatio';
 
 import { api } from '../../api';
-import { Camera, CameraZone, EVENT_TYPE_LABEL, SecurityEvent } from '../../domain/types';
+import { isTrackInZone } from '../../domain/geometry';
+import { Camera, CameraZone, SecurityEvent } from '../../domain/types';
 import { EmptyState } from '../common/States';
 import { HealthDot, SourceBadge } from '../common/Badges';
 import { CameraDetailModal } from './CameraDetailModal';
@@ -70,7 +71,7 @@ export function CameraGrid({ cameras, events }: CameraGridProps) {
       ) {
         const targetTime = ((telemetry as { videoTime: number }).videoTime) % video.duration;
         const diff = Math.abs(video.currentTime - targetTime);
-        if (diff > 0.1) {
+        if (diff > 0.05) {
           video.currentTime = targetTime;
         }
       }
@@ -130,20 +131,34 @@ export function CameraGrid({ cameras, events }: CameraGridProps) {
             (z) => z.cameraId === camKey || z.cameraId === `cam_${camera.id}` || z.cameraId === String(camera.id),
           );
 
+          const telemetry =
+            telemetryMap?.[camera.id] ??
+            (telemetryMap as any)?.[`cam_${camera.id}`] ??
+            (telemetryMap as any)?.[`cam_0${camera.id}`];
+
+          const hasIntrusion = Boolean(
+            cameraZone?.polygon &&
+            cameraZone.polygon.length >= 3 &&
+            cameraZone.enabled !== false &&
+            telemetry?.tracks?.some((t: any) => {
+              const isLuggage = t.className === 'luggage' || t.className === 'bag' || t.className === 'suitcase';
+              return (
+                !isLuggage &&
+                isTrackInZone(
+                  t.bbox,
+                  telemetry.frameSize?.[0] || 1280,
+                  telemetry.frameSize?.[1] || 720,
+                  cameraZone.polygon
+                )
+              );
+            })
+          );
+
           const renderBbox = () => {
             if (!devMode || offline) return null;
 
-            const telemetry =
-              telemetryMap?.[camera.id] ??
-              (telemetryMap as Record<string, unknown>)?.[`cam_${camera.id}`] ??
-              (telemetryMap as Record<string, unknown>)?.[`cam_0${camera.id}`];
-
-            if (telemetry && (telemetry as { tracks?: Array<{ trackId: number; bbox: number[]; confidence: number }> }).tracks) {
-              const typedTelemetry = telemetry as {
-                frameSize?: [number, number];
-                tracks: Array<{ trackId: number; bbox: number[]; confidence: number }>;
-              };
-              const [frameW, frameH] = typedTelemetry.frameSize || [1280, 720];
+            if (telemetry && telemetry.tracks && telemetry.tracks.length > 0) {
+              const [frameW, frameH] = telemetry.frameSize || [1280, 720];
               const frameAspect = frameW / frameH;
               const containerAspect = 16 / 9;
 
@@ -162,7 +177,7 @@ export function CameraGrid({ cameras, events }: CameraGridProps) {
 
               return (
                 <>
-                  {(typedTelemetry.tracks || []).map((track) => {
+                  {telemetry.tracks.map((track: any) => {
                     const [x1, y1, x2, y2] = track.bbox;
                     const isPercentage = x1 <= 1 && y1 <= 1 && x2 <= 1 && y2 <= 1;
 
@@ -176,36 +191,75 @@ export function CameraGrid({ cameras, events }: CameraGridProps) {
                     const widthPct = Math.max(0, Math.min(100 - leftPct, relW * renderWidthPct));
                     const heightPct = Math.max(0, Math.min(100 - topPct, relH * renderHeightPct));
 
+                    const isLuggage = track.className === 'luggage' || track.className === 'bag' || track.className === 'suitcase';
+                    const isPerson = !isLuggage;
+
+                    const inIntrusionZone = isPerson && cameraZone && cameraZone.polygon && cameraZone.polygon.length >= 3 && cameraZone.enabled !== false
+                      ? isTrackInZone(track.bbox, frameW, frameH, cameraZone.polygon)
+                      : false;
+
+                    const isIntruder = isPerson && inIntrusionZone;
+                    const isAbandonedObject = isLuggage && active && active.eventType === 'ABANDONED_OBJECT';
+
+                    let borderColor = '#10b981';
+                    let badgeBg = '#059669';
+                    let label = `Người #${track.trackId} (${Math.round(track.confidence * 100)}%)`;
+                    let extraClass = '';
+
+                    if (isIntruder) {
+                      borderColor = '#ef4444';
+                      badgeBg = '#dc2626';
+                      label = `XÂM NHẬP #${track.trackId} (${Math.round(track.confidence * 100)}%)`;
+                      extraClass = 'animate-bbox';
+                    } else if (isAbandonedObject) {
+                      borderColor = '#f43f5e';
+                      badgeBg = '#e11d48';
+                      label = `Vật thể bỏ quên #${track.trackId}`;
+                      extraClass = 'animate-bbox';
+                    } else if (isLuggage) {
+                      borderColor = '#f59e0b';
+                      badgeBg = '#d97706';
+                      label = `Hành lý #${track.trackId}`;
+                    }
+
                     return (
                       <div
                         key={`track-${track.trackId}`}
+                        className={extraClass}
                         style={{
                           position: 'absolute',
                           left: `${leftPct}%`,
                           top: `${topPct}%`,
                           width: `${widthPct}%`,
                           height: `${heightPct}%`,
-                          border: '2px solid var(--color-success)',
-                          backgroundColor: 'color-mix(in oklch, var(--color-success) 20%, transparent)',
-                          zIndex: 30,
-                          pointerEvents: 'none',
-                          padding: 'var(--spacing-0-5)',
+                          border: `2px solid ${borderColor}`,
+                          backgroundColor: `color-mix(in srgb, ${borderColor} 20%, transparent)`,
                           borderRadius: 'var(--radius-inner)',
+                          zIndex: 30,
+                          boxSizing: 'border-box',
+                          pointerEvents: 'none',
                         }}
                       >
                         <span
                           style={{
-                            backgroundColor: 'var(--color-success)',
-                            color: 'var(--color-on-success)',
-                            padding: '2px 6px',
-                            fontSize: '11px',
-                            fontWeight: '600',
+                            position: 'absolute',
+                            bottom: 'calc(100% + 2px)',
+                            left: 0,
+                            backgroundColor: badgeBg,
+                            color: '#ffffff',
+                            padding: '1px 4px',
                             fontFamily: 'monospace',
+                            fontSize: '9px',
+                            fontWeight: 700,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
                             borderRadius: 'var(--radius-inner)',
-                            lineHeight: 1.2,
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.3)',
+                            whiteSpace: 'nowrap',
+                            pointerEvents: 'none',
                           }}
                         >
-                          #{track.trackId} ({Math.round(track.confidence * 100)}%)
+                          {label}
                         </span>
                       </div>
                     );
@@ -214,62 +268,27 @@ export function CameraGrid({ cameras, events }: CameraGridProps) {
               );
             }
 
-            if (active && active.bbox && active.bbox.length === 4) {
-              const [x1, y1, x2, y2] = active.bbox;
-              const isPercentage = x1 <= 100 && x2 <= 100 && y1 <= 100 && y2 <= 100 && x2 <= 1 && y2 <= 1;
-              let styleObj: React.CSSProperties;
-              if (isPercentage) {
-                styleObj = {
-                  left: `${x1 * 100}%`,
-                  top: `${y1 * 100}%`,
-                  width: `${(x2 - x1) * 100}%`,
-                  height: `${(y2 - y1) * 100}%`,
-                };
-              } else {
-                const isHD = x2 > 640 || y2 > 480;
-                const width = isHD ? 1280 : 640;
-                const height = isHD ? 720 : 480;
-                styleObj = {
-                  left: `${Math.max(0, Math.min(100, (x1 / width) * 100))}%`,
-                  top: `${Math.max(0, Math.min(100, (y1 / height) * 100))}%`,
-                  width: `${Math.max(0, Math.min(100, ((x2 - x1) / width) * 100))}%`,
-                  height: `${Math.max(0, Math.min(100, ((y2 - y1) / height) * 100))}%`,
-                };
-              }
-
-              return (
-                <div
-                  className="animate-bbox"
-                  style={{
-                    position: 'absolute',
-                    ...styleObj,
-                    border: '2px solid var(--color-error)',
-                    backgroundColor: 'color-mix(in oklch, var(--color-error) 20%, transparent)',
-                    zIndex: 30,
-                    pointerEvents: 'none',
-                    padding: 'var(--spacing-0-5)',
-                    borderRadius: 'var(--radius-inner)',
-                  }}
-                >
-                  <span
-                    style={{
-                      backgroundColor: 'var(--color-error)',
-                      color: 'var(--color-on-error)',
-                      padding: '2px 6px',
-                      fontSize: '11px',
-                      fontWeight: '600',
-                      fontFamily: 'monospace',
-                      borderRadius: 'var(--radius-inner)',
-                      lineHeight: 1.2,
-                    }}
-                  >
-                    {EVENT_TYPE_LABEL[active.eventType]}
-                  </span>
-                </div>
-              );
-            }
-
-            return null;
+            return (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '8px',
+                  right: '8px',
+                  zIndex: 30,
+                  borderRadius: 'var(--radius-inner)',
+                  backgroundColor: 'rgba(15, 23, 42, 0.85)',
+                  border: '1px solid rgba(16, 185, 129, 0.4)',
+                  padding: '2px 6px',
+                  fontFamily: 'monospace',
+                  fontSize: '9px',
+                  fontWeight: 500,
+                  color: '#34d399',
+                  pointerEvents: 'none',
+                }}
+              >
+                DEV: 0 tracks
+              </div>
+            );
           };
 
           return (
@@ -379,20 +398,20 @@ export function CameraGrid({ cameras, events }: CameraGridProps) {
                       >
                         <polygon
                           points={cameraZone.polygon.map((p) => `${p[0]},${p[1]}`).join(' ')}
-                          fill="color-mix(in oklch, var(--color-warning) 25%, transparent)"
-                          stroke="var(--color-warning)"
+                          fill={hasIntrusion ? 'rgba(239, 68, 68, 0.35)' : 'rgba(245, 158, 11, 0.25)'}
+                          stroke={hasIntrusion ? '#ef4444' : '#f59e0b'}
                           strokeWidth="3"
                           strokeDasharray="5 3"
                         />
                         <text
                           x={cameraZone.polygon[0][0] + 5}
                           y={cameraZone.polygon[0][1] + 20}
-                          fill="var(--color-warning)"
+                          fill={hasIntrusion ? '#ef4444' : '#f59e0b'}
                           fontSize="16"
                           fontWeight="bold"
-                          fontFamily="monospace"
+                          style={{ fontFamily: 'monospace', userSelect: 'none' }}
                         >
-                          {cameraZone.name}
+                          {hasIntrusion ? `${cameraZone.name} (XÂM NHẬP)` : cameraZone.name}
                         </text>
                       </svg>
                     )}

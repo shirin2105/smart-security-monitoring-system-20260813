@@ -66,6 +66,8 @@ export interface Camera {
 export interface EventArtifact {
   url: string;
   redactionStatus: RedactionStatus;
+  clipStartS?: number;
+  clipEndS?: number;
 }
 
 export interface EventAction {

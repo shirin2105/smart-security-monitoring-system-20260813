@@ -8,6 +8,11 @@ import json
 import math
 import numpy as np
 
+try:
+    from .placement_transition import placement_transition_features
+except ImportError:  # direct kernel import used by notebook/unit entrypoints
+    from placement_transition import placement_transition_features
+
 
 # ---------------------------------------------------------------------
 # Data types
@@ -53,8 +58,9 @@ class StationaryConfig:
 class OwnerConfig:
     near_norm: float = 0.50
     min_overlap_s: float = 0.70
-    min_association_score: float = 0.60
+    min_association_score: float = 0.45
     away_hold_s: float = 5.0
+    placement_window_s: float = 3.0
 
 
 @dataclass
@@ -64,6 +70,7 @@ class Phase7CConfig:
     stationary: StationaryConfig = field(default_factory=StationaryConfig)
     owner: OwnerConfig = field(default_factory=OwnerConfig)
     roi_polygon: Optional[List[Tuple[float, float]]] = None
+    diagnostics_enabled: bool = False
 
 
 @dataclass
@@ -109,6 +116,12 @@ class OwnerAssociation:
     overlap_frames: int
     overlap_s: float
     owner_last_near_s: Optional[float]
+    owner_last_visible_s: Optional[float] = None
+    candidates: List[dict] = field(default_factory=list)
+    rejection_reason: Optional[str] = None
+    selection_reason: Optional[str] = None
+    history_window_start_s: Optional[float] = None
+    history_window_end_s: Optional[float] = None
 
 
 @dataclass
@@ -469,23 +482,36 @@ def associate_owner(
     quality_profiles: Dict[int, TrackQualityProfile],
     cfg: OwnerConfig,
     fps_hint: float = 30.0,
+    diagnostics_enabled: bool = False,
 ) -> OwnerAssociation:
-    # Use bag history up to the start of the long stationary run.
+    physical_luggage_first_seen_s = float(physical.rows[0]["timestamp_s"])
+    history_end_s = float(stationary_run.start_s)
+    history_start_s = max(
+        physical_luggage_first_seen_s,
+        history_end_s - float(cfg.placement_window_s),
+    )
+
+    # Use bag history within placement window [history_start_s, history_end_s]
     bag_rows = [
         r for r in physical.rows
-        if float(r["timestamp_s"]) <= stationary_run.start_s
+        if history_start_s <= float(r["timestamp_s"]) <= history_end_s
     ]
     bag_by_frame = {int(r["frame_index"]): r for r in bag_rows}
 
     best = None
+    candidates = []
 
     for person_id, prs in person_tracks.items():
         prof = quality_profiles.get(person_id)
-        if prof is None or not prof.passed or prof.class_name != "person":
+        if prof is None or prof.class_name != "person":
             continue
 
         person_by_frame = {int(r["frame_index"]): r for r in prs}
         distances = []
+        distances_px = []
+        candidate_bboxes = []
+        overlap_times = []
+        synchronized_observations = []
 
         for frame_idx, bag_r in bag_by_frame.items():
             person_r = person_by_frame.get(frame_idx)
@@ -496,26 +522,36 @@ def associate_owner(
                 person_r["bbox_xyxy"],
             )
             d_norm = d / bbox_diag(person_r["bbox_xyxy"])
+            distances_px.append(float(d))
             distances.append(float(d_norm))
-
-        if not distances:
-            continue
+            candidate_bboxes.append([float(v) for v in person_r["bbox_xyxy"]])
+            overlap_times.append(float(person_r["timestamp_s"]))
+            synchronized_observations.append({
+                "timestamp_s": float(person_r["timestamp_s"]),
+                "bag_center": [float(v) for v in bag_r["center_xy"]],
+                "person_center": [float(v) for v in person_r["center_xy"]],
+                "person_bbox": [float(v) for v in person_r["bbox_xyxy"]],
+            })
 
         overlap_frames = len(distances)
         overlap_s = overlap_frames / max(fps_hint, 1e-9)
-        if overlap_s < cfg.min_overlap_s:
-            continue
-
         arr = np.asarray(distances, dtype=np.float64)
-        inside_ratio = float(np.mean(arr <= 1e-9))
-        near_ratio = float(np.mean(arr <= cfg.near_norm))
-        overlap_term = min(overlap_s / 3.0, 1.0)
-
-        score = (
-            0.65 * inside_ratio
-            + 0.25 * near_ratio
-            + 0.10 * overlap_term
+        inside_ratio = float(np.mean(arr <= 1e-9)) if len(arr) else 0.0
+        near_ratio = float(np.mean(arr <= cfg.near_norm)) if len(arr) else 0.0
+        overlap_term = min(overlap_s / max(cfg.placement_window_s, 1e-9), 1.0)
+        min_distance_norm = float(np.min(arr)) if len(arr) else None
+        proximity_ratio = (
+            max(0.0, 1.0 - min_distance_norm / max(cfg.near_norm, 1e-9))
+            if min_distance_norm is not None else 0.0
         )
+        # Closest approach is retained as diagnostic evidence. Production
+        # selection keeps the frozen containment/near/overlap weighting.
+        proximity_component = 0.65 * proximity_ratio
+        inside_component = 0.65 * inside_ratio
+        near_component = 0.25 * near_ratio
+        overlap_component = 0.10 * overlap_term
+        score = inside_component + near_component + overlap_component
+        eligible = bool(prof.passed and overlap_s >= cfg.min_overlap_s)
 
         item = {
             "person_track_id": int(person_id),
@@ -524,12 +560,60 @@ def associate_owner(
             "near_ratio": near_ratio,
             "overlap_frames": int(overlap_frames),
             "overlap_s": float(overlap_s),
+            "quality_pass": bool(prof.passed),
+            "first_seen_s": min(overlap_times) if overlap_times else None,
+            "last_seen_s": max(overlap_times) if overlap_times else None,
+            "track_age_s": max(overlap_times) - min(overlap_times) if overlap_times else 0.0,
+            "min_distance_norm": min_distance_norm,
+            # Keep diagnostic evidence bounded for long tracks.
+            "candidate_bboxes": candidate_bboxes[-5:],
         }
+        if diagnostics_enabled:
+            placement = placement_transition_features(synchronized_observations)
+            frame_indices = sorted(person_by_frame)
+            strides = np.diff(frame_indices)
+            typical_stride = float(np.median(strides)) if len(strides) else 0.0
+            item.update({
+                "inside_score_component": float(inside_component),
+                "proximity_ratio": float(proximity_ratio),
+                "proximity_score_component": float(proximity_component),
+                "near_score_component": float(near_component),
+                "overlap_score_component": float(overlap_component),
+                "overlap_term": float(overlap_term),
+                "temporal_overlap_ratio": overlap_frames / max(len(bag_by_frame), 1),
+                "candidate_eligible": eligible,
+                "candidate_selected": False,
+                "min_association_score": float(cfg.min_association_score),
+                "person_confidence": max((float(row["confidence"]) for row in prs), default=0.0),
+                "min_distance_px": float(np.min(distances_px)) if distances_px else None,
+                "candidate_present_before_stationary": bool(overlap_times and min(overlap_times) < stationary_run.start_s),
+                "candidate_present_at_stationary": int(round(stationary_run.start_s * fps_hint)) in person_by_frame,
+                "candidate_present_after_stationary": any(float(row["timestamp_s"]) > stationary_run.start_s for row in prs),
+                "person_track_fragmented": bool(
+                    len(strides) and typical_stride > 0 and np.max(strides) > 1.5 * typical_stride
+                ),
+                "placement_transition": placement,
+            })
+        candidates.append(item)
 
+        if not prof.passed or overlap_s < cfg.min_overlap_s:
+            continue
         if best is None or item["association_score"] > best["association_score"]:
             best = item
 
     if best is None or best["association_score"] < cfg.min_association_score:
+        if not candidates:
+            reason = "NO_PERSON_CANDIDATES"
+        elif not any(item["quality_pass"] for item in candidates):
+            reason = "CANDIDATE_TRACK_TOO_SHORT"
+        elif not any(item["overlap_frames"] for item in candidates):
+            reason = "OWNER_HISTORY_NOT_AVAILABLE"
+        elif not any(item["overlap_s"] >= cfg.min_overlap_s for item in candidates):
+            reason = "CANDIDATE_TRACK_TOO_SHORT"
+        elif not any(item["near_ratio"] > 0 or item["inside_ratio"] > 0 for item in candidates):
+            reason = "NO_PERSON_WITHIN_DISTANCE"
+        else:
+            reason = "CANDIDATE_SCORE_BELOW_THRESHOLD"
         return OwnerAssociation(
             physical_id=physical.physical_id,
             person_track_id=None,
@@ -539,11 +623,23 @@ def associate_owner(
             overlap_frames=int(best["overlap_frames"]) if best else 0,
             overlap_s=float(best["overlap_s"]) if best else 0.0,
             owner_last_near_s=None,
+            owner_last_visible_s=None,
+            candidates=candidates,
+            rejection_reason=reason,
+            history_window_start_s=history_start_s,
+            history_window_end_s=history_end_s,
         )
 
     owner_id = int(best["person_track_id"])
+    if diagnostics_enabled:
+        best["candidate_selected"] = True
     owner_rows = person_tracks[owner_id]
     owner_by_frame = {int(r["frame_index"]): r for r in owner_rows}
+
+    # Product Policy v2: the abandonment trigger requires the owner to be absent
+    # from the camera view, not merely standing far from the bag. Track the last
+    # frame in which the owner track is observed anywhere in the scene.
+    owner_last_visible_s = float(owner_rows[-1]["timestamp_s"]) if owner_rows else None
 
     last_near = None
     for bag_r in physical.rows:
@@ -567,6 +663,11 @@ def associate_owner(
         overlap_frames=int(best["overlap_frames"]),
         overlap_s=float(best["overlap_s"]),
         owner_last_near_s=last_near,
+        owner_last_visible_s=owner_last_visible_s,
+        candidates=candidates,
+        selection_reason="highest_association_score",
+        history_window_start_s=history_start_s,
+        history_window_end_s=history_end_s,
     )
 
 
@@ -599,6 +700,7 @@ def infer_phase7c(
     events: List[AbandonedCandidate] = []
     physical_reports = []
     owner_reports = []
+    owner_prechecks = []
     timeline_rows = []
 
     event_counter = 1
@@ -628,14 +730,25 @@ def infer_phase7c(
         chosen_event = None
 
         for run in stationary_runs:
-            # Final event location must be inside ROI if an ROI is configured.
+            # Product Policy v2: ABANDONED_OBJECT is evaluated over the full camera
+            # frame. No valid-floor ROI is used to include or exclude luggage.
             row_for_roi = nearest_row_at_or_after(physical.rows, run.confirmed_at_s)
             if row_for_roi is None:
+                owner_prechecks.append({
+                    "physical_id": physical.physical_id,
+                    "stationary_start_s": float(run.start_s),
+                    "stationary_confirmed_s": float(run.confirmed_at_s),
+                    "eligible": False,
+                    "rejection_reason": "NO_LUGGAGE_ROW_AT_STATIONARY_CONFIRM",
+                })
                 continue
-            x1, y1, x2, y2 = map(float, row_for_roi["bbox_xyxy"])
-            bottom_center = ((x1 + x2) / 2.0, y2)
-            if not point_in_polygon(bottom_center, cfg.roi_polygon):
-                continue
+            owner_prechecks.append({
+                "physical_id": physical.physical_id,
+                "stationary_start_s": float(run.start_s),
+                "stationary_confirmed_s": float(run.confirmed_at_s),
+                "eligible": True,
+                "rejection_reason": None,
+            })
 
             owner = associate_owner(
                 physical,
@@ -644,15 +757,22 @@ def infer_phase7c(
                 quality,
                 cfg.owner,
                 fps_hint=fps_hint,
+                diagnostics_enabled=cfg.diagnostics_enabled,
             )
             owner_reports.append(asdict(owner))
 
-            if owner.person_track_id is None or owner.owner_last_near_s is None:
+            if (
+                owner.person_track_id is None
+                or owner.owner_last_near_s is None
+                or owner.owner_last_visible_s is None
+            ):
                 continue
 
+            # Product Policy v2: the abandonment trigger is the owner being absent
+            # from the camera view (not merely far from the bag) for away_hold_s.
             candidate_time = max(
                 run.confirmed_at_s,
-                float(owner.owner_last_near_s) + cfg.owner.away_hold_s,
+                float(owner.owner_last_visible_s) + cfg.owner.away_hold_s,
             )
 
             # The luggage must remain in the SAME stationary run until candidate time.
@@ -706,8 +826,8 @@ def infer_phase7c(
                 ):
                     state = "STATIONARY"
 
-            if chosen_owner and chosen_owner.owner_last_near_s is not None:
-                if t >= float(chosen_owner.owner_last_near_s) + cfg.owner.away_hold_s:
+            if chosen_owner and chosen_owner.owner_last_visible_s is not None:
+                if t >= float(chosen_owner.owner_last_visible_s) + cfg.owner.away_hold_s:
                     if state == "STATIONARY":
                         state = "OWNER_AWAY"
 
@@ -758,6 +878,7 @@ def infer_phase7c(
         "summary": summary,
         "quality_report": quality_report,
         "physical_luggage": physical_reports,
+        "owner_prechecks": owner_prechecks,
         "owner_associations": owner_reports,
         "events": [asdict(e) for e in events],
         "timeline": timeline_rows,

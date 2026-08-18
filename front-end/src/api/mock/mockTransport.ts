@@ -28,7 +28,7 @@ let mockZones: CameraZone[] = [
     zoneId: 'restricted_gate',
     cameraId: 'cam_01',
     name: 'Khu vực hạn chế Cổng A',
-    polygon: [[50, 100], [590, 100], [590, 440], [50, 440]],
+    polygon: [[50, 80], [600, 80], [600, 700], [50, 700]],
     enabled: true,
   },
   {
@@ -63,6 +63,60 @@ let simulationTimer: ReturnType<typeof setInterval> | null = null;
 
 function emit(event: SecurityEvent, kind: 'created' | 'updated'): void {
   listeners.forEach((listener) => listener(event, kind));
+}
+
+function createEvent(
+  template: (typeof SIMULATION_TEMPLATES)[number],
+  includeArtifact = true,
+): SecurityEvent {
+  const severe =
+    template.effectiveSeverity === 'HIGH' || template.effectiveSeverity === 'CRITICAL';
+
+  return {
+    id: nextEventId++,
+    cameraId: template.cameraId,
+    cameraName: template.cameraName,
+    eventType: template.eventType,
+    effectiveSeverity: template.effectiveSeverity,
+    state: severe ? 'PENDING_REVIEW' : 'OPEN',
+    escalation: 'NONE',
+    description: template.description,
+    aiGenerated: true,
+    sourceType: 'SIMULATED',
+    detectedAt: new Date().toISOString(),
+    version: 1,
+    bbox: template.bbox,
+    artifact: includeArtifact
+      ? {
+          url: MOCK_CAMERAS.find((cam) => cam.id === template.cameraId)?.previewUrl ?? '',
+          redactionStatus: 'COMPLETE',
+        }
+      : undefined,
+    actions: [],
+  };
+}
+
+/** Event deterministic đồng bộ với mốc Phase7C START trong video Camera 1. */
+export function triggerCameraOneAbandonedDemo(): void {
+  const created = createEvent(
+    {
+      cameraId: 1,
+      cameraName: 'Camera Cổng Chính',
+      eventType: 'ABANDONED_OBJECT',
+      effectiveSeverity: 'HIGH',
+      description: 'Phát hiện hành lý bị bỏ quên; chủ sở hữu đã rời khỏi khu vực giám sát.',
+      bbox: [125, 293, 171, 379],
+    },
+    false,
+  );
+  created.artifact = {
+    url: '/videos/camera-1-aboda-source.h264.mp4',
+    redactionStatus: 'COMPLETE',
+    clipStartS: 33.75,
+    clipEndS: 56.75,
+  };
+  events = [created, ...events];
+  emit(created, 'created');
 }
 
 /** Dùng bởi `useAlertStream` khi chạy mock mode thay cho WebSocket thật. */
