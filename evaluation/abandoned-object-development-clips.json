@@ -1,0 +1,24 @@
+{
+  "schema": "abandoned-object-development-clips-v1",
+  "phase8_dataset_allowed": false,
+  "primary_positive": {
+    "path": "datasets/aboda-video1.avi",
+    "label": "POSITIVE",
+    "reason": "Clear fixed-camera placement, large visible bag, owner departure, and unattended dwell."
+  },
+  "review_video": "examples/aboda-video1-abandoned-bag-window.mp4",
+  "reviewed_negatives": [
+    "tests/clips/bottle-detection.mp4",
+    "tests/clips/people_detection.mp4",
+    "tests/clips/person-bicycle-car-detection.mp4",
+    "tests/clips/store-aisle-detection.mp4",
+    "tests/clips/vtest.avi",
+    "tests/clips/walking_people.mp4"
+  ],
+  "future_hard_set": [
+    "tests/clips/aban3.mp4",
+    "tests/clips/cut.mp4",
+    "tests/clips/pets2006_3.mp4"
+  ],
+  "policy": "Primary development acceptance uses ABODA plus reviewed negatives. The hard set measures future robustness and does not block the initial production baseline."
+}

@@ -1,7 +1,7 @@
 from typing import List, Dict, Any, Optional
 from app.common.enums import EventType, SourceEngine, IntrusionState
 from app.common.schemas import EventCandidate, ObservationData, FrameData
-from app.common.geometry import is_point_in_polygon, scale_polygon_to_frame
+from app.common.geometry import is_point_in_polygon
 from app.common.time_utils import calculate_duration_seconds
 from app.events.base import BaseEventEngine
 from app.events.temporal_state import TrackIntrusionStateTracker
@@ -22,8 +22,7 @@ class IntrusionEventEngine(BaseEventEngine):
         self.zones = [z for z in zones_config if z.get("camera_id") == camera_id and z.get("enabled", True)]
         
         intrusion_rules = rules_config.get("intrusion", {})
-        self.dwell_seconds = float(intrusion_rules.get("dwell_seconds", 1.0))
-        self.exit_grace_seconds = float(intrusion_rules.get("exit_grace_seconds", 0.5))
+        self.dwell_seconds = float(intrusion_rules.get("dwell_seconds", 2.0))
         self.cooldown_seconds = float(intrusion_rules.get("cooldown_seconds", 30))
 
         self.state_trackers: Dict[int, Dict[str, TrackIntrusionStateTracker]] = {}  # track_id -> {zone_id: Tracker}
@@ -33,7 +32,6 @@ class IntrusionEventEngine(BaseEventEngine):
     def evaluate(self, tracks: List[TrackState], frame_data: FrameData) -> List[EventCandidate]:
         candidates: List[EventCandidate] = []
         timestamp = frame_data.captured_at
-        img_h, img_w = (frame_data.image.shape[:2]) if frame_data.image is not None else (None, None)
 
         for track in tracks:
             if track.class_name != "person":
@@ -47,11 +45,11 @@ class IntrusionEventEngine(BaseEventEngine):
 
             for zone in self.zones:
                 z_id = zone["zone_id"]
-                polygon_pts = scale_polygon_to_frame(zone["polygon"], frame_width=img_w, frame_height=img_h)
+                polygon_pts = zone["polygon"]
 
                 if z_id not in self.state_trackers[t_id]:
                     self.state_trackers[t_id][z_id] = TrackIntrusionStateTracker(
-                        track_id=t_id, dwell_threshold=self.dwell_seconds, exit_grace_seconds=self.exit_grace_seconds
+                        track_id=t_id, dwell_threshold=self.dwell_seconds
                     )
 
                 tracker = self.state_trackers[t_id][z_id]
@@ -96,7 +94,6 @@ class IntrusionEventEngine(BaseEventEngine):
                                 confidence=track.confidence,
                                 trackCount=1,
                                 trackIds=[t_id],
-                                bbox=list(track.latest_bbox),
                                 observations=ObservationData(
                                     personCount=1,
                                     dwellSeconds=round(dwell_duration, 2),
@@ -113,6 +110,6 @@ class IntrusionEventEngine(BaseEventEngine):
                             tracker.event_generated = True
 
                 else:
-                    tracker.update_outside(timestamp)
+                    tracker.update_outside()
 
         return candidates

@@ -64,8 +64,11 @@ export interface Camera {
 }
 
 export interface EventArtifact {
-  url: string;
+  url?: string;
   redactionStatus: RedactionStatus;
+  /** Optional evidence window within a full source video. */
+  clipStartS?: number;
+  clipEndS?: number;
 }
 
 export interface EventAction {
@@ -99,22 +102,6 @@ export interface SecurityEvent {
   artifact?: EventArtifact;
   bbox?: [number, number, number, number];
   actions: EventAction[];
-}
-
-export interface TelemetryTrack {
-  trackId: number;
-  className: string;
-  confidence: number;
-  bbox: [number, number, number, number];
-}
-
-export interface CameraTelemetry {
-  cameraId: string;
-  numericCameraId: number;
-  timestamp: string;
-  frameSize?: [number, number];
-  videoTime?: number;
-  tracks: TelemetryTrack[];
 }
 
 /** HIGH/CRITICAL là "severe" — đi nhánh review bắt buộc của Manager. */
@@ -173,12 +160,3 @@ export const ROLE_LABEL: Record<Role, string> = {
   GUARD: 'Bảo vệ trực',
   MANAGER: 'Quản lý an ninh',
 };
-
-export interface CameraZone {
-  zoneId: string;
-  cameraId: string;
-  name: string;
-  polygon: [number, number][];
-  enabled: boolean;
-}
-

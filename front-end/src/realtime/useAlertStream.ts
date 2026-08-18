@@ -12,7 +12,7 @@ import { isMockMode } from '../api';
 import { WS_URL } from '../api/config';
 import { RawIncident, toEvent } from '../api/adapters';
 import { subscribeMockStream } from '../api/mock/mockTransport';
-import { CameraTelemetry, SecurityEvent } from '../domain/types';
+import { SecurityEvent } from '../domain/types';
 
 export type StreamStatus = 'connecting' | 'open' | 'reconnecting' | 'offline';
 
@@ -22,8 +22,6 @@ interface StreamHandlers {
   onEventUpdated: (eventId: number) => void;
   /** Chạy sau mỗi lần kết nối thành công, để đồng bộ lại bằng REST. */
   onReconcile: () => void;
-  /** Nhận frame telemetry (bounding box realtime từ CV). */
-  onTelemetryReceived?: (telemetry: CameraTelemetry) => void;
 }
 
 const MAX_BACKOFF_MS = 15_000;
@@ -103,8 +101,6 @@ export function useAlertStream(handlers: StreamHandlers): {
             if (acceptOnce(event)) handlersRef.current.onEventCreated(event);
           } else if (payload.type === 'ALERT_UPDATED' && payload.incident_id != null) {
             handlersRef.current.onEventUpdated(Number(payload.incident_id));
-          } else if (payload.type === 'FRAME_TELEMETRY' && payload.numericCameraId != null) {
-            handlersRef.current.onTelemetryReceived?.(payload as CameraTelemetry);
           }
         } catch {
           // Message hỏng không được làm sập kênh — bỏ qua và chờ message sau.

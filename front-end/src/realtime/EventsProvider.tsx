@@ -17,8 +17,8 @@ import {
 
 import { api } from '../api';
 import { useAuth } from '../auth/AuthContext';
+import { SecurityEvent } from '../domain/types';
 import { useToast } from '../hooks/useToast';
-import { CameraTelemetry, SecurityEvent } from '../domain/types';
 import { StreamStatus, useAlertStream } from './useAlertStream';
 
 /** Số event giữ trong feed realtime của dashboard. */
@@ -26,7 +26,6 @@ const FEED_SIZE = 50;
 
 interface EventsContextValue {
   events: SecurityEvent[];
-  telemetryMap: Record<number, CameraTelemetry>;
   loading: boolean;
   error: unknown;
   streamStatus: StreamStatus;
@@ -56,7 +55,6 @@ export function EventsProvider({ children }: { children: ReactNode }) {
   const { user, reportApiError } = useAuth();
   const { warning, error: toastError } = useToast();
   const [events, setEvents] = useState<SecurityEvent[]>([]);
-  const [telemetryMap, setTelemetryMap] = useState<Record<number, CameraTelemetry>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
   const [revision, setRevision] = useState(0);
@@ -84,13 +82,6 @@ export function EventsProvider({ children }: { children: ReactNode }) {
   const upsert = useCallback((event: SecurityEvent) => {
     setEvents((list) => mergeById(list, event));
     setRevision((value) => value + 1);
-  }, []);
-
-  const handleTelemetry = useCallback((telemetry: CameraTelemetry) => {
-    setTelemetryMap((prev) => ({
-      ...prev,
-      [telemetry.numericCameraId]: telemetry,
-    }));
   }, []);
 
   const handleEventCreated = useCallback(
@@ -133,7 +124,6 @@ export function EventsProvider({ children }: { children: ReactNode }) {
   const { status: streamStatus } = useAlertStream({
     onEventCreated: handleEventCreated,
     onEventUpdated: refetchOne,
-    onTelemetryReceived: handleTelemetry,
     onReconcile: () => {
       // Chỉ tải khi đã đăng nhập — tránh gọi API rồi nhận 401 ở màn login.
       if (userRef.current) void reload();
@@ -151,7 +141,6 @@ export function EventsProvider({ children }: { children: ReactNode }) {
   const value = useMemo<EventsContextValue>(
     () => ({
       events,
-      telemetryMap,
       loading,
       error,
       streamStatus,
@@ -160,7 +149,7 @@ export function EventsProvider({ children }: { children: ReactNode }) {
       upsert,
       triggerSimulation,
     }),
-    [events, telemetryMap, loading, error, streamStatus, revision, reload, upsert, triggerSimulation],
+    [events, loading, error, streamStatus, revision, reload, upsert, triggerSimulation],
   );
 
   return <EventsContext.Provider value={value}>{children}</EventsContext.Provider>;

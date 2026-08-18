@@ -1,0 +1,24 @@
+{
+  "status": "ROI_POLICY_UNRESOLVED",
+  "benchmark_version": "phase11b-final-v1",
+  "benchmark_roi": "CENTRAL_ROI",
+  "in_policy_positive_count": 0,
+  "tp": 0,
+  "fp": 0,
+  "fn": 0,
+  "precision": null,
+  "recall": null,
+  "f1": null,
+  "median_delay_s": null,
+  "duplicate_rate": null,
+  "first_failing_stage_distribution": {},
+  "negative_safety": {
+    "expected_clips": 15,
+    "completed_clips": 15,
+    "abandoned_starts": 0,
+    "false_alarms_per_hour": 0.0,
+    "pass": true
+  },
+  "run_manifest": "artifacts\\phase11b_final\\production-roi-run-v3.json",
+  "metrics_note": "Positive metrics and stage distribution require human-adjudicated positives."
+}

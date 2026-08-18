@@ -50,7 +50,7 @@ def test_header_id_wins_over_body_id(tmp_path):
 
 def test_accept_failure_returns_error_outcome(tmp_path):
     intake = PersistedIntake(storage_dir=str(tmp_path))
-    outcome = intake.accept(_candidate("bad\0id"))
+    outcome = intake.accept(_candidate('bad"id'))
 
     assert outcome.status == "ERROR"
     assert outcome.error is not None

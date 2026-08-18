@@ -15,8 +15,3 @@ class CVEventPublisher(ABC):
     def publish(self, event: CVEvent) -> bool:
         """Publish one schema-valid CVEvent v1 record."""
         pass
-
-    def publish_telemetry(self, telemetry: dict) -> bool:
-        """Publish real-time frame telemetry (bounding boxes). Returns True if successful."""
-        return True
-

@@ -1,0 +1,24 @@
+runtime_performance:
+  profile: BALANCED
+  target_inference_fps:
+    fast: 10
+    balanced: 7
+    accurate: 4
+  latency_budget_ms:
+    preferred: 500
+    acceptable: 1000
+    overloaded: 1500
+  adaptive:
+    enabled: true
+    high_res_area_threshold: 1500000
+    tile_profile: tile768_overlap20
+    min_mode_hold_s: 5.0
+  scheduler:
+    policy: round_robin
+    starvation_threshold_ms: 1500
+  overload:
+    degraded_latency_ms: 700
+    overloaded_latency_ms: 1500
+    min_degrade_hold_s: 2.0
+    recovery_hold_s: 5.0
+    dropped_ratio_high: 0.30

@@ -1,0 +1,29 @@
+{
+  "version": "phase11b-final-v1",
+  "status": "ROI_POLICY_UNRESOLVED",
+  "positive_clips": [],
+  "generic_negative_clips": [
+    "Browse1",
+    "Browse2",
+    "Browse3",
+    "Browse4",
+    "Meet_Crowd",
+    "Meet_Split_3rdGuy",
+    "Meet_WalkSplit",
+    "Meet_WalkTogether1",
+    "Meet_WalkTogether2",
+    "Rest_InChair",
+    "Walk1",
+    "Walk2",
+    "Walk3",
+    "WalkByShop1cor",
+    "WalkByShop1front"
+  ],
+  "excluded_pending_human": [
+    "LeftBag",
+    "LeftBag_AtChair",
+    "LeftBag_PickedUp",
+    "LeftBox"
+  ],
+  "source_manifest": "phase8_dataset/manifest.json"
+}

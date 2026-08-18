@@ -7,11 +7,11 @@
  * nhánh lỗi 403/409 của BAC-53 kiểm chứng được mà không cần backend.
  */
 
-import { ActionType, CameraZone, EventAction, SecurityEvent, User } from '../../domain/types';
+import { ActionType, EventAction, SecurityEvent, User } from '../../domain/types';
 import { allowedActions, reasonRequired } from '../../domain/permissions';
 import { ApiError } from '../errors';
 import { applyQuery } from '../query';
-import { ActionPayload, ApiTransport, IncidentQuery, LoginResult } from '../types';
+import { ActionPayload, ApiTransport, IncidentQuery, LoginResult, StreamClockEntry } from '../types';
 import { MOCK_CAMERAS, MOCK_EVENTS, MOCK_USERS, SIMULATION_TEMPLATES } from './fixtures';
 
 /* --------------------------------- state ------------------------------------ */
@@ -22,23 +22,6 @@ let events: SecurityEvent[] = MOCK_EVENTS.map((event) => ({
 }));
 let nextEventId = 200;
 let nextActionId = 10_000;
-
-let mockZones: CameraZone[] = [
-  {
-    zoneId: 'restricted_gate',
-    cameraId: 'cam_01',
-    name: 'Khu vực hạn chế Cổng A',
-    polygon: [[50, 80], [600, 80], [600, 700], [50, 700]],
-    enabled: true,
-  },
-  {
-    zoneId: 'lobby_area',
-    cameraId: 'cam_02',
-    name: 'Khu vực sảnh',
-    polygon: [[50, 50], [1200, 50], [1200, 700], [50, 700]],
-    enabled: true,
-  },
-];
 
 let actorGetter: () => User | null = () => null;
 
@@ -260,48 +243,13 @@ export const mockTransport: ApiTransport = {
     const template =
       SIMULATION_TEMPLATES[Math.floor(Math.random() * SIMULATION_TEMPLATES.length)];
 
-    const severe =
-      template.effectiveSeverity === 'HIGH' || template.effectiveSeverity === 'CRITICAL';
-
-    const created: SecurityEvent = {
-      id: nextEventId++,
-      cameraId: template.cameraId,
-      cameraName: template.cameraName,
-      eventType: template.eventType,
-      effectiveSeverity: template.effectiveSeverity,
-      state: severe ? 'PENDING_REVIEW' : 'OPEN',
-      escalation: 'NONE',
-      description: template.description,
-      aiGenerated: true,
-      sourceType: 'SIMULATED',
-      detectedAt: new Date().toISOString(),
-      version: 1,
-      bbox: template.bbox,
-      artifact: {
-        url: MOCK_CAMERAS.find((cam) => cam.id === template.cameraId)?.previewUrl ?? '',
-        redactionStatus: 'COMPLETE',
-      },
-      actions: [],
-    };
+    const created = createEvent(template);
 
     events = [created, ...events];
     emit(created, 'created');
   },
 
-  async getZones(): Promise<CameraZone[]> {
-    await latency();
-    return [...mockZones];
-  },
-
-  async saveZone(zone: CameraZone): Promise<CameraZone> {
-    await latency();
-    const idx = mockZones.findIndex((z) => z.zoneId === zone.zoneId || z.cameraId === zone.cameraId);
-    if (idx >= 0) {
-      mockZones[idx] = zone;
-    } else {
-      mockZones.push(zone);
-    }
-    return zone;
+  async getStreamClock(): Promise<StreamClockEntry[]> {
+    return [];
   },
 };
-

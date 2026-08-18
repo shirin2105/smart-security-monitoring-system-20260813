@@ -122,7 +122,7 @@ async def _local_execution(config: dict, run_id: str, factory: Callable[..., obj
             raise DemoFailure("CV test executor: worker did not stop") from exc
         raise DemoFailure("CV timeout: worker stopped before post-timeout publish") from exc
     accepted = _receipt(getattr(worker.publisher, "last_receipt", None))
-    matching = next((item for item in candidates if accepted and item.event_id == accepted["candidate_id"]), None)
+    matching = next((item for item in candidates if accepted and getattr(item, "event_id", getattr(item, "candidateId", None)) == accepted["candidate_id"]), None)
     duplicate = None
     if matching is not None and worker.publisher.publish(matching):
         duplicate = _receipt(worker.publisher.last_receipt)

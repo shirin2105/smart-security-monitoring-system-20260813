@@ -66,23 +66,23 @@ def _payload_hash(payload: dict) -> str:
 
 def assessment_snapshot(payload: dict, camera_id: int) -> dict:
     """Return only policy-approved, non-identifying event metadata."""
-    observations = payload["observations"]
+    observations = payload.get("observations") or {}
     return {
         "cameraId": camera_id,
         "zoneId": payload.get("zoneId"),
-        "eventType": payload["eventType"],
-        "detectedAt": payload["detectedAt"],
-        "firstSeenAt": payload["firstSeenAt"],
-        "lastSeenAt": payload["lastSeenAt"],
-        "confidence": payload["confidence"],
-        "trackCount": payload["trackCount"],
+        "eventType": payload.get("eventType"),
+        "detectedAt": str(payload.get("detectedAt")),
+        "firstSeenAt": str(payload.get("firstSeenAt")),
+        "lastSeenAt": str(payload.get("lastSeenAt")),
+        "confidence": float(payload.get("confidence", 0.0)),
+        "trackCount": int(payload.get("trackCount", 1)),
         "observations": {
             key: observations.get(key)
             for key in ("personCount", "dwellSeconds", "insideZone", "stationarySeconds", "ownerAbsentSeconds")
         },
-        "modelVersion": payload["modelVersion"],
-        "ruleVersion": payload["ruleVersion"],
-        "policyVersion": payload["policyVersion"],
+        "modelVersion": str(payload.get("modelVersion", "deimv2-phase7a")),
+        "ruleVersion": str(payload.get("ruleVersion", "intrusion-rule-v1")),
+        "policyVersion": int(payload.get("policyVersion", 1)),
     }
 
 
@@ -155,8 +155,10 @@ async def ingest_event_candidate(payload: dict) -> dict:
             db.commit()
         except IntegrityError:
             db.rollback()
-            existing = db.query(Incident).filter(Incident.candidate_id == candidate_id).one()
-            return _duplicate_result(existing, digest, db)
+            existing = db.query(Incident).filter(Incident.candidate_id == candidate_id).first()
+            if existing:
+                return _duplicate_result(existing, digest, db)
+            raise
         db.refresh(incident)
         camera = db.query(Camera).filter(Camera.id == camera_id).first()
         incident_payload = _incident_payload(incident, camera.name if camera else f"Camera #{camera_id}")

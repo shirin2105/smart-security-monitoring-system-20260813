@@ -86,6 +86,10 @@ class CVEventManager:
         self._active.clear()
         return events
 
+    def has_active_events(self) -> bool:
+        """Return True while any event lifecycle is open on this camera."""
+        return bool(self._active)
+
     def discard(self, event_id: str) -> None:
         """Forget a lifecycle whose START could not cross the publisher boundary."""
         self._active = {

@@ -1,48 +1,34 @@
 cameras:
   - camera_id: cam_01
-    name: Camera Cổng Chính
+    name: Cổng kỹ thuật
     source_type: SIMULATED
     source_uri: ./tests/clips/walking_people.mp4
-    location: Cổng A - Tầng 1
+    location: Gate A
     inference_fps: 5
     enabled: true
 
   - camera_id: cam_02
-    name: Camera Sảnh Chờ
+    name: Sảnh chính
     source_type: SIMULATED
-    source_uri: ./tests/clips/people_detection.mp4
-    location: Sảnh Tòa Nhà - Tầng 1
+    source_uri: ./tests/clips/aboda-video1.mp4
+    location: Lobby
     inference_fps: 5
     enabled: true
 
-  - camera_id: cam_03
-    name: Camera Hàng Rào Tây
-    source_type: SIMULATED
-    source_uri: ./tests/clips/aban3.mp4
-    location: Khu Vực Hàng Rào - Phía Tây
+  - camera_id: rtsp_test_01
+    name: RTSP Test Camera
+    source_type: RTSP
+    source_uri: ${RTSP_TEST_URL}
     inference_fps: 5
-    enabled: true
-
-  - camera_id: cam_04
-    name: Camera Phòng Server
-    source_type: SIMULATED
-    source_uri: ./tests/clips/pets2006_3.mp4
-    location: Khai Thác Kỹ Thuật - Tầng Hầm
-    inference_fps: 5
-    enabled: true
-
-  - camera_id: cam_05
-    name: Camera Bãi Xe B1
-    source_type: SIMULATED
-    source_uri: ./tests/clips/store-aisle-detection.mp4
-    location: Bãi Xe Ô Tô - Tầng B1
-    inference_fps: 5
-    enabled: true
-
-  - camera_id: cam_06
-    name: Camera Hành Lang T4
-    source_type: SIMULATED
-    source_uri: ./tests/clips/person-bicycle-car-detection.mp4
-    location: Hành Lang Văn Phòng - Tầng 4
-    inference_fps: 5
-    enabled: true
+    enabled: false
+    rtsp:
+      open_timeout_ms: 5000
+      read_timeout_ms: 5000
+    reconnect:
+      enabled: true
+      initial_backoff_s: 1.0
+      max_backoff_s: 15.0
+      multiplier: 2.0
+    continuity:
+      grace_s: 3.0
+      reset_after_s: 5.0

@@ -1,0 +1,58 @@
+{
+  "schema": "placement-transition-test-clips-v1",
+  "source_root": "tests/clips",
+  "phase8_dataset_allowed": false,
+  "review_method": "12-frame local contact sheet plus existing project visual-review evidence",
+  "clips": [
+    {
+      "clip": "aban3.mp4",
+      "label": "POSITIVE",
+      "reason": "Person departs while the placed red object remains unattended in the monitored scene."
+    },
+    {
+      "clip": "cut.mp4",
+      "label": "POSITIVE",
+      "reason": "Person leaves the stair area while the black bag remains in place."
+    },
+    {
+      "clip": "pets2006_3.mp4",
+      "label": "POSITIVE",
+      "reason": "Person and bag arrive together; the bag remains at the platform after the person departs."
+    },
+    {
+      "clip": "bottle-detection.mp4",
+      "label": "NEGATIVE",
+      "reason": "Bottle manipulation scene; no person-luggage abandonment scenario."
+    },
+    {
+      "clip": "people_detection.mp4",
+      "label": "NEGATIVE",
+      "reason": "Pedestrian corridor scene without a visible unattended luggage transition."
+    },
+    {
+      "clip": "person-bicycle-car-detection.mp4",
+      "label": "NEGATIVE",
+      "reason": "Parking-area people, bicycle, and vehicle activity without unattended luggage."
+    },
+    {
+      "clip": "store-aisle-detection.mp4",
+      "label": "NEGATIVE",
+      "reason": "Retail aisle pedestrian activity without a visible luggage placement-and-departure event."
+    },
+    {
+      "clip": "vtest.avi",
+      "label": "NEGATIVE",
+      "reason": "Outdoor pedestrian activity without a confirmed unattended luggage event."
+    },
+    {
+      "clip": "walking_people.mp4",
+      "label": "NEGATIVE",
+      "reason": "Metro pedestrian flow without a visible unattended luggage event."
+    },
+    {
+      "clip": "walking_people_browser.webm",
+      "label": "EXCLUDED_DUPLICATE",
+      "reason": "Duplicate presentation of walking_people content; excluded to avoid double-counting."
+    }
+  ]
+}

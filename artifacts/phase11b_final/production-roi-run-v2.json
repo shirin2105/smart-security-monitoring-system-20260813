@@ -1,0 +1,132 @@
+{
+  "schema": "phase11-inference-run-v1",
+  "clips": [
+    {
+      "clip_id": "Browse1",
+      "source_sha256": "fafff382d83c7f091dc47396dee82159fb88c0d951b649b6f17afc2b0a914380",
+      "processed_frames": 348,
+      "lifecycle_records": 42,
+      "completed": true
+    },
+    {
+      "clip_id": "Browse2",
+      "source_sha256": "c1decc9a72a48133674227cf64ad79adbde5dbd9239c45f1e868056ada9a0851",
+      "processed_frames": 292,
+      "lifecycle_records": 5,
+      "completed": true
+    },
+    {
+      "clip_id": "Browse3",
+      "source_sha256": "0ed6cf6287f4b1fc96174f62d0d42340f597538334e8fd08ddc9fbb0840391ba",
+      "processed_frames": 304,
+      "lifecycle_records": 11,
+      "completed": true
+    },
+    {
+      "clip_id": "Browse4",
+      "source_sha256": "7ce2cd82e77ab7e2c572802dbcae57b8be20eff55c2f3de47770185246f37c12",
+      "processed_frames": 380,
+      "lifecycle_records": 46,
+      "completed": true
+    },
+    {
+      "clip_id": "Meet_Crowd",
+      "source_sha256": "223f01cdd4c6c31121a93387cb4e39305c2f6f37254d726121f39cac3729689c",
+      "processed_frames": 164,
+      "lifecycle_records": 32,
+      "completed": true
+    },
+    {
+      "clip_id": "Meet_Split_3rdGuy",
+      "source_sha256": "5d9780dac601c9b7c76da169cb81bd50ea5257ce1fdc9218ae071ced0ead204f",
+      "processed_frames": 308,
+      "lifecycle_records": 42,
+      "completed": true
+    },
+    {
+      "clip_id": "Meet_WalkSplit",
+      "source_sha256": "91a5b5c2a3060a02ebd1ee4264ab78ae7681e02d17d16c2546fcc7751c91805e",
+      "processed_frames": 208,
+      "lifecycle_records": 32,
+      "completed": true
+    },
+    {
+      "clip_id": "Meet_WalkTogether1",
+      "source_sha256": "95969a486f39ffd7a9a0365db070aba89062ae78c021ef1afc7cabff5e9a6452",
+      "processed_frames": 236,
+      "lifecycle_records": 19,
+      "completed": true
+    },
+    {
+      "clip_id": "Meet_WalkTogether2",
+      "source_sha256": "e7ac8ccbc4f268b4da68f6a698f5077a3f74a8f69e9f245f7e3b46443f280a91",
+      "processed_frames": 276,
+      "lifecycle_records": 35,
+      "completed": true
+    },
+    {
+      "clip_id": "Rest_InChair",
+      "source_sha256": "19b32edd0fe6ad0c0243f3c94adc787ffee28d8a74cb8ca73473fdfb996c423a",
+      "processed_frames": 336,
+      "lifecycle_records": 40,
+      "completed": true
+    },
+    {
+      "clip_id": "Walk1",
+      "source_sha256": "a5d6dc7d7def01c1bdaeea8ff620195c148b366e1a52589bf4e46f15b6daa0c2",
+      "processed_frames": 204,
+      "lifecycle_records": 16,
+      "completed": true
+    },
+    {
+      "clip_id": "Walk2",
+      "source_sha256": "b0096abea4a99c67b78d46e37fc5abae7f510b81ff3712911c3295656d3aa8b8",
+      "processed_frames": 352,
+      "lifecycle_records": 5,
+      "completed": true
+    },
+    {
+      "clip_id": "Walk3",
+      "source_sha256": "ff308985f127652527f67675516ca362fd21531c4a24e3fe055fec3fcb78c407",
+      "processed_frames": 460,
+      "lifecycle_records": 51,
+      "completed": true
+    },
+    {
+      "clip_id": "WalkByShop1cor",
+      "source_sha256": "8adc5aa3a54080fc389f47d5d44e6a326e592fd8843db645ab1d7d5af079183f",
+      "processed_frames": 786,
+      "lifecycle_records": 54,
+      "completed": true
+    },
+    {
+      "clip_id": "WalkByShop1front",
+      "source_sha256": "cf2138e7f69ad2700d025eaa39b683716792b4f972170faa7b9b1b99672858ee",
+      "processed_frames": 786,
+      "lifecycle_records": 13,
+      "completed": true
+    }
+  ],
+  "phase7c_valid_floor_roi_polygon": [
+    [
+      115,
+      115
+    ],
+    [
+      269,
+      115
+    ],
+    [
+      269,
+      259
+    ],
+    [
+      115,
+      259
+    ]
+  ],
+  "predictions_path": "artifacts\\phase11b_final\\predictions-negatives-production-roi-v2.jsonl",
+  "predictions_sha256": "db4009a1197e2d21b494e03403457b0e43f95c9be39ff701d0e0a63d1adcc447",
+  "event_rules_sha256": "c0620a6c4b8eb003c4298d10aa1960a9467974b69b5d51ebf65f2d2768a6fa1d",
+  "inference_script_sha256": "2612f7e5b5e658fc4448487a9790e362561c7b3e2536d4e8570cd77d896e1a4b"
+}

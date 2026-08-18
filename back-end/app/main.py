@@ -6,7 +6,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from app.api import alerts, auth, cameras, events_ingest, zones
+from app.api import alerts, auth, cameras, events_ingest
 from app.db.database import init_db_and_seed
 from app.services.websocket import manager
 
@@ -50,7 +50,6 @@ app.include_router(auth.router)
 app.include_router(cameras.router)
 app.include_router(alerts.router)
 app.include_router(events_ingest.router)
-app.include_router(zones.router)
 
 # Serve video clips làm nguồn camera giả lập cho MVP
 candidate_paths = [

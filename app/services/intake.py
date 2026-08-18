@@ -106,7 +106,7 @@ class PersistedIntake:
                 candidate_id=candidate_id,
                 stored_uri=f"/backend/events/candidate_{candidate_id}.json",
             )
-        except (OSError, ValueError) as exc:
+        except OSError as exc:
             return IntakeOutcome(
                 status="ERROR",
                 candidate_id=candidate_id,

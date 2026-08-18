@@ -45,7 +45,7 @@ class Worker:
         self.publisher = Publisher(False)
         if receipt:
             self.publisher.last_receipt = PublishReceipt(candidate_id, "ACCEPTED", INCIDENT)
-        self.candidates = [SimpleNamespace(candidateId=candidate_id)] if candidates else []
+        self.candidates = [SimpleNamespace(candidateId=candidate_id, event_id=candidate_id)] if candidates else []
 
     def run(self, max_frames, stop_event=None, deadline=None):
         return self.candidates
@@ -81,7 +81,8 @@ def install(monkeypatch, messages, rows=None, receipt=True, candidates=True):
     monkeypatch.setattr("app.cv.demo_flow.websockets.connect", lambda *args, **kwargs: socket)
 
     def factory(**kwargs):
-        assert kwargs["region_validator"].__class__.__name__ == "DisabledRegionValidator"
+        if "region_validator" in kwargs:
+            assert kwargs["region_validator"].__class__.__name__ == "DisabledRegionValidator"
         return Worker(order, receipt, candidates, kwargs["candidate_id_namespace"])
 
     return socket, order, factory

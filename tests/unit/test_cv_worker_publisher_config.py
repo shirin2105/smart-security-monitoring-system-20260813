@@ -41,6 +41,23 @@ def test_invalid_phase7c_config_fails_during_construction(monkeypatch):
         raise AssertionError("invalid Phase7C config must fail before frame processing")
 
 
+def test_invalid_phase7c_debug_config_fails_during_construction(monkeypatch):
+    rules = {"abandoned_object": {"phase7c": {"debug": {"enabled": "yes"}}}}
+    monkeypatch.setattr(type(__import__("app.cv.worker", fromlist=["settings"]).settings),
+                        "event_rules", property(lambda self: rules))
+
+    try:
+        CVWorker(
+            camera_id="cam_test",
+            detector=Mock(),
+            tracker=SimpleNamespace(track=lambda detections, frame: []),
+        )
+    except ValueError as error:
+        assert "debug.enabled" in str(error)
+    else:
+        raise AssertionError("invalid Phase7C debug config must fail before frame processing")
+
+
 def test_namespaced_failed_start_is_rolled_back_without_orphan_end():
     manager = CVEventManager("cam_test", run_id="run")
     signal = EventSignal(

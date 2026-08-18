@@ -81,7 +81,6 @@ class EventCandidate(BaseModel):
     confidence: float
     trackCount: int = 1
     trackIds: list[int] = Field(default_factory=list)
-    bbox: list[float] | None = None
 
     observations: ObservationData
     modelVersion: str = "deimv2-phase7a"

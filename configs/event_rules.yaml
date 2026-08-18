@@ -1,7 +1,7 @@
 intrusion:
-  dwell_seconds: 0.5
-  exit_grace_seconds: 1
-  cooldown_seconds: 0.5
+  dwell_seconds: 2.0
+  exit_grace_seconds: 1.0
+  cooldown_seconds: 30
 
 crowd:
   count_threshold: 8
@@ -11,6 +11,10 @@ crowd:
 
 abandoned_object:
   phase7c:
+    debug:
+      enabled: false
+      emit_trace_jsonl: false
+      trace_output_dir: artifacts/phase11b/traces
     valid_floor_roi_polygon: null
     quality:
       window_s: 2.0

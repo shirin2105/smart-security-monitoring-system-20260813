@@ -1,0 +1,27 @@
+{
+  "version": "phase11b-final-roi-v1",
+  "status": "UNCHANGED_PENDING_HUMAN",
+  "event_type": "ABANDONED_OBJECT",
+  "coordinate_mode": "pixel",
+  "default_polygon": [
+    [
+      115,
+      115
+    ],
+    [
+      269,
+      115
+    ],
+    [
+      269,
+      259
+    ],
+    [
+      115,
+      259
+    ]
+  ],
+  "camera_overrides": {},
+  "diagnostic_no_roi_is_production_default": false,
+  "source": "docs/phase11/BENCHMARK_FREEZE.md"
+}

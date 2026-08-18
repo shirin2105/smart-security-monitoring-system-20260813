@@ -1,0 +1,19 @@
+clip_id,gt_event_id,gt_trigger_s,actual_people_visible,runtime_threshold,runtime_hold_s,sampling_rate,first_count_reached_s,held_long_enough,prediction_emitted,primary_reason,notes
+WalkByShop1cor,GT-WalkByShop1cor-CROWD_THRESHOLD-1,80.64,,3,4.0,1/5,76.64,1,yes,NONE,genuine crowd; matches hardened GT (matched by event_id)
+Browse1,GT-Browse1-CROWD_THRESHOLD-1,0.0,,3,4.0,1/5,,0,no,GT_TIMING_MISMATCH,heuristic fired at clip start (crowd present from t=0)
+Browse3,GT-Browse3-CROWD_THRESHOLD-1,26.16,,3,4.0,1/5,,0,no,ROI_ERROR,hardened: count outside central ROI or did not sustain 4s hold
+LeftBag,GT-LeftBag-CROWD_THRESHOLD-1,0.0,,3,4.0,1/5,,0,no,GT_TIMING_MISMATCH,heuristic fired at clip start (crowd present from t=0)
+LeftBag_AtChair,GT-LeftBag_AtChair-CROWD_THRESHOLD-1,0.0,,3,4.0,1/5,,0,no,GT_TIMING_MISMATCH,heuristic fired at clip start (crowd present from t=0)
+LeftBag_BehindChair,GT-LeftBag_BehindChair-CROWD_THRESHOLD-1,33.8,,3,4.0,1/5,,0,no,ROI_ERROR,hardened: count outside central ROI or did not sustain 4s hold
+Meet_Crowd,GT-Meet_Crowd-CROWD_THRESHOLD-1,2.76,,3,4.0,1/5,,0,no,ROI_ERROR,hardened: count outside central ROI or did not sustain 4s hold
+Meet_Split_3rdGuy,GT-Meet_Split_3rdGuy-CROWD_THRESHOLD-1,12.8,,3,4.0,1/5,,0,no,ROI_ERROR,hardened: count outside central ROI or did not sustain 4s hold
+Meet_WalkSplit,GT-Meet_WalkSplit-CROWD_THRESHOLD-1,0.04,,3,4.0,1/5,,0,no,GT_TIMING_MISMATCH,heuristic fired at clip start (crowd present from t=0)
+Meet_WalkSplit,GT-Meet_WalkSplit-CROWD_THRESHOLD-2,2.72,,3,4.0,1/5,,0,no,ROI_ERROR,hardened: count outside central ROI or did not sustain 4s hold
+Rest_InChair,GT-Rest_InChair-CROWD_THRESHOLD-1,1.56,,3,4.0,1/5,,0,no,ROI_ERROR,hardened: count outside central ROI or did not sustain 4s hold
+Walk1,GT-Walk1-CROWD_THRESHOLD-1,2.52,,3,4.0,1/5,,0,no,ROI_ERROR,hardened: count outside central ROI or did not sustain 4s hold
+Walk1,GT-Walk1-CROWD_THRESHOLD-2,9.44,,3,4.0,1/5,,0,no,ROI_ERROR,hardened: count outside central ROI or did not sustain 4s hold
+Walk2,GT-Walk2-CROWD_THRESHOLD-1,0.0,,3,4.0,1/5,,0,no,GT_TIMING_MISMATCH,heuristic fired at clip start (crowd present from t=0)
+Walk2,GT-Walk2-CROWD_THRESHOLD-2,2.8,,3,4.0,1/5,,0,no,ROI_ERROR,hardened: count outside central ROI or did not sustain 4s hold
+Walk2,GT-Walk2-CROWD_THRESHOLD-3,11.8,,3,4.0,1/5,,0,no,ROI_ERROR,hardened: count outside central ROI or did not sustain 4s hold
+Walk2,GT-Walk2-CROWD_THRESHOLD-4,32.0,,3,4.0,1/5,,0,no,ROI_ERROR,hardened: count outside central ROI or did not sustain 4s hold
+WalkByShop1front,GT-WalkByShop1front-CROWD_THRESHOLD-1,73.8,,3,4.0,1/5,,0,no,ROI_ERROR,hardened: count outside central ROI or did not sustain 4s hold

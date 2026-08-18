@@ -53,6 +53,10 @@ class AppConfig(BaseSettings):
         return self.load_yaml("models.yaml")
 
     @property
+    def runtime_performance(self) -> dict[str, Any]:
+        return self.load_yaml("runtime_performance.yaml").get("runtime_performance", {})
+
+    @property
     def detector_config(self) -> dict[str, Any]:
         config = dict(self.models.get("detector", {}))
         overrides = {

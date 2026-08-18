@@ -14,8 +14,11 @@ DATABASE_URL = os.getenv(
     "postgresql://postgres:postgres@localhost:5432/security_db"
 )
 
+from pathlib import Path
+
 # SQLite fallback URL
-SQLITE_FALLBACK_URL = "sqlite:///./security_monitoring.db"
+_DB_PATH = (Path(__file__).resolve().parents[2] / "security_monitoring.db").as_posix()
+SQLITE_FALLBACK_URL = f"sqlite:///{_DB_PATH}"
 
 def get_engine(url: str):
     connect_args = {}

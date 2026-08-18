@@ -30,7 +30,7 @@ def test_worker_process_returns_serializable_success_and_duplicate_receipts(monk
             self.publisher = Publisher()
 
         def run(self, *args):
-            return [SimpleNamespace(candidateId="demo-run-original")]
+            return [SimpleNamespace(candidateId="demo-run-original", event_id="demo-run-original")]
 
     output = Output()
     monkeypatch.setattr("app.cv.demo_flow.CVWorker", Worker)

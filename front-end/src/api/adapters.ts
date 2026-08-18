@@ -16,7 +16,6 @@ import { API_BASE_URL } from './config';
 import {
   Camera,
   CameraHealth,
-  CameraZone,
   EscalationState,
   EventAction,
   EventState,
@@ -49,12 +48,15 @@ export interface RawIncident {
   status: string;
   source?: string;
   created_at: string;
+  detected_at?: string | null;
   bbox?: [number, number, number, number];
   version?: number;
   ai_generated?: boolean;
   recommended_severity?: string;
-  artifact_url?: string;
+  artifact_url?: string | null;
   redaction_status?: string;
+  clip_start_s?: number | null;
+  clip_end_s?: number | null;
 }
 
 export interface RawAuditLog {
@@ -203,18 +205,31 @@ export function toEvent(raw: RawIncident, actions: EventAction[] = []): Security
     description: raw.description,
     aiGenerated: raw.ai_generated ?? false,
     sourceType: raw.source === 'CV' ? 'LIVE' : 'SIMULATED',
-    detectedAt: normalizeTimestamp(raw.created_at),
+    detectedAt: normalizeTimestamp(raw.detected_at ?? raw.created_at),
     version: raw.version ?? 1,
-    artifact: raw.artifact_url
+    artifact: raw.artifact_url || raw.redaction_status
       ? {
-          url: raw.artifact_url,
+          url: raw.artifact_url ? resolveMediaUrl(raw.artifact_url) : undefined,
           redactionStatus:
             raw.redaction_status === 'COMPLETE' ? 'COMPLETE' : 'PENDING',
+          clipStartS: raw.clip_start_s ?? undefined,
+          clipEndS: raw.clip_end_s ?? undefined,
         }
       : undefined,
     bbox: raw.bbox,
     actions,
   };
+}
+
+/** Resolve relative backend media paths (e.g. /evidence/...) against the API base. */
+function resolveMediaUrl(url: string): string {
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('blob:')) {
+    return url;
+  }
+  if (url.startsWith('/')) {
+    return `${API_BASE_URL}${url}`;
+  }
+  return url;
 }
 
 export function toAuditAction(raw: RawAuditLog): EventAction {
@@ -237,32 +252,3 @@ export function toUser(raw: RawUser): User {
     cameraScope: raw.camera_scope ?? [],
   };
 }
-
-export interface RawZone {
-  zone_id: string;
-  camera_id: string;
-  name: string;
-  polygon: [number, number][];
-  enabled: boolean;
-}
-
-export function toCameraZone(raw: RawZone): CameraZone {
-  return {
-    zoneId: raw.zone_id,
-    cameraId: raw.camera_id,
-    name: raw.name,
-    polygon: raw.polygon,
-    enabled: raw.enabled ?? true,
-  };
-}
-
-export function toRawZone(zone: CameraZone): RawZone {
-  return {
-    zone_id: zone.zoneId,
-    camera_id: zone.cameraId,
-    name: zone.name,
-    polygon: zone.polygon,
-    enabled: zone.enabled,
-  };
-}
-

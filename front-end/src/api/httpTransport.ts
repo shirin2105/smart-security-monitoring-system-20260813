@@ -1,18 +1,15 @@
 /** Transport thật — gọi FastAPI backend. */
 
-import { CameraZone, EventAction, SecurityEvent, User } from '../domain/types';
+import { EventAction, SecurityEvent, User } from '../domain/types';
 import { API_BASE_URL } from './config';
 import {
   RawAuditLog,
   RawCamera,
   RawIncident,
   RawUser,
-  RawZone,
   toAuditAction,
   toCamera,
-  toCameraZone,
   toEvent,
-  toRawZone,
   toUser,
 } from './adapters';
 import { ApiError, notImplemented, toApiError } from './errors';
@@ -143,18 +140,7 @@ export const httpTransport: ApiTransport = {
     await request('/api/v1/alerts/simulate', { method: 'POST' });
   },
 
-  async getZones(): Promise<CameraZone[]> {
-    const raw = await request<RawZone[]>('/api/v1/zones');
-    return raw.map(toCameraZone);
-  },
-
-  async saveZone(zone: CameraZone): Promise<CameraZone> {
-    const rawPayload = toRawZone(zone);
-    const rawRes = await request<RawZone>('/api/v1/zones', {
-      method: 'POST',
-      body: JSON.stringify(rawPayload),
-    });
-    return toCameraZone(rawRes);
+  async getStreamClock() {
+    return request('/api/v1/stream/clock');
   },
 };
-
