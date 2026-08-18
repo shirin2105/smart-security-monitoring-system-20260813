@@ -163,7 +163,7 @@ export function HeatmapPage() {
             <HStack gap={1.5} vAlign="center">
               <ShieldAlert size={14} color="var(--color-warning)" />
               <Text type="supporting" size="xsm" color="secondary">
-                Cảnh báo mở:
+                Sự cố cần xử lý:
               </Text>
               <Text type="label" size="xsm" weight="bold">
                 {totalIncidents} sự cố
@@ -177,6 +177,15 @@ export function HeatmapPage() {
       <Grid columns={{ minWidth: 220, max: 4 }} gap={3}>
         {ZONES.map((zone) => {
           const isSelected = zone.id === selectedZoneId;
+          const statusLabel =
+            zone.status === 'CRITICAL'
+              ? 'Nguy hiểm'
+              : zone.status === 'HIGH'
+              ? 'Cảnh báo cao'
+              : zone.status === 'MEDIUM'
+              ? 'Trung bình'
+              : 'An toàn';
+
           return (
             <SelectableCard
               key={zone.id}
@@ -193,7 +202,7 @@ export function HeatmapPage() {
                   <Token
                     size="sm"
                     color={ZONE_STATUS_TOKEN_COLOR[zone.status]}
-                    label={zone.status}
+                    label={statusLabel}
                   />
                 </HStack>
 
@@ -364,7 +373,15 @@ export function HeatmapPage() {
                 <Token
                   size="sm"
                   color={ZONE_STATUS_TOKEN_COLOR[selectedZone.status]}
-                  label={`Mức ${selectedZone.status}`}
+                  label={
+                    selectedZone.status === 'CRITICAL'
+                      ? 'Mức: Nguy hiểm'
+                      : selectedZone.status === 'HIGH'
+                      ? 'Mức: Cảnh báo cao'
+                      : selectedZone.status === 'MEDIUM'
+                      ? 'Mức: Trung bình'
+                      : 'Mức: An toàn'
+                  }
                 />
               </HStack>
               <Heading level={2}>
@@ -378,7 +395,7 @@ export function HeatmapPage() {
               <HStack gap={1.5} vAlign="center">
                 <CameraIcon size={14} />
                 <Text type="label" weight="bold" color="secondary">
-                  CAMERA THEO VÙNG ({selectedZoneCameras.length})
+                  CAMERA TRONG KHU VỰC ({selectedZoneCameras.length})
                 </Text>
               </HStack>
               <VStack gap={2}>
@@ -413,7 +430,7 @@ export function HeatmapPage() {
               <HStack gap={1.5} vAlign="center">
                 <AlertTriangle size={14} />
                 <Text type="label" weight="bold" color="secondary">
-                  SỰ CỐ ĐANG PHÁT HIỆN ({selectedZoneEvents.length})
+                  SỰ CỐ TRONG KHU VỰC ({selectedZoneEvents.length})
                 </Text>
               </HStack>
               {selectedZoneEvents.length === 0 ? (

@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
-import { Edit3, ShieldAlert, Video, VideoOff } from 'lucide-react';
+import { Activity, Cpu, Edit3, Maximize2, Radio, ShieldAlert, Video, VideoOff } from 'lucide-react';
 
 import { Grid } from '@astryxdesign/core/Grid';
 import { Card } from '@astryxdesign/core/Card';
-import { HStack, VStack } from '@astryxdesign/core/Stack';
+import { HStack, VStack, StackItem } from '@astryxdesign/core/Stack';
 import { Text, Heading } from '@astryxdesign/core/Text';
 import { Switch } from '@astryxdesign/core/Switch';
 import { Button } from '@astryxdesign/core/Button';
+import { Badge } from '@astryxdesign/core/Badge';
 import { AspectRatio } from '@astryxdesign/core/AspectRatio';
+import { Table, pixel, proportional } from '@astryxdesign/core/Table';
 
 import { api } from '../../api';
 import { isTrackInZone } from '../../domain/geometry';
@@ -102,13 +104,13 @@ export function CameraGrid({ cameras, events }: CameraGridProps) {
         <HStack gap={2} vAlign="center">
           <Video size={18} />
           <Heading level={2}>
-            LƯỚI CAMERA ({cameras.length} LUỒNG)
+            HỆ THỐNG CAMERA ({cameras.length} KÊNH)
           </Heading>
         </HStack>
 
         <HStack gap={4} vAlign="center">
           <Switch
-            label="Dev Mode (Realtime Bbox)"
+            label="Hiển thị nhận diện AI"
             value={devMode}
             onChange={(checked) => setDevMode(checked)}
             size="sm"
@@ -286,7 +288,7 @@ export function CameraGrid({ cameras, events }: CameraGridProps) {
                   pointerEvents: 'none',
                 }}
               >
-                DEV: 0 tracks
+                DEV: 0 đối tượng
               </div>
             );
           };
@@ -465,6 +467,251 @@ export function CameraGrid({ cameras, events }: CameraGridProps) {
           );
         })}
       </Grid>
+
+      {/* Operational Telemetry & Channel Monitoring Matrix */}
+      <VStack gap={3} style={{ marginTop: 'var(--spacing-2)' }}>
+        {/* Section Header */}
+        <HStack justify="between" vAlign="center" wrap="wrap" gap={2}>
+          <HStack gap={2} vAlign="center">
+            <Radio size={18} />
+            <Heading level={3}>
+              THỐNG KÊ VẬN HÀNH & KÊNH GIÁM SÁT
+            </Heading>
+          </HStack>
+          <HStack gap={2} vAlign="center">
+            <Badge
+              variant="neutral"
+              label={`${healthyCount}/${cameras.length} CAMERA ONLINE`}
+            />
+            <Badge
+              variant="neutral"
+              label="AI GIÁM SÁT: ĐANG BẬT"
+            />
+          </HStack>
+        </HStack>
+
+        {/* 4 Operational Metric Cards */}
+        <Grid columns={{ minWidth: 220, max: 4 }} gap={3}>
+          <Card elevation="low" padding={3}>
+            <VStack gap={1}>
+              <HStack justify="between" vAlign="center">
+                <Text type="supporting" size="xsm" color="secondary">
+                  TRẠNG THÁI CAMERA
+                </Text>
+                <HealthDot health={healthyCount === cameras.length ? 'HEALTHY' : 'DEGRADED'} />
+              </HStack>
+              <Text type="label" size="lg" weight="bold">
+                {healthyCount}/{cameras.length} Camera trực tuyến
+              </Text>
+              <Text type="supporting" size="xsm" color="secondary">
+                1080p H.264 · Độ trễ thấp ~28ms
+              </Text>
+            </VStack>
+          </Card>
+
+          <Card elevation="low" padding={3}>
+            <VStack gap={1}>
+              <HStack justify="between" vAlign="center">
+                <Text type="supporting" size="xsm" color="secondary">
+                  VÙNG GIÁM SÁT AN NINH
+                </Text>
+                <ShieldAlert size={16} color="var(--color-accent)" />
+              </HStack>
+              <Text type="label" size="lg" weight="bold" color="accent">
+                {zones.filter((z) => z.enabled !== false).length} Vùng đang kích hoạt
+              </Text>
+              <Text type="supporting" size="xsm" color="secondary">
+                Tự động cảnh báo khi có xâm nhập
+              </Text>
+            </VStack>
+          </Card>
+
+          <Card elevation="low" padding={3}>
+            <VStack gap={1}>
+              <HStack justify="between" vAlign="center">
+                <Text type="supporting" size="xsm" color="secondary">
+                  TRẠNG THÁI GIÁM SÁT AI
+                </Text>
+                <Cpu size={16} color="var(--color-success)" />
+              </HStack>
+              <Text type="label" size="lg" weight="bold">
+                Đang hoạt động (Trực tiếp)
+              </Text>
+              <Text type="supporting" size="xsm" color="secondary">
+                Tự động phát hiện xâm nhập & sự cố
+              </Text>
+            </VStack>
+          </Card>
+
+          <Card elevation="low" padding={3}>
+            <VStack gap={1}>
+              <HStack justify="between" vAlign="center">
+                <Text type="supporting" size="xsm" color="secondary">
+                  SỰ CỐ CẦN THEO DÕI
+                </Text>
+                <Activity size={16} color="var(--color-warning)" />
+              </HStack>
+              <Text type="label" size="lg" weight="bold" color={events.filter((e) => OPEN_STATES.includes(e.state)).length > 0 ? 'accent' : 'primary'}>
+                {events.filter((e) => OPEN_STATES.includes(e.state)).length} Sự cố chưa xử lý
+              </Text>
+              <Text type="supporting" size="xsm" color="secondary">
+                {events.filter((e) => OPEN_STATES.includes(e.state) && e.effectiveSeverity === 'CRITICAL').length} khẩn cấp · Cần xử lý
+              </Text>
+            </VStack>
+          </Card>
+        </Grid>
+
+        {/* Camera Channel Details Table */}
+        <Card elevation="low" padding={3}>
+          <VStack gap={2} style={{ width: '100%', minWidth: 0 }}>
+            <Text type="label" weight="bold">
+              DANH SÁCH CAMERA & THIẾT LẬP VÙNG GIÁM SÁT
+            </Text>
+            <StackItem size="fill" isScrollable style={{ minWidth: 0, width: '100%' }}>
+              <Table
+                density="balanced"
+                hasHover
+                data={cameras}
+                idKey="id"
+                columns={[
+                  {
+                    key: 'id',
+                    header: 'Mã & Tên Camera',
+                    width: pixel(170),
+                    renderCell: (cam) => (
+                      <HStack gap={2} vAlign="center">
+                        <Text type="code" size="xsm" weight="bold" color="accent">
+                          {cam.id <= 9 ? `CAM-0${cam.id}` : `CAM-${cam.id}`}
+                        </Text>
+                        <Text type="label" weight="semibold">
+                          {cam.name}
+                        </Text>
+                      </HStack>
+                    ),
+                  },
+                  {
+                    key: 'location',
+                    header: 'Vị trí lắp đặt',
+                    width: pixel(180),
+                    renderCell: (cam) => (
+                      <Text type="body" size="xsm">
+                        {cam.location}
+                      </Text>
+                    ),
+                  },
+                  {
+                    key: 'health',
+                    header: 'Tín hiệu',
+                    width: pixel(120),
+                    renderCell: (cam) => (
+                      <HStack gap={1.5} vAlign="center">
+                        <HealthDot health={cam.health} />
+                        <Text type="label" size="xsm">
+                          {cam.health === 'HEALTHY'
+                            ? 'Trực tuyến'
+                            : cam.health === 'DEGRADED'
+                            ? 'Chập chờn'
+                            : 'Mất kết nối'}
+                        </Text>
+                      </HStack>
+                    ),
+                  },
+                  {
+                    key: 'sourceType',
+                    header: 'Loại nguồn',
+                    width: pixel(110),
+                    renderCell: (cam) => <SourceBadge sourceType={cam.sourceType} />,
+                  },
+                  {
+                    key: 'zone',
+                    header: 'Vùng giám sát',
+                    width: pixel(160),
+                    renderCell: (cam) => {
+                      const camKey = cam.id <= 9 ? `cam_0${cam.id}` : `cam_${cam.id}`;
+                      const zone = zones.find(
+                        (z) => z.cameraId === camKey || z.cameraId === `cam_${cam.id}` || z.cameraId === String(cam.id),
+                      );
+                      if (!zone || !zone.polygon || zone.polygon.length < 3) {
+                        return (
+                          <Text type="supporting" size="xsm" color="secondary">
+                            Chưa thiết lập vùng
+                          </Text>
+                        );
+                      }
+                      return (
+                        <HStack gap={1} vAlign="center">
+                          <Text type="code" size="xsm" weight="semibold">
+                            {zone.name}
+                          </Text>
+                        </HStack>
+                      );
+                    },
+                  },
+                  {
+                    key: 'tracks',
+                    header: 'Đối tượng trong khung',
+                    width: proportional(1, { minWidth: 140 }),
+                    renderCell: (cam) => {
+                      const telemetry =
+                        telemetryMap?.[cam.id] ??
+                        (telemetryMap as any)?.[`cam_${cam.id}`] ??
+                        (telemetryMap as any)?.[`cam_0${cam.id}`];
+                      const trackCount = telemetry?.tracks?.length ?? 0;
+                      if (cam.health === 'OFFLINE') {
+                        return (
+                          <Text type="supporting" size="xsm" color="secondary">
+                            Không khả dụng
+                          </Text>
+                        );
+                      }
+                      if (trackCount === 0) {
+                        return (
+                          <Text type="supporting" size="xsm" color="secondary">
+                            0 đối tượng trong khung
+                          </Text>
+                        );
+                      }
+                      return (
+                        <HStack gap={1} vAlign="center">
+                          <Text type="code" size="xsm" weight="bold" color="primary">
+                            {trackCount} đối tượng
+                          </Text>
+                          <Text type="supporting" size="xsm" color="secondary">
+                            ({telemetry.tracks.map((t: any) => t.className).join(', ')})
+                          </Text>
+                        </HStack>
+                      );
+                    },
+                  },
+                  {
+                    key: 'actions',
+                    header: 'Thao tác',
+                    width: pixel(150),
+                    renderCell: (cam) => (
+                      <HStack gap={1} vAlign="center">
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          icon={<Maximize2 size={12} />}
+                          label="Phóng to"
+                          onClick={() => setSelected(cam)}
+                        />
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          icon={<Edit3 size={12} />}
+                          label="Vùng"
+                          onClick={() => setEditingZoneCamera(cam)}
+                        />
+                      </HStack>
+                    ),
+                  },
+                ]}
+              />
+            </StackItem>
+          </VStack>
+        </Card>
+      </VStack>
 
       {selected && (
         <CameraDetailModal

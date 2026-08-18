@@ -55,10 +55,10 @@ const STREAM_DOT_VARIANT: Record<StreamStatus, 'success' | 'accent' | 'warning' 
 };
 
 const STREAM_LABEL: Record<StreamStatus, string> = {
-  open: 'Realtime: đã kết nối',
-  connecting: 'Realtime: đang mở…',
-  reconnecting: 'Realtime: kết nối lại…',
-  offline: 'Realtime: ngắt kết nối',
+  open: 'Realtime: Đã kết nối',
+  connecting: 'Realtime: Đang kết nối…',
+  reconnecting: 'Realtime: Đang thử kết nối lại…',
+  offline: 'Realtime: Mất kết nối',
 };
 
 export function Navbar({ streamStatus, onTriggerSimulation }: NavbarProps) {
@@ -95,14 +95,14 @@ export function Navbar({ streamStatus, onTriggerSimulation }: NavbarProps) {
         <TopNavHeading
           logo={<Shield size={22} />}
           heading="TRUNG TÂM GIÁM SÁT AN NINH"
-          subheading="Cảnh báo realtime · Xác nhận bởi người trực (HITL)"
+          subheading="Cảnh báo thời gian thực · Giám sát & phê duyệt an ninh đa tầng"
           headerEndContent={
             isMockMode ? (
               <Token
                 color="purple"
                 size="sm"
                 icon={<FlaskConical size={12} />}
-                label="GIẢ LẬP"
+                label="CHẾ ĐỘ GIẢ LẬP"
               />
             ) : undefined
           }
@@ -148,7 +148,7 @@ export function Navbar({ streamStatus, onTriggerSimulation }: NavbarProps) {
 
           {/* Simulation button */}
           <Button
-            label="Giả lập cảnh báo"
+            label="Tạo sự cố giả lập"
             variant="secondary"
             size="sm"
             icon={<AlertTriangle size={14} />}

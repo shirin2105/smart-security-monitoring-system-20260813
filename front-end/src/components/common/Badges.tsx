@@ -111,7 +111,7 @@ export function SimulatedBadge() {
     <Token
       size="sm"
       color="purple"
-      label="Nguồn giả lập"
+      label="Dữ liệu giả lập"
     />
   );
 }
@@ -123,7 +123,7 @@ export function SourceBadge({ sourceType }: { sourceType: 'LIVE' | 'SIMULATED' }
       <Token
         size="sm"
         color="green"
-        label="CV thật"
+        label="Camera trực tiếp"
       />
     );
   }
@@ -137,7 +137,7 @@ export function AiGeneratedBadge() {
       size="sm"
       color="purple"
       icon={<Bot size={12} />}
-      label="AI hỗ trợ"
+      label="AI phân tích"
     />
   );
 }

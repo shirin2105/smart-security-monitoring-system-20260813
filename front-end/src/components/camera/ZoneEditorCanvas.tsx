@@ -27,7 +27,7 @@ export function ZoneEditorCanvas({
     existingZone?.polygon || [],
   );
   const [zoneName, setZoneName] = useState<string>(
-    existingZone?.name || `Vùng Intrusion ${camera.name}`,
+    existingZone?.name || `Vùng giám sát ${camera.name}`,
   );
   const [saving, setSaving] = useState(false);
   const svgRef = useRef<SVGSVGElement | null>(null);
@@ -63,7 +63,7 @@ export function ZoneEditorCanvas({
       });
       onClose();
     } catch (err) {
-      console.error('Lỗi lưu vùng Intrusion:', err);
+      console.error('Lỗi lưu vùng an ninh:', err);
     } finally {
       setSaving(false);
     }
@@ -81,7 +81,7 @@ export function ZoneEditorCanvas({
       purpose="form"
     >
       <DialogHeader
-        title={`Thiết lập vùng Intrusion (Xâm nhập) — ${camera.name}`}
+        title={`Thiết lập vùng giám sát an ninh — ${camera.name}`}
         onOpenChange={(isOpen) => {
           if (!isOpen && !saving) onClose();
         }}
@@ -100,12 +100,12 @@ export function ZoneEditorCanvas({
           <Token
             size="md"
             color={points.length >= 3 ? 'green' : 'orange'}
-            label={`Đã chấm: ${points.length} điểm (tối thiểu 3)`}
+            label={`Đã chọn: ${points.length} điểm (tối thiểu 3 điểm)`}
           />
         </HStack>
 
         <Text type="supporting" color="secondary">
-          * Click trực tiếp lên khung hình để chấm các đỉnh polygon của Vùng Intrusion. Tọa độ tự động quy đổi về độ phân giải chuẩn 1280x720.
+          * Nhấp chuột trực tiếp lên khung hình để vẽ ranh giới khu vực bảo vệ (tối thiểu 3 điểm). Hệ thống AI sẽ tự động kích hoạt cảnh báo khi phát hiện người đi vào khu vực này.
         </Text>
 
         {/* Video with SVG overlay */}
@@ -187,7 +187,7 @@ export function ZoneEditorCanvas({
 
         <HStack justify="between" vAlign="center">
           <Button
-            label="Xóa / Vẽ lại"
+            label="Vẽ lại"
             variant="secondary"
             size="sm"
             icon={<RotateCcw size={14} />}
@@ -203,7 +203,7 @@ export function ZoneEditorCanvas({
               isDisabled={saving}
             />
             <Button
-              label="Lưu vùng Intrusion"
+              label="Lưu vùng giám sát"
               variant="primary"
               size="sm"
               isLoading={saving}

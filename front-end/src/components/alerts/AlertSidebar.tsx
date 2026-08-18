@@ -83,7 +83,7 @@ export function AlertSidebar({ events, loading, error, onRetry }: AlertSidebarPr
                 CẢNH BÁO THỜI GIAN THỰC
               </Heading>
               <Text type="supporting" color="secondary">
-                {events.length} sự cố gần nhất · {activeCount} đang mở
+                {events.length} sự cố gần nhất · {activeCount} chưa xử lý
               </Text>
             </VStack>
           </HStack>
@@ -108,8 +108,8 @@ export function AlertSidebar({ events, loading, error, onRetry }: AlertSidebarPr
           layout="fill"
         >
           <SegmentedControlItem value="all" label={`Tất cả (${events.length})`} />
-          <SegmentedControlItem value="active" label={`Mở (${activeCount})`} />
-          <SegmentedControlItem value="closed" label={`Đóng (${events.length - activeCount})`} />
+          <SegmentedControlItem value="active" label={`Chờ xử lý (${activeCount})`} />
+          <SegmentedControlItem value="closed" label={`Đã giải quyết (${events.length - activeCount})`} />
         </SegmentedControl>
       </VStack>
       <Divider />

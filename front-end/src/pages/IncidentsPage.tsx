@@ -1,14 +1,16 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ListFilter, SearchX } from 'lucide-react';
 
 import { Card } from '@astryxdesign/core/Card';
 import { HStack, VStack, StackItem } from '@astryxdesign/core/Stack';
 import { Text, Heading } from '@astryxdesign/core/Text';
-import { Table, TableRow, TableCell, TableHeaderCell } from '@astryxdesign/core/Table';
+import { Table, pixel, proportional } from '@astryxdesign/core/Table';
+import type { TableColumn } from '@astryxdesign/core/Table';
 
 import { api } from '../api';
 import { EMPTY_QUERY, IncidentQuery } from '../api/types';
+import { SecurityEvent } from '../domain/types';
 import {
   EscalationBadge,
   EventTypeBadge,
@@ -39,6 +41,82 @@ export function IncidentsPage() {
   }, []);
 
   const resetQuery = useCallback(() => setQuery(EMPTY_QUERY), []);
+
+  const columns = useMemo<TableColumn<SecurityEvent>[]>(
+    () => [
+      {
+        key: 'detectedAt',
+        header: 'Thời điểm',
+        width: pixel(175),
+        renderCell: (event) => (
+          <Text type="code" size="xsm" color="secondary">
+            {new Date(event.detectedAt).toLocaleString('vi-VN')}
+          </Text>
+        ),
+      },
+      {
+        key: 'cameraName',
+        header: 'Camera',
+        width: pixel(180),
+        renderCell: (event) => (
+          <Text type="label" weight="semibold">
+            {event.cameraName}
+          </Text>
+        ),
+      },
+      {
+        key: 'eventType',
+        header: 'Loại sự kiện',
+        width: pixel(170),
+        renderCell: (event) => <EventTypeBadge eventType={event.eventType} />,
+      },
+      {
+        key: 'effectiveSeverity',
+        header: 'Mức độ',
+        width: pixel(110),
+        renderCell: (event) => <SeverityBadge severity={event.effectiveSeverity} />,
+      },
+      {
+        key: 'state',
+        header: 'Trạng thái',
+        width: pixel(260),
+        renderCell: (event) => (
+          <HStack gap={1} vAlign="center" style={{ flexWrap: 'nowrap' }}>
+            <StateBadge state={event.state} />
+            <EscalationBadge escalation={event.escalation} />
+            <SourceBadge sourceType={event.sourceType} />
+          </HStack>
+        ),
+      },
+      {
+        key: 'description',
+        header: 'Mô tả sự cố',
+        width: proportional(1, { minWidth: 260 }),
+        renderCell: (event) => (
+          <Text type="body" maxLines={2}>
+            {event.description}
+          </Text>
+        ),
+      },
+    ],
+    [],
+  );
+
+  const plugins = useMemo(
+    () => ({
+      rowClick: {
+        transformBodyRow: (props: any, item: SecurityEvent) => ({
+          ...props,
+          htmlProps: {
+            ...props.htmlProps,
+            onClick: () => navigate(`/incidents/${item.id}`),
+            style: { ...props.htmlProps?.style, cursor: 'pointer' },
+          },
+        }),
+      },
+    }),
+    [navigate],
+  );
 
   return (
     <VStack gap={4} padding={4} height="100%">
@@ -73,56 +151,14 @@ export function IncidentsPage() {
         ) : (
           <VStack gap={3} height="100%">
             <StackItem size="fill" isScrollable>
-              <Table density="compact" hasHover>
-                <thead>
-                  <TableRow>
-                    <TableHeaderCell style={{ width: 170, whiteSpace: 'nowrap' }}>Thời điểm</TableHeaderCell>
-                    <TableHeaderCell style={{ width: 160, whiteSpace: 'nowrap' }}>Camera</TableHeaderCell>
-                    <TableHeaderCell style={{ width: 160, whiteSpace: 'nowrap' }}>Loại sự kiện</TableHeaderCell>
-                    <TableHeaderCell style={{ width: 110, whiteSpace: 'nowrap' }}>Mức độ</TableHeaderCell>
-                    <TableHeaderCell style={{ width: 260, whiteSpace: 'nowrap' }}>Trạng thái</TableHeaderCell>
-                    <TableHeaderCell>Mô tả sự cố</TableHeaderCell>
-                  </TableRow>
-                </thead>
-                <tbody>
-                  {page.data.items.map((event) => (
-                    <TableRow
-                      key={event.id}
-                      onClick={() => navigate(`/incidents/${event.id}`)}
-                      style={{ cursor: 'pointer' }}
-                    >
-                      <TableCell style={{ whiteSpace: 'nowrap' }}>
-                        <Text type="code" size="xsm" color="secondary">
-                          {new Date(event.detectedAt).toLocaleString('vi-VN')}
-                        </Text>
-                      </TableCell>
-                      <TableCell style={{ whiteSpace: 'nowrap' }}>
-                        <Text type="label" weight="semibold">
-                          {event.cameraName}
-                        </Text>
-                      </TableCell>
-                      <TableCell style={{ whiteSpace: 'nowrap' }}>
-                        <EventTypeBadge eventType={event.eventType} />
-                      </TableCell>
-                      <TableCell style={{ whiteSpace: 'nowrap' }}>
-                        <SeverityBadge severity={event.effectiveSeverity} />
-                      </TableCell>
-                      <TableCell>
-                        <HStack gap={1} vAlign="center" style={{ flexWrap: 'nowrap' }}>
-                          <StateBadge state={event.state} />
-                          <EscalationBadge escalation={event.escalation} />
-                          <SourceBadge sourceType={event.sourceType} />
-                        </HStack>
-                      </TableCell>
-                      <TableCell>
-                        <Text type="body" maxLines={2}>
-                          {event.description}
-                        </Text>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </tbody>
-              </Table>
+              <Table
+                data={page.data.items}
+                columns={columns}
+                idKey="id"
+                density="balanced"
+                hasHover
+                plugins={plugins}
+              />
             </StackItem>
 
             <Pagination

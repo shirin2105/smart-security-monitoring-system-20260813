@@ -180,7 +180,7 @@ export function CameraDetailModal({ camera, events, onClose }: CameraDetailModal
 
     return (
       <div className="pointer-events-none absolute top-3 right-3 z-30 rounded bg-slate-900/80 border border-emerald-500/40 px-2 py-1 font-mono text-[10px] font-medium text-emerald-400">
-        DEV MODE: 0 tracks
+        DEV: 0 đối tượng
       </div>
     );
   };
@@ -201,7 +201,7 @@ export function CameraDetailModal({ camera, events, onClose }: CameraDetailModal
         endContent={
           <HStack gap={3} vAlign="center">
             <Switch
-              label="Dev Mode"
+              label="Hiển thị nhận diện AI"
               value={devMode}
               onChange={(checked) => setDevMode(checked)}
               size="sm"

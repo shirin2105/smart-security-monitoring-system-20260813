@@ -84,13 +84,13 @@ export function LoginPage() {
               TRUNG TÂM GIÁM SÁT AN NINH
             </Heading>
             <Text type="supporting" color="secondary">
-              Cảnh báo realtime · Xác nhận bởi người trực (HITL)
+              Hệ thống giám sát an ninh thời gian thực & hỗ trợ ra quyết định (HITL)
             </Text>
             {isMockMode && (
               <Token
                 size="sm"
                 color="purple"
-                label="CHẾ ĐỘ GIẢ LẬP — KHÔNG CẦN BACKEND"
+                label="CHẾ ĐỘ DÙNG THỬ — DỮ LIỆU MẪU"
               />
             )}
           </VStack>
