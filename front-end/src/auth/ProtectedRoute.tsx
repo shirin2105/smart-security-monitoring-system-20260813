@@ -1,6 +1,9 @@
 import { ReactNode } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
-import { ShieldOff } from 'lucide-react';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Center } from '@astryxdesign/core/Center';
+import { VStack } from '@astryxdesign/core/Stack';
+import { Banner } from '@astryxdesign/core/Banner';
+import { Button } from '@astryxdesign/core/Button';
 
 import { ROLE_LABEL, Role } from '../domain/types';
 import { useAuth } from './AuthContext';
@@ -21,6 +24,7 @@ interface ProtectedRouteProps {
 export function ProtectedRoute({ children, allowRoles }: ProtectedRouteProps) {
   const { user, restoring } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
 
   if (restoring) {
     return <LoadingState label="Đang khôi phục phiên đăng nhập…" />;
@@ -31,25 +35,29 @@ export function ProtectedRoute({ children, allowRoles }: ProtectedRouteProps) {
   }
 
   if (allowRoles && !allowRoles.includes(user.role)) {
+    const requiredRoles = allowRoles.map((role) => ROLE_LABEL[role]).join(', ');
     return (
-      <div className="flex flex-1 items-center justify-center p-10">
-        <div className="max-w-md rounded-2xl border border-amber-500/40 bg-amber-950/20 p-8 text-center">
-          <ShieldOff className="mx-auto mb-4 h-10 w-10 text-amber-400" />
-          <h2 className="mb-2 text-base font-bold text-white">
-            Không đủ quyền truy cập
-          </h2>
-          <p className="text-sm leading-relaxed text-gray-300">
-            Trang này chỉ dành cho{' '}
-            <strong className="text-amber-300">
-              {allowRoles.map((role) => ROLE_LABEL[role]).join(', ')}
-            </strong>
-            . Tài khoản của bạn đang ở vai trò{' '}
-            <strong className="text-gray-100">{ROLE_LABEL[user.role]}</strong>.
-          </p>
-        </div>
-      </div>
+      <Center padding={8} minHeight={320}>
+        <VStack gap={4} hAlign="center" maxWidth={480} width="100%">
+          <Banner
+            status="warning"
+            container="card"
+            title="Không đủ quyền truy cập"
+            description={`Trang này chỉ dành cho ${requiredRoles}. Tài khoản của bạn đang ở vai trò ${ROLE_LABEL[user.role]}.`}
+            endContent={
+              <Button
+                label="Quay lại giám sát"
+                variant="secondary"
+                size="sm"
+                onClick={() => navigate('/')}
+              />
+            }
+          />
+        </VStack>
+      </Center>
     );
   }
 
   return <>{children}</>;
 }
+

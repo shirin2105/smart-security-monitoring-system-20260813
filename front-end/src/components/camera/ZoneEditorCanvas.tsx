@@ -1,6 +1,14 @@
 import { useState, useRef, MouseEvent } from 'react';
 import { Camera, CameraZone } from '../../domain/types';
-import { Check, RotateCcw, X, ShieldAlert } from 'lucide-react';
+import { Check, RotateCcw } from 'lucide-react';
+
+import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog';
+import { HStack, VStack } from '@astryxdesign/core/Stack';
+import { Text } from '@astryxdesign/core/Text';
+import { TextInput } from '@astryxdesign/core/TextInput';
+import { Button } from '@astryxdesign/core/Button';
+import { Token } from '@astryxdesign/core/Token';
+import { AspectRatio } from '@astryxdesign/core/AspectRatio';
 
 interface ZoneEditorCanvasProps {
   camera: Camera;
@@ -16,15 +24,14 @@ export function ZoneEditorCanvas({
   onClose,
 }: ZoneEditorCanvasProps) {
   const [points, setPoints] = useState<[number, number][]>(
-    existingZone?.polygon || []
+    existingZone?.polygon || [],
   );
   const [zoneName, setZoneName] = useState<string>(
-    existingZone?.name || `Vùng Intrusion ${camera.name}`
+    existingZone?.name || `Vùng Intrusion ${camera.name}`,
   );
   const [saving, setSaving] = useState(false);
   const svgRef = useRef<SVGSVGElement | null>(null);
 
-  // Thêm điểm vào polygon khi click SVG
   const handleSvgClick = (e: MouseEvent<SVGSVGElement>) => {
     if (!svgRef.current) return;
     const rect = svgRef.current.getBoundingClientRect();
@@ -65,52 +72,55 @@ export function ZoneEditorCanvas({
   const pointsString = points.map((p) => `${p[0]},${p[1]}`).join(' ');
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
-      role="dialog"
-      aria-modal="true"
+    <Dialog
+      isOpen={true}
+      onOpenChange={(isOpen) => {
+        if (!isOpen && !saving) onClose();
+      }}
+      width={880}
+      purpose="form"
     >
-      <div className="flex w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-gray-700 bg-gray-900 shadow-2xl">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-gray-800 px-6 py-4">
-          <div className="flex items-center gap-2">
-            <ShieldAlert className="h-5 w-5 text-amber-500" />
-            <h3 className="text-base font-bold text-white">
-              Thiết lập vùng Intrusion (Xâm nhập) — {camera.name}
-            </h3>
-          </div>
-          <button
-            onClick={onClose}
-            className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-800 hover:text-white"
+      <DialogHeader
+        title={`Thiết lập vùng Intrusion (Xâm nhập) — ${camera.name}`}
+        onOpenChange={(isOpen) => {
+          if (!isOpen && !saving) onClose();
+        }}
+      />
+      <VStack gap={4} padding={4}>
+        <HStack justify="between" vAlign="end" wrap="wrap" gap={3}>
+          <HStack gap={2} style={{ flex: 1, minWidth: 240 }}>
+            <TextInput
+              label="Tên vùng"
+              value={zoneName}
+              onChange={(val) => setZoneName(val)}
+              placeholder="Nhập tên vùng..."
+              size="sm"
+            />
+          </HStack>
+          <Token
+            size="md"
+            color={points.length >= 3 ? 'green' : 'orange'}
+            label={`Đã chấm: ${points.length} điểm (tối thiểu 3)`}
+          />
+        </HStack>
+
+        <Text type="supporting" color="secondary">
+          * Click trực tiếp lên khung hình để chấm các đỉnh polygon của Vùng Intrusion. Tọa độ tự động quy đổi về độ phân giải chuẩn 1280x720.
+        </Text>
+
+        {/* Video with SVG overlay */}
+        <AspectRatio ratio={16 / 9}>
+          <div
+            style={{
+              position: 'relative',
+              width: '100%',
+              height: '100%',
+              backgroundColor: 'var(--color-background-body)',
+              borderRadius: 'var(--radius-container)',
+              overflow: 'hidden',
+              border: '1px solid var(--color-border)',
+            }}
           >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        {/* Body */}
-        <div className="p-6 space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex flex-1 items-center gap-3">
-              <label className="text-xs font-semibold text-gray-300">Tên vùng:</label>
-              <input
-                type="text"
-                value={zoneName}
-                onChange={(e) => setZoneName(e.target.value)}
-                className="flex-1 rounded-lg border border-gray-700 bg-gray-800 px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:border-amber-500 focus:outline-none"
-                placeholder="Nhập tên vùng..."
-              />
-            </div>
-            <div className="font-mono text-xs text-amber-400 bg-amber-950/60 border border-amber-800/60 px-3 py-1.5 rounded-lg">
-              Số điểm đã chấm: <span className="font-bold text-white">{points.length}</span> (tối thiểu 3 điểm)
-            </div>
-          </div>
-
-          <p className="text-xs text-gray-400">
-            * Click trực tiếp lên video bên dưới để chấm các đỉnh polygon của Vùng Intrusion. Tọa độ sẽ được tự động quy đổi về độ phân giải gốc <code className="text-amber-400">1280x720</code>.
-          </p>
-
-          {/* Video Stream + Interactive SVG Overlay */}
-          <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-gray-800 bg-black">
             {camera.previewUrl.match(/\.(mp4|webm|avi)(\?.*)?$/i) ? (
               <video
                 src={camera.previewUrl}
@@ -118,57 +128,54 @@ export function ZoneEditorCanvas({
                 muted
                 loop
                 playsInline
-                className="h-full w-full object-contain pointer-events-none opacity-75"
+                style={{ width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none', opacity: 0.75 }}
               />
             ) : (
               <img
                 src={camera.previewUrl}
                 alt=""
-                className="h-full w-full object-contain pointer-events-none opacity-75"
+                style={{ width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none', opacity: 0.75 }}
               />
             )}
 
-            {/* Interactive SVG Overlay */}
             <svg
               ref={svgRef}
               onClick={handleSvgClick}
               viewBox="0 0 1280 720"
               preserveAspectRatio="none"
-              className="absolute inset-0 h-full w-full cursor-crosshair z-20"
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', cursor: 'crosshair', zIndex: 20 }}
             >
-              {/* Drawn Polygon Fill & Stroke */}
               {points.length >= 3 && (
                 <polygon
                   points={pointsString}
-                  fill="rgba(245, 158, 11, 0.25)"
-                  stroke="#f59e0b"
+                  fill="color-mix(in oklch, var(--color-warning) 25%, transparent)"
+                  stroke="var(--color-warning)"
                   strokeWidth="4"
                   strokeDasharray="6 4"
                 />
               )}
 
-              {/* Drawn Line Segments before 3 points */}
               {points.length > 1 && (
                 <polyline
                   points={pointsString}
                   fill="none"
-                  stroke="#f59e0b"
+                  stroke="var(--color-warning)"
                   strokeWidth="3"
                 />
               )}
 
-              {/* Point Markers */}
               {points.map(([px, py], i) => (
                 <g key={i}>
-                  <circle cx={px} cy={py} r="10" fill="#f59e0b" stroke="#ffffff" strokeWidth="2" />
+                  <circle cx={px} cy={py} r="10" fill="var(--color-warning)" stroke="white" strokeWidth="2" />
                   <text
                     x={px}
                     y={py + 4}
-                    fill="#000000"
+                    fill="black"
                     fontSize="12"
                     fontWeight="bold"
                     textAnchor="middle"
-                    className="pointer-events-none select-none font-mono"
+                    fontFamily="monospace"
+                    style={{ pointerEvents: 'none', userSelect: 'none' }}
                   >
                     {i + 1}
                   </text>
@@ -176,39 +183,38 @@ export function ZoneEditorCanvas({
               ))}
             </svg>
           </div>
-        </div>
+        </AspectRatio>
 
-        {/* Footer Actions */}
-        <div className="flex items-center justify-between border-t border-gray-800 px-6 py-4 bg-gray-900/60">
-          <button
-            type="button"
+        <HStack justify="between" vAlign="center">
+          <Button
+            label="Xóa / Vẽ lại"
+            variant="secondary"
+            size="sm"
+            icon={<RotateCcw size={14} />}
             onClick={handleClear}
-            className="flex items-center gap-2 rounded-lg border border-gray-700 bg-gray-800 px-4 py-2 text-xs font-semibold text-gray-300 transition hover:bg-gray-700 hover:text-white"
-          >
-            <RotateCcw className="h-4 w-4" />
-            Xóa / Vẽ lại
-          </button>
+          />
 
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
+          <HStack gap={2}>
+            <Button
+              label="Hủy"
+              variant="secondary"
+              size="sm"
               onClick={onClose}
-              className="rounded-lg border border-gray-700 px-4 py-2 text-xs font-semibold text-gray-300 transition hover:bg-gray-800 hover:text-white"
-            >
-              Hủy
-            </button>
-            <button
-              type="button"
+              isDisabled={saving}
+            />
+            <Button
+              label="Lưu vùng Intrusion"
+              variant="primary"
+              size="sm"
+              isLoading={saving}
+              isDisabled={points.length < 3 || saving}
+              icon={<Check size={14} />}
               onClick={handleSave}
-              disabled={points.length < 3 || saving}
-              className="flex items-center gap-2 rounded-lg bg-amber-600 px-5 py-2 text-xs font-bold text-white shadow-md transition hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Check className="h-4 w-4" />
-              {saving ? 'Đang lưu...' : 'Lưu vùng Intrusion'}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+            />
+          </HStack>
+        </HStack>
+      </VStack>
+    </Dialog>
   );
 }
+
