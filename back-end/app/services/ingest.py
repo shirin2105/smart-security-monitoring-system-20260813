@@ -141,6 +141,8 @@ async def ingest_event_candidate(payload: dict) -> dict:
             candidate_id=candidate_id,
             payload_hash=digest,
             bbox_json=bbox_json_str,
+            artifact_url=(payload.get("artifact") or {}).get("uri"),
+            redaction_status=(payload.get("artifact") or {}).get("redactionStatus", "COMPLETE"),
             created_at=datetime.now(UTC),
         )
         db.add(incident)
@@ -195,3 +197,23 @@ def _build_description(payload: dict, camera_id: int, event_type: str, severity:
         detail = f" ({observations['stationarySeconds']} giây)"
     level = "CRITICAL" if severity == "critical" else "CẢNH BÁO"
     return f"{level}: {labels[event_type]}{detail} tại Camera #{camera_id}"
+
+
+async def mark_incident_artifact_ready(incident_id: int, uri: str, redaction_status: str) -> dict | None:
+    """Attach a rendered evidence clip to an already-posted incident and notify listeners."""
+    db = SessionLocal()
+    try:
+        incident = db.query(Incident).filter(Incident.id == incident_id).first()
+        if incident is None:
+            return None
+        incident.artifact_url = uri
+        incident.redaction_status = redaction_status
+        db.commit()
+        db.refresh(incident)
+        camera = db.query(Camera).filter(Camera.id == incident.camera_id).first()
+        incident_payload = _incident_payload(incident, camera.name if camera else f"Camera #{incident.camera_id}")
+        await manager.broadcast({"type": "ALERT_UPDATED", "incident_id": incident.id})
+        return incident_payload
+    finally:
+        db.close()
+

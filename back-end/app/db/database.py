@@ -87,8 +87,8 @@ def init_db_and_seed():
 
         # Seed or update cameras
         cameras_seed = [
-            (1, "Camera Cổng Chính", "Cổng A - Tầng 1", "/media/walking_people_browser.webm"),
-            (2, "Camera Sảnh Chờ", "Sảnh Tòa Nhà - Tầng 1", "/media/people_detection.mp4"),
+            (1, "Camera Cổng Chính", "Cổng A - Tầng 1", "/media/walking_people.mp4"),
+            (2, "Camera Sảnh Chờ", "Sảnh Tòa Nhà - Tầng 1", "/media/aboda-video1.mp4"),
             (3, "Camera Hàng Rào Tây", "Khu Vực Hàng Rào - Phía Tây", "/media/pets2006_3.mp4"),
             (4, "Camera Phòng Server", "Khai Thác Kỹ Thuật - Tầng Hầm", "/media/aban3.mp4"),
             (5, "Camera Bãi Xe B1", "Bãi Xe Ô Tô - Tầng B1", "/media/store-aisle-detection.mp4"),
@@ -97,9 +97,8 @@ def init_db_and_seed():
         for cam_id, name, location, stream_url in cameras_seed:
             existing = db.query(Camera).filter(Camera.id == cam_id).first()
             if existing:
-                if "unsplash.com" in (existing.stream_url or ""):
-                    existing.stream_url = stream_url
-                    existing.source = "CV"
+                existing.stream_url = stream_url
+                existing.source = "CV"
             else:
                 db.add(Camera(id=cam_id, name=name, location=location, stream_url=stream_url, status="online", source="CV"))
         db.commit()
@@ -124,6 +123,10 @@ def _ensure_incident_ingest_columns():
             connection.execute(text("ALTER TABLE incidents ADD COLUMN payload_hash VARCHAR(64)"))
         if "bbox_json" not in inc_columns:
             connection.execute(text("ALTER TABLE incidents ADD COLUMN bbox_json TEXT"))
+        if "artifact_url" not in inc_columns:
+            connection.execute(text("ALTER TABLE incidents ADD COLUMN artifact_url VARCHAR(2048)"))
+        if "redaction_status" not in inc_columns:
+            connection.execute(text("ALTER TABLE incidents ADD COLUMN redaction_status VARCHAR(50) DEFAULT 'COMPLETE'"))
         if "source" not in inc_columns:
             connection.execute(text("ALTER TABLE incidents ADD COLUMN source VARCHAR(20) DEFAULT 'SIMULATOR' NOT NULL"))
         if "source" not in cam_columns:
@@ -131,4 +134,5 @@ def _ensure_incident_ingest_columns():
         connection.execute(
             text("CREATE UNIQUE INDEX IF NOT EXISTS ix_incidents_candidate_id ON incidents (candidate_id)")
         )
+
 

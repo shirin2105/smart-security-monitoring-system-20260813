@@ -11,6 +11,7 @@ import {
   SeverityBadge,
   StateBadge,
 } from '../common/Badges';
+import { EvidenceMedia } from '../common/EvidenceMedia';
 import { HitlActionBar } from '../hitl/HitlActionBar';
 
 type FilterKey = 'all' | 'active' | 'closed';
@@ -154,11 +155,15 @@ function AlertCard({ event }: { event: SecurityEvent }) {
       </div>
 
       {event.artifact?.redactionStatus === 'COMPLETE' && event.artifact.url && (
-        <img
-          src={event.artifact.url}
-          alt={`Ảnh bằng chứng sự cố #${event.id}`}
-          className="mb-2 h-28 w-full rounded-lg border border-gray-200 dark:border-gray-800 object-cover shadow-sm"
-        />
+        <div className="mb-2 h-32 w-full overflow-hidden rounded-lg border border-gray-200 dark:border-gray-800 bg-slate-950 shadow-sm">
+          <EvidenceMedia
+            artifact={event.artifact}
+            description={event.description}
+            className="h-full w-full object-cover"
+            autoPlay
+            loop
+          />
+        </div>
       )}
 
       {event.artifact && event.artifact.redactionStatus !== 'COMPLETE' && (

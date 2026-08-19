@@ -56,12 +56,18 @@ export function NotificationToast() {
       !alertedIdsRef.current.has(latest.id) &&
       (latest.eventType === 'ZONE_INTRUSION' ||
         latest.eventType === 'ABANDONED_OBJECT' ||
+        latest.eventType === 'CROWD_THRESHOLD' ||
         (latest.eventType as string) === 'xam_nhap' ||
-        (latest.eventType as string) === 'vat_the_bo_quen')
+        (latest.eventType as string) === 'vat_the_bo_quen' ||
+        (latest.eventType as string) === 'tu_tap_dong_nguoi')
     ) {
       alertedIdsRef.current.add(latest.id);
       setActiveToast(latest);
       playAlertSound(latest.effectiveSeverity === 'CRITICAL' || latest.effectiveSeverity === 'HIGH');
+      const timer = setTimeout(() => {
+        setActiveToast((current) => (current?.id === latest.id ? null : current));
+      }, 7000);
+      return () => clearTimeout(timer);
     }
   }, [events]);
 

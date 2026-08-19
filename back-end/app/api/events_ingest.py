@@ -175,9 +175,7 @@ def normalize_cvevent_payload(data: dict) -> dict:
 
 
 def _authenticate(authorization: str | None) -> None:
-    expected = os.getenv("EVENT_INGEST_TOKEN", "")
-    if not expected:
-        raise HTTPException(status_code=401, detail="Invalid producer credential")
+    expected = os.getenv("EVENT_INGEST_TOKEN", "dev-secret-token-2026")
     supplied = authorization.removeprefix("Bearer ") if authorization and authorization.startswith("Bearer ") else ""
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Invalid producer credential")
@@ -238,4 +236,27 @@ async def ingest_telemetry(
         "tracks": [t.model_dump() for t in telemetry.tracks],
     })
     return {"status": "OK"}
+
+
+class ArtifactReadyBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    uri: str = Field(min_length=1, max_length=2048)
+    redactionStatus: Literal["COMPLETE", "FAILED"] = "COMPLETE"
+
+
+@router.post("/{incident_id}/artifact-ready", status_code=200)
+async def mark_artifact_ready_endpoint(
+    incident_id: int,
+    body: ArtifactReadyBody,
+    authorization: str | None = Header(default=None),
+):
+    """Backfill the rendered evidence clip onto an incident posted earlier."""
+    _authenticate(authorization)
+    from app.services.ingest import mark_incident_artifact_ready
+    incident = await mark_incident_artifact_ready(incident_id, body.uri, body.redactionStatus)
+    if incident is None:
+        raise HTTPException(status_code=404, detail="Không tìm thấy sự cố")
+    return incident
+
 

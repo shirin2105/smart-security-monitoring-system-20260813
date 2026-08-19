@@ -43,6 +43,8 @@ class Incident(Base):
     candidate_id = Column(String(255), nullable=True, unique=True, index=True)
     payload_hash = Column(String(64), nullable=True)
     bbox_json = Column(Text, nullable=True)
+    artifact_url = Column(String(255), nullable=True)
+    redaction_status = Column(String(20), nullable=True, default="COMPLETE")
     created_at = Column(DateTime, default=utc_now, nullable=False)
 
     camera = relationship("Camera", back_populates="incidents")

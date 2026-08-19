@@ -68,12 +68,12 @@ def extract_evidence_clip(
     cmd = [
         ffmpeg_bin,
         "-y",
+        "-i",
+        str(src),
         "-ss",
         f"{start:.3f}",
         "-to",
         f"{end:.3f}",
-        "-i",
-        str(src),
         "-c:v",
         "libx264",
         "-an",
@@ -113,8 +113,7 @@ def build_event_candidate(
     ``clip_url=None`` marks the artifact PENDING (alert posted immediately, video
     backfilled later via ``mark_artifact_ready`` once the clip is cut).
     """
-    epoch = _video_epoch()
-    detected_at = epoch + timedelta(seconds=detected_at_s)
+    now_ts = datetime.now(UTC).isoformat()
     objects = event.objects or {}
     person_count = int(objects.get("personCount", objects.get("person", 0)) or 0)
     return {
@@ -124,9 +123,9 @@ def build_event_candidate(
         "sourceType": "SIMULATED",
         "eventType": event.event_type,
         "eventDetected": True,
-        "detectedAt": detected_at.isoformat(),
-        "firstSeenAt": detected_at.isoformat(),
-        "lastSeenAt": detected_at.isoformat(),
+        "detectedAt": now_ts,
+        "firstSeenAt": now_ts,
+        "lastSeenAt": now_ts,
         "confidence": float(event.cv_confidence),
         "trackCount": 1,
         "trackIds": [],

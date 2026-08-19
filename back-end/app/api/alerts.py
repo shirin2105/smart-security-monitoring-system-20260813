@@ -27,6 +27,8 @@ class IncidentResponse(BaseModel):
     source: str = "SIMULATOR"
     created_at: datetime
     bbox: Optional[List[float]] = None
+    artifact_url: Optional[str] = None
+    redaction_status: Optional[str] = None
 
 class AuditLogResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -54,6 +56,8 @@ def get_incidents(db: Session = Depends(get_db)):
             "source": inc.source,
             "created_at": inc.created_at,
             "bbox": bbox,
+            "artifact_url": getattr(inc, "artifact_url", None),
+            "redaction_status": getattr(inc, "redaction_status", None),
         })
     return results
 

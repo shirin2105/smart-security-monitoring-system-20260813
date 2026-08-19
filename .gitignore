@@ -161,3 +161,11 @@ docs/superpowers/*
 
 # Video
 video/
+*.err
+artifacts/evidence_clips/
+.codex/
+.opencode/
+repomix-output.xml
+test_cut.mp4
+raw2.json
+raw_incidents.json

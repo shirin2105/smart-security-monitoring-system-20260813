@@ -15,6 +15,14 @@ cameras:
     inference_fps: 5
     enabled: true
 
+  - camera_id: cam_03
+    name: Hàng rào Tây
+    source_type: SIMULATED
+    source_uri: ./tests/clips/pets2006_3.mp4
+    location: Fence / Yard
+    inference_fps: 5
+    enabled: true
+
   - camera_id: rtsp_test_01
     name: RTSP Test Camera
     source_type: RTSP

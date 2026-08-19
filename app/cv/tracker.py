@@ -41,10 +41,10 @@ class ByteTrackMultiObjectTracker:
         factory = tracker_factory or _default_tracker_factory
         defaults = {
             "lost_track_buffer": 30,
-            "track_activation_threshold": 0.25,
+            "track_activation_threshold": 0.08,
             "minimum_consecutive_frames": 2,
             "minimum_iou_threshold": 0.10,
-            "high_conf_det_threshold": 0.60,
+            "high_conf_det_threshold": 0.25,
         }
         defaults.update(config)
         self._lost_track_buffer = max(0, int(defaults["lost_track_buffer"]))
