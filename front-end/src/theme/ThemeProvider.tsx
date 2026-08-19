@@ -1,10 +1,12 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { Theme as AstryxTheme } from '@astryxdesign/core/theme';
+import { neutralTheme } from '../themes/neutral/neutralTheme';
 
-export type Theme = 'light' | 'dark' | 'system';
+export type ThemeMode = 'light' | 'dark' | 'system';
 
 interface ThemeContextType {
-  theme: Theme;
-  setTheme: (theme: Theme) => void;
+  theme: ThemeMode;
+  setTheme: (theme: ThemeMode) => void;
   actualTheme: 'light' | 'dark';
 }
 
@@ -13,10 +15,10 @@ const THEME_STORAGE_KEY = 'vinai_theme_preference';
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>(() => {
+  const [theme, setThemeState] = useState<ThemeMode>(() => {
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
-        const saved = window.localStorage.getItem(THEME_STORAGE_KEY) as Theme;
+        const saved = window.localStorage.getItem(THEME_STORAGE_KEY) as ThemeMode;
         if (saved && ['light', 'dark', 'system'].includes(saved)) {
           return saved;
         }
@@ -24,12 +26,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // Ignore storage errors in restricted contexts
     }
-    return 'light'; // Default to Light Mode as planned
+    return 'dark'; // Security/surveillance vibe defaults to dark
   });
 
-  const [actualTheme, setActualTheme] = useState<'light' | 'dark'>('light');
+  const [actualTheme, setActualTheme] = useState<'light' | 'dark'>('dark');
 
-  const setTheme = (newTheme: Theme) => {
+  const setTheme = (newTheme: ThemeMode) => {
     setThemeState(newTheme);
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
@@ -41,9 +43,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    const root = document.documentElement;
-
-    const resolveTheme = (t: Theme): 'light' | 'dark' => {
+    const resolveTheme = (t: ThemeMode): 'light' | 'dark' => {
       if (t === 'system') {
         return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
       }
@@ -53,26 +53,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const computed = resolveTheme(theme);
     setActualTheme(computed);
 
-    if (computed === 'dark') {
-      root.classList.add('dark');
-      root.classList.remove('light');
-    } else {
-      root.classList.remove('dark');
-      root.classList.add('light');
-    }
-
     if (theme === 'system') {
       const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
       const handleChange = () => {
-        const updated = mediaQuery.matches ? 'dark' : 'light';
-        setActualTheme(updated);
-        if (updated === 'dark') {
-          root.classList.add('dark');
-          root.classList.remove('light');
-        } else {
-          root.classList.remove('dark');
-          root.classList.add('light');
-        }
+        setActualTheme(mediaQuery.matches ? 'dark' : 'light');
       };
       mediaQuery.addEventListener('change', handleChange);
       return () => mediaQuery.removeEventListener('change', handleChange);
@@ -81,7 +65,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme, actualTheme }}>
-      {children}
+      <AstryxTheme theme={neutralTheme} mode={theme}>
+        {children}
+      </AstryxTheme>
     </ThemeContext.Provider>
   );
 }

@@ -1,6 +1,12 @@
 import { useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { VideoOff, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { VideoOff } from 'lucide-react';
+
+import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog';
+import { Card } from '@astryxdesign/core/Card';
+import { HStack, VStack } from '@astryxdesign/core/Stack';
+import { Text } from '@astryxdesign/core/Text';
+import { AspectRatio } from '@astryxdesign/core/AspectRatio';
 
 import { Camera, SecurityEvent } from '../../domain/types';
 import { EmptyState } from '../common/States';
@@ -13,8 +19,9 @@ interface CameraDetailModalProps {
   onClose: () => void;
 }
 
-/** Chế độ xem chi tiết một camera — acceptance criteria của BAC-50. */
 export function CameraDetailModal({ camera, events, onClose }: CameraDetailModalProps) {
+  const navigate = useNavigate();
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose();
@@ -24,54 +31,74 @@ export function CameraDetailModal({ camera, events, onClose }: CameraDetailModal
   }, [onClose]);
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/90 p-4 backdrop-blur-sm"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="camera-detail-title"
+    <Dialog
+      isOpen={true}
+      onOpenChange={(isOpen) => {
+        if (!isOpen) onClose();
+      }}
+      width={840}
+      maxHeight="90vh"
+      purpose="info"
     >
-      <div className="glass-panel flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-2xl">
-        <div className="flex items-center justify-between gap-3 border-b border-gray-200 dark:border-gray-800 bg-slate-50 dark:bg-gray-950 px-6 py-4">
-          <div className="min-w-0">
-            <h3 id="camera-detail-title" className="truncate text-base font-bold text-gray-900 dark:text-white">
-              {camera.name}
-            </h3>
-            <div className="mt-1 flex flex-wrap items-center gap-2">
-              <span className="text-xs font-medium text-gray-600 dark:text-gray-400">{camera.location}</span>
-              <HealthDot health={camera.health} />
-              <SourceBadge sourceType={camera.sourceType} />
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="rounded-lg bg-gray-100 dark:bg-gray-800 p-2 text-gray-500 dark:text-gray-400 transition-colors hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-            aria-label="Đóng"
+      <DialogHeader
+        title={camera.name}
+        subtitle={camera.location}
+        endContent={
+          <HStack gap={3} vAlign="center">
+            <HealthDot health={camera.health} />
+            <SourceBadge sourceType={camera.sourceType} />
+          </HStack>
+        }
+        onOpenChange={(isOpen) => {
+          if (!isOpen) onClose();
+        }}
+      />
+      <VStack gap={4} padding={4}>
+        {/* Video Preview */}
+        <AspectRatio ratio={16 / 9}>
+          <div
+            style={{
+              position: 'relative',
+              width: '100%',
+              height: '100%',
+              backgroundColor: '#000',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: 'var(--radius-container)',
+              overflow: 'hidden',
+              border: '1px solid var(--color-border)',
+            }}
           >
-            <X className="h-4 w-4" aria-hidden />
-          </button>
-        </div>
+            {camera.health === 'OFFLINE' ? (
+              <VStack gap={2} hAlign="center" vAlign="center">
+                <VideoOff size={36} />
+                <Text type="code" size="xsm" color="secondary">
+                  CAMERA MẤT KẾT NỐI
+                </Text>
+              </VStack>
+            ) : camera.previewUrl ? (
+              <LiveCameraVideo
+                cameraId={camera.id}
+                src={camera.previewUrl}
+                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+              />
+            ) : (
+              <VStack gap={2} hAlign="center" vAlign="center">
+                <VideoOff size={36} />
+                <Text type="code" size="xsm" color="secondary">
+                  KHÔNG CÓ NGUỒN PHÁT
+                </Text>
+              </VStack>
+            )}
+          </div>
+        </AspectRatio>
 
-        <div className="relative flex aspect-video shrink-0 max-h-[50vh] items-center justify-center overflow-hidden bg-slate-950">
-          {camera.health === 'OFFLINE' ? (
-            <div className="flex flex-col items-center gap-2 text-slate-500">
-              <VideoOff className="h-10 w-10" aria-hidden />
-              <span className="font-mono text-xs font-semibold">CAMERA MẤT KẾT NỐI</span>
-            </div>
-          ) : camera.previewUrl.match(/\.(mp4|webm|avi)([?#].*)?$/i) ? (
-            <LiveCameraVideo
-              cameraId={camera.id}
-              src={camera.previewUrl}
-              className={`h-full w-full ${camera.id === 1 ? 'object-contain' : 'object-cover'}`}
-            />
-          ) : (
-            <img src={camera.previewUrl} alt="" className="h-full w-full object-cover" />
-          )}
-        </div>
-
-        <div className="min-h-0 flex-1 overflow-y-auto p-6">
-          <h4 className="mb-3 font-mono text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-400">
-            Sự cố gần đây trên camera này
-          </h4>
+        {/* Events list */}
+        <VStack gap={3}>
+          <Text type="label" weight="bold" color="secondary" size="xsm">
+            SỰ CỐ GẦN ĐÂY TRÊN CAMERA NÀY ({events.length})
+          </Text>
 
           {events.length === 0 ? (
             <EmptyState
@@ -79,31 +106,42 @@ export function CameraDetailModal({ camera, events, onClose }: CameraDetailModal
               hint="Camera đang hoạt động bình thường trong khoảng thời gian đang xem."
             />
           ) : (
-            <ul className="space-y-2.5">
+            <VStack gap={2}>
               {events.map((event) => (
-                <li key={event.id}>
-                  <Link
-                    to={`/incidents/${event.id}`}
-                    onClick={onClose}
-                    className="block rounded-xl border border-gray-200 dark:border-gray-800 bg-slate-50/80 dark:bg-gray-950/70 p-3.5 transition-all hover:border-blue-400 dark:hover:border-blue-500/40 hover:bg-slate-100 dark:hover:bg-gray-900 shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-                  >
-                    <div className="mb-1.5 flex flex-wrap items-center gap-2">
-                      <SeverityBadge severity={event.effectiveSeverity} />
-                      <StateBadge state={event.state} />
-                      <span className="ml-auto font-mono text-[11px] text-gray-500 dark:text-gray-400">
+                <Card
+                  key={event.id}
+                  elevation="low"
+                  padding={3}
+                  onClick={() => {
+                    onClose();
+                    navigate(`/incidents/${event.id}`);
+                  }}
+                  style={{
+                    cursor: 'pointer',
+                    borderRadius: 'var(--radius-container)',
+                    border: '1px solid var(--color-border)',
+                  }}
+                >
+                  <VStack gap={1}>
+                    <HStack justify="between" vAlign="center" gap={2} style={{ flexWrap: 'nowrap' }}>
+                      <HStack gap={1.5} vAlign="center">
+                        <SeverityBadge severity={event.effectiveSeverity} />
+                        <StateBadge state={event.state} />
+                      </HStack>
+                      <Text type="code" size="xsm" color="secondary" style={{ flexShrink: 0, whiteSpace: 'nowrap' }}>
                         {new Date(event.detectedAt).toLocaleString('vi-VN')}
-                      </span>
-                    </div>
-                    <p className="text-xs leading-relaxed text-gray-800 dark:text-gray-300">
+                      </Text>
+                    </HStack>
+                    <Text type="body">
                       {event.description}
-                    </p>
-                  </Link>
-                </li>
+                    </Text>
+                  </VStack>
+                </Card>
               ))}
-            </ul>
+            </VStack>
           )}
-        </div>
-      </div>
-    </div>
+        </VStack>
+      </VStack>
+    </Dialog>
   );
 }

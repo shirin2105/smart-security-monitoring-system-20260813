@@ -9,6 +9,16 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 
+import { Card } from '@astryxdesign/core/Card';
+import { SelectableCard } from '@astryxdesign/core/SelectableCard';
+import { Grid } from '@astryxdesign/core/Grid';
+import { HStack, VStack } from '@astryxdesign/core/Stack';
+import { Text, Heading } from '@astryxdesign/core/Text';
+import { Token } from '@astryxdesign/core/Token';
+import { StatusDot } from '@astryxdesign/core/StatusDot';
+import { ProgressBar } from '@astryxdesign/core/ProgressBar';
+import { AspectRatio } from '@astryxdesign/core/AspectRatio';
+
 import { api } from '../api';
 import { HealthDot, SeverityBadge, StateBadge } from '../components/common/Badges';
 import { ErrorState, LoadingState } from '../components/common/States';
@@ -20,7 +30,7 @@ interface Zone {
   id: string;
   name: string;
   code: string;
-  riskScore: number; // 0 - 100
+  riskScore: number;
   status: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
   cameraCount: number;
   activeIncidents: number;
@@ -36,7 +46,7 @@ const ZONES: Zone[] = [
     status: 'CRITICAL',
     cameraCount: 2,
     activeIncidents: 3,
-    coordinates: { x: 5, y: 10, width: 40, height: 35 },
+    coordinates: { x: 60, y: 60, width: 320, height: 160 },
   },
   {
     id: 'z2',
@@ -46,7 +56,7 @@ const ZONES: Zone[] = [
     status: 'HIGH',
     cameraCount: 2,
     activeIncidents: 1,
-    coordinates: { x: 50, y: 10, width: 45, height: 35 },
+    coordinates: { x: 420, y: 60, width: 320, height: 160 },
   },
   {
     id: 'z3',
@@ -56,7 +66,7 @@ const ZONES: Zone[] = [
     status: 'MEDIUM',
     cameraCount: 1,
     activeIncidents: 0,
-    coordinates: { x: 5, y: 50, width: 40, height: 40 },
+    coordinates: { x: 60, y: 240, width: 320, height: 150 },
   },
   {
     id: 'z4',
@@ -66,35 +76,29 @@ const ZONES: Zone[] = [
     status: 'LOW',
     cameraCount: 1,
     activeIncidents: 0,
-    coordinates: { x: 50, y: 50, width: 45, height: 40 },
+    coordinates: { x: 420, y: 240, width: 320, height: 150 },
   },
 ];
 
-const ZONE_STATUS_STYLE: Record<Zone['status'], { badge: string; border: string; bg: string; dot: string }> = {
-  CRITICAL: {
-    badge: 'bg-rose-50 dark:bg-red-500/20 text-rose-700 dark:text-red-300 border-rose-300 dark:border-red-500/50',
-    border: 'border-rose-500 dark:border-red-500',
-    bg: 'bg-rose-500/10 dark:bg-red-500/15',
-    dot: 'bg-rose-500 animate-ping',
-  },
-  HIGH: {
-    badge: 'bg-amber-50 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-500/50',
-    border: 'border-amber-500 dark:border-amber-500',
-    bg: 'bg-amber-500/10 dark:bg-amber-500/15',
-    dot: 'bg-amber-500',
-  },
-  MEDIUM: {
-    badge: 'bg-blue-50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-500/50',
-    border: 'border-blue-500 dark:border-blue-500',
-    bg: 'bg-blue-500/10 dark:bg-blue-500/15',
-    dot: 'bg-blue-500',
-  },
-  LOW: {
-    badge: 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-500/50',
-    border: 'border-emerald-500 dark:border-emerald-500',
-    bg: 'bg-emerald-500/10 dark:bg-emerald-500/15',
-    dot: 'bg-emerald-500',
-  },
+const ZONE_STATUS_TOKEN_COLOR: Record<Zone['status'], 'red' | 'orange' | 'cyan' | 'green'> = {
+  CRITICAL: 'red',
+  HIGH: 'orange',
+  MEDIUM: 'cyan',
+  LOW: 'green',
+};
+
+const ZONE_PROGRESS_VARIANT: Record<Zone['status'], 'error' | 'warning' | 'accent' | 'success'> = {
+  CRITICAL: 'error',
+  HIGH: 'warning',
+  MEDIUM: 'accent',
+  LOW: 'success',
+};
+
+const ZONE_COLOR_MAP: Record<Zone['status'], string> = {
+  CRITICAL: 'var(--color-error)',
+  HIGH: 'var(--color-warning)',
+  MEDIUM: 'var(--color-accent)',
+  LOW: 'var(--color-success)',
 };
 
 export function HeatmapPage() {
@@ -113,7 +117,6 @@ export function HeatmapPage() {
   const cameras = camerasRes.data ?? [];
   const selectedZone = ZONES.find((z) => z.id === selectedZoneId) || ZONES[0];
 
-  // Map cameras to zone mock assignment
   const getZoneCameras = (zoneCode: string): Camera[] => {
     if (zoneCode === 'ZONE-A') return cameras.slice(0, 2);
     if (zoneCode === 'ZONE-B') return cameras.slice(2, 4);
@@ -128,215 +131,349 @@ export function HeatmapPage() {
   const totalIncidents = events.filter((e) => ['OPEN', 'ACKNOWLEDGED', 'PENDING_REVIEW'].includes(e.state)).length;
 
   return (
-    <div className="flex flex-1 flex-col gap-5 overflow-y-auto">
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="rounded-xl border border-blue-500/40 bg-blue-600/10 dark:bg-blue-600/20 p-2 text-blue-600 dark:text-blue-400 shadow-sm">
-            <MapIcon className="h-5 w-5" aria-hidden />
-          </div>
-          <div>
-            <h1 className="text-base font-extrabold tracking-wide text-gray-900 dark:text-white">
+    <VStack gap={4} padding={4} height="100%" isScrollable>
+      {/* Header */}
+      <HStack justify="between" vAlign="center" wrap="wrap" gap={3}>
+        <HStack gap={2} vAlign="center">
+          <MapIcon size={20} />
+          <VStack gap={0.5}>
+            <Heading level={1}>
               BẢN ĐỒ ĐIỂM NÓNG AN NINH
-            </h1>
-            <p className="text-[11px] text-gray-500 dark:text-gray-400">
+            </Heading>
+            <Text type="supporting" size="xsm" color="secondary">
               Phân tích chỉ số mật độ rủi ro & nhiệt độ sự cố theo vùng mặt bằng
-            </p>
-          </div>
-        </div>
+            </Text>
+          </VStack>
+        </HStack>
 
-        <div className="flex items-center gap-3 font-mono text-xs">
-          <div className="flex items-center gap-2 rounded-xl border border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/60 px-3.5 py-2 shadow-sm">
-            <Flame className="h-4 w-4 text-rose-500" />
-            <span className="text-gray-600 dark:text-gray-400">Rủi ro cao nhất:</span>
-            <span className="font-bold text-rose-600 dark:text-rose-400">ZONE-A (85%)</span>
-          </div>
-          <div className="flex items-center gap-2 rounded-xl border border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/60 px-3.5 py-2 shadow-sm">
-            <ShieldAlert className="h-4 w-4 text-amber-500" />
-            <span className="text-gray-600 dark:text-gray-400">Cảnh báo mở:</span>
-            <span className="font-bold text-amber-600 dark:text-amber-400">{totalIncidents} sự cố</span>
-          </div>
-        </div>
-      </header>
+        <HStack gap={3} vAlign="center">
+          <Card elevation="none" padding={2} style={{ backgroundColor: 'var(--color-background-muted)' }}>
+            <HStack gap={1.5} vAlign="center">
+              <Flame size={14} color="var(--color-error)" />
+              <Text type="supporting" size="xsm" color="secondary">
+                Rủi ro cao nhất:
+              </Text>
+              <Text type="label" size="xsm" weight="bold" color="accent">
+                ZONE-A (85%)
+              </Text>
+            </HStack>
+          </Card>
 
-      {/* Grid tổng quan metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card elevation="none" padding={2} style={{ backgroundColor: 'var(--color-background-muted)' }}>
+            <HStack gap={1.5} vAlign="center">
+              <ShieldAlert size={14} color="var(--color-warning)" />
+              <Text type="supporting" size="xsm" color="secondary">
+                Sự cố cần xử lý:
+              </Text>
+              <Text type="label" size="xsm" weight="bold">
+                {totalIncidents} sự cố
+              </Text>
+            </HStack>
+          </Card>
+        </HStack>
+      </HStack>
+
+      {/* Grid Zone Metric Cards */}
+      <Grid columns={{ minWidth: 220, max: 4 }} gap={3}>
         {ZONES.map((zone) => {
           const isSelected = zone.id === selectedZoneId;
-          const style = ZONE_STATUS_STYLE[zone.status];
-          return (
-            <button
-              key={zone.id}
-              onClick={() => setSelectedZoneId(zone.id)}
-              className={`flex flex-col text-left rounded-2xl border p-4.5 transition-all shadow-sm card-elevation focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
-                isSelected
-                  ? 'border-blue-500 ring-2 ring-blue-500/40 bg-blue-50/50 dark:bg-gray-900'
-                  : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/60 hover:border-gray-300 dark:hover:border-gray-700'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-mono text-xs font-bold text-gray-500 dark:text-gray-400">{zone.code}</span>
-                <span className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[10px] font-bold border ${style.badge}`}>
-                  <span className={`h-1.5 w-1.5 rounded-full ${style.dot}`} />
-                  {zone.status}
-                </span>
-              </div>
-              <h3 className="text-sm font-bold text-gray-900 dark:text-white truncate mb-3">{zone.name}</h3>
+          const statusLabel =
+            zone.status === 'CRITICAL'
+              ? 'Nguy hiểm'
+              : zone.status === 'HIGH'
+              ? 'Cảnh báo cao'
+              : zone.status === 'MEDIUM'
+              ? 'Trung bình'
+              : 'An toàn';
 
-              {/* Progress bar rủi ro */}
-              <div className="mt-auto space-y-1.5">
-                <div className="flex justify-between text-[11px] font-mono">
-                  <span className="text-gray-500 dark:text-gray-400">Chỉ số nhiệt độ:</span>
-                  <span className="font-bold text-gray-900 dark:text-gray-200">{zone.riskScore}/100</span>
-                </div>
-                <div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-800 overflow-hidden">
-                  <div
-                    className={`h-full transition-all duration-500 ${
-                      zone.riskScore > 75
-                        ? 'bg-rose-500'
-                        : zone.riskScore > 50
-                        ? 'bg-amber-500'
-                        : zone.riskScore > 25
-                        ? 'bg-blue-500'
-                        : 'bg-emerald-500'
-                    }`}
-                    style={{ width: `${zone.riskScore}%` }}
+          return (
+            <SelectableCard
+              key={zone.id}
+              label={zone.name}
+              isSelected={isSelected}
+              onChange={() => setSelectedZoneId(zone.id)}
+              padding={3}
+            >
+              <VStack gap={2}>
+                <HStack justify="between" vAlign="center">
+                  <Text type="code" size="xsm" weight="bold" color="secondary">
+                    {zone.code}
+                  </Text>
+                  <Token
+                    size="sm"
+                    color={ZONE_STATUS_TOKEN_COLOR[zone.status]}
+                    label={statusLabel}
                   />
-                </div>
-              </div>
-            </button>
+                </HStack>
+
+                <Text type="body" weight="bold" size="xsm" maxLines={1}>
+                  {zone.name}
+                </Text>
+
+                <VStack gap={1}>
+                  <HStack justify="between" vAlign="center">
+                    <Text type="supporting" color="secondary">
+                      Chỉ số nhiệt:
+                    </Text>
+                    <Text type="code" size="xsm" weight="bold">
+                      {zone.riskScore}/100
+                    </Text>
+                  </HStack>
+                  <ProgressBar
+                    label={`Nhiệt độ ${zone.code}`}
+                    isLabelHidden
+                    value={zone.riskScore}
+                    max={100}
+                    variant={ZONE_PROGRESS_VARIANT[zone.status]}
+                  />
+                </VStack>
+              </VStack>
+            </SelectableCard>
           );
         })}
-      </div>
+      </Grid>
 
-      {/* Map mặt bằng + Chi tiết vùng */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 min-h-[420px]">
-        {/* Bản đồ nhiệt mặt bằng 2D tương tác */}
-        <section className="lg:col-span-7 flex flex-col rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/60 p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="flex items-center gap-2 text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider">
-              <Building2 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-              Sơ đồ mặt bằng tòa nhà (Floorplan Heatmap)
-            </h2>
-            <div className="flex items-center gap-3 text-[11px] font-mono text-gray-500">
-              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-rose-500" /> Nguy hiểm</span>
-              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-amber-500" /> Rủi ro</span>
-              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-500" /> An toàn</span>
-            </div>
-          </div>
+      {/* Map + Detail Panel */}
+      <Grid columns={{ minWidth: 360, max: 2 }} gap={4}>
+        {/* Floorplan Map Card */}
+        <Card elevation="low" padding={4}>
+          <VStack gap={3} height="100%">
+            <HStack justify="between" vAlign="center" wrap="wrap" gap={2}>
+              <HStack gap={1.5} vAlign="center">
+                <Building2 size={16} />
+                <Heading level={2}>
+                  SƠ ĐỒ MẶT BẰNG TÒA NHÀ
+                </Heading>
+              </HStack>
+              <HStack gap={3} vAlign="center" style={{ flexWrap: 'nowrap' }}>
+                <HStack gap={1} vAlign="center">
+                  <StatusDot variant="error" label="Nguy hiểm" />
+                  <Text type="label" size="xsm">Nguy hiểm</Text>
+                </HStack>
+                <HStack gap={1} vAlign="center">
+                  <StatusDot variant="warning" label="Rủi ro" />
+                  <Text type="label" size="xsm">Rủi ro</Text>
+                </HStack>
+                <HStack gap={1} vAlign="center">
+                  <StatusDot variant="success" label="An toàn" />
+                  <Text type="label" size="xsm">An toàn</Text>
+                </HStack>
+              </HStack>
+            </HStack>
 
-          <div className="relative flex-1 min-h-[300px] w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-slate-100 dark:bg-gray-950 overflow-hidden">
-            {/* Grid đường kẻ sơ đồ */}
-            <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:20px_20px]" />
+            <AspectRatio ratio={16 / 9}>
+              <svg
+                viewBox="0 0 800 450"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  backgroundColor: 'var(--color-background-body)',
+                  borderRadius: 'var(--radius-container)',
+                  border: '1px solid var(--color-border)',
+                }}
+              >
+                {/* Background Grid Lines */}
+                <defs>
+                  <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                    <path d="M 40 0 L 0 0 0 40" fill="none" stroke="var(--color-border)" strokeWidth="0.5" />
+                  </pattern>
+                </defs>
+                <rect width="800" height="450" fill="url(#grid)" />
 
-            {/* Các vùng tương tác */}
-            {ZONES.map((zone) => {
-              const isSelected = zone.id === selectedZoneId;
-              const style = ZONE_STATUS_STYLE[zone.status];
-              return (
-                <button
-                  key={zone.id}
-                  onClick={() => setSelectedZoneId(zone.id)}
-                  style={{
-                    left: `${zone.coordinates.x}%`,
-                    top: `${zone.coordinates.y}%`,
-                    width: `${zone.coordinates.width}%`,
-                    height: `${zone.coordinates.height}%`,
-                  }}
-                  className={`absolute rounded-xl border-2 transition-all p-3 flex flex-col justify-between text-left ${style.bg} ${style.border} ${
-                    isSelected ? 'ring-4 ring-blue-500/50 scale-[1.01] z-10 shadow-lg' : 'opacity-85 hover:opacity-100'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-xs font-extrabold text-gray-900 dark:text-white bg-white/80 dark:bg-gray-900/80 px-2 py-0.5 rounded shadow-sm">
-                      {zone.code}
-                    </span>
-                    <span className="font-mono text-[11px] font-bold text-gray-800 dark:text-gray-200">
-                      {zone.riskScore}°C
-                    </span>
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-gray-900 dark:text-gray-100 truncate">{zone.name}</p>
-                    <p className="text-[10px] text-gray-600 dark:text-gray-400 font-mono mt-0.5">
-                      {zone.cameraCount} camera · {zone.activeIncidents} cảnh báo
-                    </p>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </section>
+                {/* Building Outer Wall */}
+                <rect
+                  x="40"
+                  y="40"
+                  width="720"
+                  height="370"
+                  fill="none"
+                  stroke="var(--color-border-emphasized)"
+                  strokeWidth="3"
+                  rx="6"
+                />
 
-        {/* Thông tin vùng được chọn */}
-        <section className="lg:col-span-5 flex flex-col rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/60 p-5 shadow-sm">
-          <header className="border-b border-gray-200 dark:border-gray-800 pb-3 mb-4">
-            <div className="flex items-center justify-between">
-              <span className="font-mono text-xs font-bold text-blue-600 dark:text-blue-400 uppercase">
-                {selectedZone.code}
-              </span>
-              <span className={`inline-flex items-center gap-1 rounded-md px-2.5 py-0.5 text-[10px] font-bold border ${ZONE_STATUS_STYLE[selectedZone.status].badge}`}>
-                Mức {selectedZone.status}
-              </span>
-            </div>
-            <h2 className="text-base font-bold text-gray-900 dark:text-white mt-1">
-              {selectedZone.name}
-            </h2>
-          </header>
+                {/* Zones Polygon / Rects */}
+                {ZONES.map((zone) => {
+                  const isSelected = zone.id === selectedZoneId;
+                  const { x, y, width: w, height: h } = zone.coordinates;
+                  const color = ZONE_COLOR_MAP[zone.status];
 
-          <div className="space-y-4 flex-1">
-            {/* Camera theo vùng */}
-            <div>
-              <h3 className="flex items-center gap-1.5 font-mono text-xs font-bold uppercase text-gray-700 dark:text-gray-400 mb-2">
-                <CameraIcon className="h-3.5 w-3.5 text-blue-500" />
-                Camera gán theo vùng ({selectedZoneCameras.length})
-              </h3>
-              <div className="space-y-2">
-                {selectedZoneCameras.map((cam) => (
-                  <div
-                    key={cam.id}
-                    className="flex items-center justify-between rounded-xl border border-gray-200 dark:border-gray-800 bg-slate-50 dark:bg-gray-950/70 p-3 shadow-sm"
-                  >
-                    <div>
-                      <h4 className="text-xs font-bold text-gray-900 dark:text-gray-200">{cam.name}</h4>
-                      <p className="text-[11px] text-gray-500">{cam.location}</p>
-                    </div>
-                    <HealthDot health={cam.health} />
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Sự cố mới nhất thuộc vùng */}
-            <div>
-              <h3 className="flex items-center gap-1.5 font-mono text-xs font-bold uppercase text-gray-700 dark:text-gray-400 mb-2">
-                <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
-                Sự cố đang phát hiện ({selectedZoneEvents.length})
-              </h3>
-              {selectedZoneEvents.length === 0 ? (
-                <div className="rounded-xl border border-emerald-200 dark:border-emerald-900/40 bg-emerald-50/50 dark:bg-emerald-950/20 p-4 text-center">
-                  <ShieldCheck className="h-6 w-6 text-emerald-600 dark:text-emerald-400 mx-auto mb-1" />
-                  <p className="text-xs font-bold text-emerald-800 dark:text-emerald-300">Vùng an toàn</p>
-                  <p className="text-[11px] text-emerald-600 dark:text-emerald-400">Chưa ghi nhận sự cố bất thường.</p>
-                </div>
-              ) : (
-                <ul className="space-y-2">
-                  {selectedZoneEvents.map((evt) => (
-                    <li
-                      key={evt.id}
-                      className="rounded-xl border border-gray-200 dark:border-gray-800 bg-slate-50 dark:bg-gray-950/70 p-3"
+                  return (
+                    <g
+                      key={zone.id}
+                      onClick={() => setSelectedZoneId(zone.id)}
+                      style={{ cursor: 'pointer' }}
                     >
-                      <div className="flex items-center justify-between mb-1">
-                        <SeverityBadge severity={evt.effectiveSeverity} />
-                        <StateBadge state={evt.state} />
-                      </div>
-                      <p className="text-xs font-medium text-gray-800 dark:text-gray-200">{evt.description}</p>
-                    </li>
+                      {/* Zone Area Fill with Heatmap Tint */}
+                      <rect
+                        x={x}
+                        y={y}
+                        width={w}
+                        height={h}
+                        fill={color}
+                        fillOpacity={isSelected ? 0.35 : 0.18}
+                        stroke={color}
+                        strokeWidth={isSelected ? 3 : 1.5}
+                        strokeDasharray={isSelected ? 'none' : '4 2'}
+                        rx="4"
+                      />
+
+                      {/* Zone Label & Indicator */}
+                      <rect
+                        x={x + 8}
+                        y={y + 8}
+                        width={70}
+                        height={24}
+                        rx="4"
+                        fill="var(--color-background-surface)"
+                        fillOpacity={0.9}
+                      />
+                      <text
+                        x={x + 16}
+                        y={y + 24}
+                        fill="var(--color-text-primary)"
+                        fontSize="12"
+                        fontWeight="bold"
+                        fontFamily="monospace"
+                      >
+                        {zone.code}
+                      </text>
+
+                      {/* Heat pulse center */}
+                      <circle
+                        cx={x + w / 2}
+                        cy={y + h / 2}
+                        r={zone.riskScore / 3}
+                        fill={color}
+                        fillOpacity="0.2"
+                      />
+                      <circle
+                        cx={x + w / 2}
+                        cy={y + h / 2}
+                        r="6"
+                        fill={color}
+                      />
+                    </g>
+                  );
+                })}
+              </svg>
+            </AspectRatio>
+          </VStack>
+        </Card>
+
+        {/* Selected Zone Detail */}
+        <Card elevation="low" padding={4}>
+          <VStack gap={4}>
+            {/* Zone header */}
+            <VStack gap={0.5}>
+              <HStack justify="between" vAlign="center">
+                <Text type="code" size="sm" weight="bold" color="secondary">
+                  {selectedZone.code}
+                </Text>
+                <Token
+                  size="sm"
+                  color={ZONE_STATUS_TOKEN_COLOR[selectedZone.status]}
+                  label={
+                    selectedZone.status === 'CRITICAL'
+                      ? 'Mức: Nguy hiểm'
+                      : selectedZone.status === 'HIGH'
+                      ? 'Mức: Cảnh báo cao'
+                      : selectedZone.status === 'MEDIUM'
+                      ? 'Mức: Trung bình'
+                      : 'Mức: An toàn'
+                  }
+                />
+              </HStack>
+              <Heading level={2}>
+                {selectedZone.name}
+              </Heading>
+            </VStack>
+
+
+            {/* Cameras assigned */}
+            <VStack gap={2}>
+              <HStack gap={1.5} vAlign="center">
+                <CameraIcon size={14} />
+                <Text type="label" weight="bold" color="secondary">
+                  CAMERA TRONG KHU VỰC ({selectedZoneCameras.length})
+                </Text>
+              </HStack>
+              <VStack gap={2}>
+                {selectedZoneCameras.map((cam) => (
+                  <Card
+                    key={cam.id}
+                    elevation="none"
+                    padding={3}
+                    style={{
+                      backgroundColor: 'var(--color-background-muted)',
+                      border: '1px solid var(--color-border)',
+                    }}
+                  >
+                    <HStack justify="between" vAlign="center">
+                      <VStack gap={0}>
+                        <Text type="label" weight="semibold">
+                          {cam.name}
+                        </Text>
+                        <Text type="supporting" color="secondary">
+                          {cam.location}
+                        </Text>
+                      </VStack>
+                      <HealthDot health={cam.health} />
+                    </HStack>
+                  </Card>
+                ))}
+              </VStack>
+            </VStack>
+
+            {/* Active events */}
+            <VStack gap={2}>
+              <HStack gap={1.5} vAlign="center">
+                <AlertTriangle size={14} />
+                <Text type="label" weight="bold" color="secondary">
+                  SỰ CỐ TRONG KHU VỰC ({selectedZoneEvents.length})
+                </Text>
+              </HStack>
+              {selectedZoneEvents.length === 0 ? (
+                <Card elevation="none" padding={3} style={{ backgroundColor: 'var(--color-background-muted)' }}>
+                  <VStack gap={1} hAlign="center" vAlign="center">
+                    <ShieldCheck size={24} color="var(--color-success)" />
+                    <Text type="label" weight="semibold">
+                      Vùng an toàn
+                    </Text>
+                    <Text type="supporting" color="secondary">
+                      Chưa ghi nhận sự cố bất thường trong vùng này.
+                    </Text>
+                  </VStack>
+                </Card>
+              ) : (
+                <VStack gap={2}>
+                  {selectedZoneEvents.map((evt) => (
+                    <Card
+                      key={evt.id}
+                      elevation="none"
+                      padding={3}
+                      style={{
+                        backgroundColor: 'var(--color-background-muted)',
+                        border: '1px solid var(--color-border)',
+                      }}
+                    >
+                      <VStack gap={1}>
+                        <HStack justify="between" vAlign="center">
+                          <SeverityBadge severity={evt.effectiveSeverity} />
+                          <StateBadge state={evt.state} />
+                        </HStack>
+                        <Text type="body">
+                          {evt.description}
+                        </Text>
+                      </VStack>
+                    </Card>
                   ))}
-                </ul>
+                </VStack>
               )}
-            </div>
-          </div>
-        </section>
-      </div>
-    </div>
+            </VStack>
+          </VStack>
+        </Card>
+      </Grid>
+    </VStack>
   );
 }

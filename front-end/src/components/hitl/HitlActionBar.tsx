@@ -1,5 +1,9 @@
 import { useState } from 'react';
-import { Info, Loader2, Lock } from 'lucide-react';
+import { Lock, Info } from 'lucide-react';
+
+import { Button } from '@astryxdesign/core/Button';
+import { HStack, VStack } from '@astryxdesign/core/Stack';
+import { Text } from '@astryxdesign/core/Text';
 
 import { api } from '../../api';
 import { useAuth } from '../../auth/AuthContext';
@@ -17,26 +21,18 @@ import { ReasonDialog } from './ReasonDialog';
 
 interface HitlActionBarProps {
   event: SecurityEvent;
-  /** Bố cục gọn cho sidebar, rộng cho trang chi tiết. */
   compact?: boolean;
   onDone?: (updated: SecurityEvent) => void;
 }
 
-const TONE_CLASS: Record<ActionSpec['tone'], string> = {
-  primary:
-    'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500 focus-visible:ring-emerald-400 shadow-sm',
-  danger:
-    'bg-rose-600 hover:bg-rose-500 text-white border-rose-500 focus-visible:ring-rose-400 shadow-sm',
-  warning:
-    'bg-amber-500/10 dark:bg-amber-600/20 hover:bg-amber-500/20 dark:hover:bg-amber-600/30 text-amber-800 dark:text-amber-200 border-amber-400 dark:border-amber-500/50 focus-visible:ring-amber-400',
-  neutral:
-    'bg-slate-100 dark:bg-gray-800 hover:bg-slate-200 dark:hover:bg-gray-700 text-slate-800 dark:text-gray-200 border-slate-300 dark:border-gray-700 focus-visible:ring-gray-400 shadow-sm',
+const BUTTON_VARIANT: Record<ActionSpec['tone'], 'primary' | 'destructive' | 'secondary'> = {
+  primary: 'primary',
+  danger: 'destructive',
+  warning: 'secondary',
+  neutral: 'secondary',
 };
 
-/**
- * Thanh hành động HITL — BAC-53.
- */
-export function HitlActionBar({ event, compact, onDone }: HitlActionBarProps) {
+export function HitlActionBar({ event, onDone }: HitlActionBarProps) {
   const { user, reportApiError } = useAuth();
   const { upsert } = useEvents();
   const toast = useToast();
@@ -80,7 +76,7 @@ export function HitlActionBar({ event, compact, onDone }: HitlActionBarProps) {
   };
 
   const handleClick = (spec: ActionSpec) => {
-    if (submitting) return; // chốt chống double-submit
+    if (submitting) return;
     if (reasonRequired(spec.type, event.effectiveSeverity)) {
       setPendingReason(spec);
       return;
@@ -90,47 +86,48 @@ export function HitlActionBar({ event, compact, onDone }: HitlActionBarProps) {
 
   if (!actions.length) {
     return (
-      <div className="space-y-2">
+      <VStack gap={2}>
         {blocked && (
-          <p className="flex items-start gap-1.5 rounded-lg border border-amber-200 dark:border-gray-800 bg-amber-50/50 dark:bg-gray-900/60 p-2.5 text-[11px] leading-relaxed text-amber-900 dark:text-gray-400">
-            <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />
-            <span>{blocked}</span>
-          </p>
+          <HStack gap={1.5} vAlign="start" padding={2}>
+            <Lock size={14} color="var(--color-warning)" style={{ flexShrink: 0, marginTop: 2 }} />
+            <Text type="supporting" color="secondary">
+              {blocked}
+            </Text>
+          </HStack>
         )}
         {error != null && <InlineError error={error} />}
-      </div>
+      </VStack>
     );
   }
 
   return (
-    <div className="space-y-2">
-      <div className={`flex flex-wrap gap-2 ${compact ? '' : 'pt-1'}`}>
+    <VStack gap={2}>
+      <HStack gap={2} wrap="wrap">
         {actions.map((spec) => {
           const isSubmitting = submitting === spec.type;
           const disabled = submitting !== null;
 
           return (
-            <button
+            <Button
               key={spec.type}
+              label={spec.label}
+              variant={BUTTON_VARIANT[spec.tone]}
+              size="sm"
+              isLoading={isSubmitting}
+              isDisabled={disabled}
               onClick={() => handleClick(spec)}
-              disabled={disabled}
-              aria-busy={isSubmitting}
-              className={`flex items-center justify-center gap-1.5 rounded-lg border px-3.5 py-2 text-xs font-bold transition-all focus:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50 active:scale-95 ${
-                TONE_CLASS[spec.tone]
-              } ${compact ? 'flex-1' : ''}`}
-            >
-              {isSubmitting && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />}
-              <span>{spec.label}</span>
-            </button>
+            />
           );
         })}
-      </div>
+      </HStack>
 
       {blocked && (
-        <p className="flex items-start gap-1.5 text-[11px] leading-relaxed text-slate-500 dark:text-gray-500">
-          <Info className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />
-          <span>{blocked}</span>
-        </p>
+        <HStack gap={1.5} vAlign="start">
+          <Info size={12} color="var(--color-text-secondary)" style={{ flexShrink: 0, marginTop: 2 }} />
+          <Text type="supporting" color="secondary">
+            {blocked}
+          </Text>
+        </HStack>
       )}
 
       {error != null && <InlineError error={error} />}
@@ -145,6 +142,6 @@ export function HitlActionBar({ event, compact, onDone }: HitlActionBarProps) {
           onSubmit={(reason) => void send(pendingReason, reason)}
         />
       )}
-    </div>
+    </VStack>
   );
 }

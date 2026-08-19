@@ -54,7 +54,7 @@ export interface User {
   cameraScope: number[];
 }
 
-export interface Camera {
+export interface Camera extends Record<string, unknown> {
   id: number;
   name: string;
   location: string;
@@ -80,7 +80,7 @@ export interface EventAction {
   at: string;
 }
 
-export interface SecurityEvent {
+export interface SecurityEvent extends Record<string, unknown> {
   id: number;
   cameraId: number;
   cameraName: string;

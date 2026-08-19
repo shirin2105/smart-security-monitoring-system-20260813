@@ -1,30 +1,28 @@
 /**
- * Empty / loading / error state dùng chung — BAC-56 yêu cầu "tất cả màn hình có
- * empty/loading/error state". Gom về một nơi để trình bày nhất quán.
+ * Empty / loading / error state dùng chung — tuân thủ Astryx Design System.
  */
 
 import { ReactNode } from 'react';
-import {
-  AlertTriangle,
-  Inbox,
-  Loader2,
-  RefreshCw,
-  ShieldOff,
-  WifiOff,
-} from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
+import { Spinner } from '@astryxdesign/core/Spinner';
+import { Center } from '@astryxdesign/core/Center';
+import { VStack } from '@astryxdesign/core/Stack';
+import { Text } from '@astryxdesign/core/Text';
+import { Button } from '@astryxdesign/core/Button';
+import { Banner } from '@astryxdesign/core/Banner';
 
 import { ApiError } from '../../api/errors';
 
 export function LoadingState({ label = 'Đang tải dữ liệu…' }: { label?: string }) {
   return (
-    <div
-      role="status"
-      aria-live="polite"
-      className="flex flex-1 flex-col items-center justify-center gap-3 p-10 text-slate-500 dark:text-gray-400"
-    >
-      <Loader2 className="h-6 w-6 animate-spin text-blue-600 dark:text-blue-400" />
-      <p className="text-xs font-medium">{label}</p>
-    </div>
+    <Center padding={8} minHeight={200}>
+      <VStack gap={3} hAlign="center" vAlign="center">
+        <Spinner size="lg" />
+        <Text type="supporting" color="secondary" size="sm">
+          {label}
+        </Text>
+      </VStack>
+    </Center>
   );
 }
 
@@ -38,50 +36,55 @@ export function EmptyState({
   icon?: ReactNode;
 }) {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-2 p-10 text-center">
-      <div className="mb-1 text-slate-400 dark:text-gray-600">
-        {icon ?? <Inbox className="h-10 w-10" />}
-      </div>
-      <p className="text-sm font-semibold text-slate-800 dark:text-gray-300">{title}</p>
-      {hint && <p className="max-w-sm text-xs leading-relaxed text-slate-500 dark:text-gray-400">{hint}</p>}
-    </div>
+    <Center padding={8} minHeight={200}>
+      <VStack gap={2} hAlign="center" vAlign="center" maxWidth={400}>
+        {icon}
+        <Text type="body" weight="semibold" color="primary">
+          {title}
+        </Text>
+        {hint && (
+          <Text type="supporting" color="secondary" size="xsm" justify="center">
+            {hint}
+          </Text>
+        )}
+      </VStack>
+    </Center>
   );
 }
 
-/** Icon + tiêu đề theo từng loại lỗi, để người dùng biết nên làm gì tiếp. */
-function describe(error: unknown): { icon: ReactNode; title: string; message: string } {
+function describe(error: unknown): { title: string; message: string; status: 'warning' | 'error' | 'info' } {
   if (error instanceof ApiError) {
     switch (error.kind) {
       case 'NETWORK':
         return {
-          icon: <WifiOff className="h-10 w-10 text-amber-500 dark:text-amber-400" />,
+          status: 'warning',
           title: 'Không kết nối được máy chủ',
           message: error.message,
         };
       case 'FORBIDDEN':
         return {
-          icon: <ShieldOff className="h-10 w-10 text-amber-500 dark:text-amber-400" />,
+          status: 'warning',
           title: 'Không đủ quyền',
           message: error.message,
         };
       case 'NOT_IMPLEMENTED':
         return {
-          icon: <AlertTriangle className="h-10 w-10 text-blue-500 dark:text-blue-400" />,
+          status: 'info',
           title: 'Tính năng chưa sẵn sàng ở backend',
           message: error.message,
         };
       default:
         return {
-          icon: <AlertTriangle className="h-10 w-10 text-rose-500 dark:text-red-400" />,
+          status: 'error',
           title: 'Đã xảy ra lỗi',
           message: error.message,
         };
     }
   }
   return {
-    icon: <AlertTriangle className="h-10 w-10 text-rose-500 dark:text-red-400" />,
+    status: 'error',
     title: 'Đã xảy ra lỗi',
-    message: 'Lỗi không xác định. Vui lòng thử lại.',
+    message: error instanceof Error ? error.message : 'Lỗi không xác định. Vui lòng thử lại.',
   };
 }
 
@@ -92,39 +95,42 @@ export function ErrorState({
   error: unknown;
   onRetry?: () => void;
 }) {
-  const { icon, title, message } = describe(error);
+  const { status, title, message } = describe(error);
 
   return (
-    <div
-      role="alert"
-      className="flex flex-1 flex-col items-center justify-center gap-3 p-10 text-center"
-    >
-      {icon}
-      <p className="text-sm font-semibold text-slate-800 dark:text-gray-200">{title}</p>
-      <p className="max-w-md text-xs leading-relaxed text-slate-600 dark:text-gray-400">{message}</p>
-      {onRetry && (
-        <button
-          onClick={onRetry}
-          className="mt-2 flex items-center gap-1.5 rounded-lg border border-slate-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-gray-200 transition-colors hover:bg-slate-50 dark:hover:bg-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 shadow-sm"
-        >
-          <RefreshCw className="h-3.5 w-3.5" />
-          <span>Thử lại</span>
-        </button>
-      )}
-    </div>
+    <Center padding={6} minHeight={200}>
+      <VStack gap={4} hAlign="center" maxWidth={480} width="100%">
+        <Banner
+          status={status}
+          title={title}
+          description={message}
+          container="card"
+          endContent={
+            onRetry ? (
+              <Button
+                label="Thử lại"
+                variant="secondary"
+                size="sm"
+                icon={<RefreshCw size={14} />}
+                onClick={onRetry}
+              />
+            ) : undefined
+          }
+        />
+      </VStack>
+    </Center>
   );
 }
 
 /** Banner lỗi gọn cho thao tác trong form/panel, không chiếm cả màn hình. */
 export function InlineError({ error }: { error: unknown }) {
-  const { message } = describe(error);
+  const { status, title, message } = describe(error);
   return (
-    <div
-      role="alert"
-      className="flex items-start gap-2 rounded-lg border border-rose-200 dark:border-red-500/30 bg-rose-50 dark:bg-red-500/10 p-3 text-xs text-rose-800 dark:text-red-300"
-    >
-      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-500 dark:text-red-400" />
-      <span className="leading-relaxed">{message}</span>
-    </div>
+    <Banner
+      status={status}
+      title={title}
+      description={message}
+      container="card"
+    />
   );
 }

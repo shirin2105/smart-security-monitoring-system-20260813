@@ -1,20 +1,31 @@
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Compass } from 'lucide-react';
 
+import { Center } from '@astryxdesign/core/Center';
+import { VStack } from '@astryxdesign/core/Stack';
+import { Text, Heading } from '@astryxdesign/core/Text';
+import { Button } from '@astryxdesign/core/Button';
+
 export function NotFoundPage() {
+  const navigate = useNavigate();
+
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-3 p-10 text-center">
-      <Compass className="h-10 w-10 text-gray-600" aria-hidden />
-      <h1 className="text-base font-bold text-white">Không tìm thấy trang</h1>
-      <p className="max-w-sm text-xs leading-relaxed text-gray-400">
-        Đường dẫn bạn truy cập không tồn tại hoặc đã được đổi.
-      </p>
-      <Link
-        to="/"
-        className="mt-2 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-blue-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
-      >
-        Về màn hình giám sát
-      </Link>
-    </div>
+    <Center padding={8} minHeight={400}>
+      <VStack gap={3} hAlign="center" vAlign="center" maxWidth={400}>
+        <Compass size={48} color="var(--color-text-disabled)" />
+        <Heading level={1}>
+          Không tìm thấy trang
+        </Heading>
+        <Text type="supporting" color="secondary" size="xsm" justify="center">
+          Đường dẫn bạn truy cập không tồn tại hoặc đã được thay đổi.
+        </Text>
+        <Button
+          label="Về màn hình giám sát"
+          variant="primary"
+          size="sm"
+          onClick={() => navigate('/')}
+        />
+      </VStack>
+    </Center>
   );
 }

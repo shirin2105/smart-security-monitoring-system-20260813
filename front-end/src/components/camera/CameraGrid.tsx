@@ -1,9 +1,18 @@
 import { useState } from 'react';
-import { Maximize2, ShieldAlert, Video, VideoOff } from 'lucide-react';
+import { Activity, Maximize2, Video, VideoOff } from 'lucide-react';
+
+import { Grid } from '@astryxdesign/core/Grid';
+import { Card } from '@astryxdesign/core/Card';
+import { HStack, VStack, StackItem } from '@astryxdesign/core/Stack';
+import { Text, Heading } from '@astryxdesign/core/Text';
+import { Button } from '@astryxdesign/core/Button';
+import { Badge } from '@astryxdesign/core/Badge';
+import { AspectRatio } from '@astryxdesign/core/AspectRatio';
+import { Table, pixel, proportional } from '@astryxdesign/core/Table';
 
 import { Camera, SecurityEvent } from '../../domain/types';
 import { EmptyState } from '../common/States';
-import { HealthDot, SourceBadge } from '../common/Badges';
+import { HealthDot, SeverityBadge, SourceBadge } from '../common/Badges';
 import { CameraDetailModal } from './CameraDetailModal';
 import { LiveCameraVideo } from './LiveCameraVideo';
 
@@ -12,7 +21,6 @@ interface CameraGridProps {
   events: SecurityEvent[];
 }
 
-/** Event còn "sống" trên camera — dùng để vẽ khung cảnh báo lên tile. */
 const OPEN_STATES = ['OPEN', 'PENDING_REVIEW', 'ACKNOWLEDGED', 'CONFIRMED'];
 
 export function CameraGrid({ cameras, events }: CameraGridProps) {
@@ -27,114 +35,321 @@ export function CameraGrid({ cameras, events }: CameraGridProps) {
 
   if (!cameras.length) {
     return (
-      <div className="flex flex-1 items-center justify-center rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/50 dark:bg-gray-900/40 backdrop-blur-sm">
-        <EmptyState
-          icon={<VideoOff className="h-10 w-10 text-gray-400" />}
-          title="Chưa có camera nào"
-          hint="Kiểm tra backend đã seed dữ liệu camera chưa, hoặc bật chế độ mock để xem dữ liệu mẫu."
-        />
-      </div>
+      <EmptyState
+        icon={<VideoOff size={40} />}
+        title="Chưa có camera nào"
+        hint="Kiểm tra backend đã seed dữ liệu camera chưa, hoặc bật chế độ mock để xem dữ liệu mẫu."
+      />
     );
   }
 
   return (
-    <section className="flex flex-col lg:min-h-0 lg:flex-1" aria-label="Lưới camera giám sát">
-      <div className="mb-3.5 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-gray-200">
-          <Video className="h-4 w-4 text-blue-600 dark:text-blue-400" aria-hidden />
-          Lưới camera ({cameras.length} luồng)
-        </h2>
-        <p className="font-mono text-xs text-gray-600 dark:text-gray-400">
-          <span
-            className={healthyCount === cameras.length ? 'font-bold text-emerald-600 dark:text-emerald-400' : 'font-bold text-amber-600 dark:text-amber-400'}
-          >
-            {healthyCount}/{cameras.length}
-          </span>{' '}
-          camera hoạt động bình thường
-        </p>
-      </div>
+    <VStack gap={3} height="100%" as="section" aria-label="Lưới camera giám sát">
+      {/* Header toolbar */}
+      <HStack justify="between" vAlign="center" wrap="wrap" gap={2}>
+        <HStack gap={2} vAlign="center">
+          <Video size={18} />
+          <Heading level={2}>
+            HỆ THỐNG CAMERA ({cameras.length} KÊNH)
+          </Heading>
+        </HStack>
 
-      <div className="grid grid-cols-1 gap-4 content-start md:grid-cols-2 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pr-1 xl:grid-cols-3">
+        <HStack gap={4} vAlign="center">
+          <Text type="code" size="xsm" color={healthyCount === cameras.length ? 'primary' : 'secondary'}>
+            {healthyCount}/{cameras.length} camera hoạt động
+          </Text>
+        </HStack>
+      </HStack>
+
+      {/* Grid of cameras */}
+      <Grid columns={{ minWidth: 320, max: 3 }} gap={3}>
         {cameras.map((camera) => {
           const active = activeFor(camera.id);
           const critical = active?.effectiveSeverity === 'CRITICAL';
           const offline = camera.health === 'OFFLINE';
 
           return (
-            <button
+            <Card
               key={camera.id}
-              onClick={() => setSelected(camera)}
-              aria-label={`Xem chi tiết ${camera.name}`}
-              className={`group relative flex flex-col justify-between overflow-hidden rounded-2xl border text-left transition-all shadow-sm card-elevation focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 h-fit ${
-                critical
-                  ? 'border-rose-400 dark:border-red-500 bg-rose-50/90 dark:bg-red-950/40 ring-2 ring-rose-500/50'
+              elevation={active ? 'high' : 'low'}
+              padding={0}
+              style={{
+                overflow: 'hidden',
+                borderRadius: 'var(--radius-container)',
+                border: critical
+                  ? '2px solid var(--color-error)'
                   : active
-                    ? 'border-amber-400 dark:border-amber-500/60 bg-amber-50/90 dark:bg-gray-900/90'
-                    : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/60 hover:border-blue-400 dark:hover:border-blue-500/50'
-              }`}
+                  ? '2px solid var(--color-warning)'
+                  : '1px solid var(--color-border)',
+                backgroundColor: 'var(--color-background-card)',
+                transition: 'all 0.15s ease-in-out',
+              }}
             >
-              {/* HUD trên */}
-              <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-between gap-2 bg-gradient-to-b from-black/80 to-transparent px-3.5 py-2.5">
-                <span className="truncate font-mono text-xs font-bold tracking-wider text-white drop-shadow-sm">
-                  {camera.name}
-                </span>
-                <HealthDot health={camera.health} />
-              </div>
+              {/* Video container */}
+              <div
+                style={{
+                  position: 'relative',
+                  width: '100%',
+                  backgroundColor: '#000',
+                  cursor: 'pointer',
+                }}
+                onClick={() => setSelected(camera)}
+              >
+                <AspectRatio ratio={16 / 9}>
+                  {!offline && camera.previewUrl ? (
+                    <LiveCameraVideo
+                      cameraId={camera.id}
+                      src={camera.previewUrl}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        display: 'block',
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: 'var(--color-background-muted)',
+                        color: 'var(--color-text-secondary)',
+                      }}
+                    >
+                      <VideoOff size={32} />
+                      <Text type="label" size="sm" color="secondary" style={{ marginTop: 'var(--spacing-1)' }}>
+                        Mất tín hiệu
+                      </Text>
+                    </div>
+                  )}
+                </AspectRatio>
 
-              <div className="relative flex aspect-video items-center justify-center overflow-hidden bg-slate-900">
-                {offline ? (
-                  <div className="flex flex-col items-center gap-2 text-slate-500">
-                    <VideoOff className="h-8 w-8" aria-hidden />
-                    <span className="font-mono text-[11px] font-semibold">KHÔNG CÓ TÍN HIỆU</span>
+                {/* Overlays */}
+                {/* Top left: Camera info */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: 'var(--spacing-2)',
+                    left: 'var(--spacing-2)',
+                    zIndex: 10,
+                    pointerEvents: 'none',
+                  }}
+                >
+                  <HStack
+                    gap={1.5}
+                    vAlign="center"
+                    style={{
+                      backgroundColor: 'rgba(0, 0, 0, 0.75)',
+                      padding: '4px 8px',
+                      borderRadius: 'var(--radius-inner)',
+                      backdropFilter: 'blur(4px)',
+                    }}
+                  >
+                    <HealthDot health={camera.health} />
+                    <Text type="code" size="xsm" weight="bold" style={{ color: '#fff' }}>
+                      {camera.id <= 9 ? `CAM-0${camera.id}` : `CAM-${camera.id}`}
+                    </Text>
+                    <Text type="label" size="xsm" style={{ color: '#fff' }}>
+                      · {camera.name}
+                    </Text>
+                  </HStack>
+                </div>
+
+                {/* Top right: Active alert badge */}
+                {active && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 'var(--spacing-2)',
+                      right: 'var(--spacing-2)',
+                      zIndex: 10,
+                      pointerEvents: 'none',
+                    }}
+                  >
+                    <SeverityBadge severity={active.effectiveSeverity} />
                   </div>
-                ) : camera.previewUrl.match(/\.(mp4|webm|avi)([?#].*)?$/i) ? (
-                  <LiveCameraVideo
-                    cameraId={camera.id}
-                    src={camera.previewUrl}
-                    className={`h-full w-full opacity-85 ${
-                      camera.id === 1
-                        ? 'object-contain'
-                        : 'object-cover transition-transform duration-500 group-hover:scale-105'
-                    }`}
-                  />
-                ) : (
-                  <img
-                    src={camera.previewUrl}
-                    alt=""
-                    className="h-full w-full object-cover opacity-85 transition-transform duration-500 group-hover:scale-105"
-                  />
                 )}
 
-                {/* Lưới radar trang trí */}
-                {!offline && (
-                  <>
-                    <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] opacity-25" />
-                    <div className="animate-radar pointer-events-none absolute inset-x-0 h-1 bg-blue-500/40" />
-                  </>
-                )}
-
-                {/* HUD dưới */}
-                <div className="absolute inset-x-0 bottom-0 z-20 flex items-center justify-between gap-2 bg-gradient-to-t from-black/90 to-transparent px-3.5 py-2 font-mono text-[11px] text-gray-300">
-                  <span className="truncate">{camera.location}</span>
-                  <SourceBadge sourceType={camera.sourceType} />
-                </div>
-
-                <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center gap-2 bg-blue-900/40 backdrop-blur-[2px] text-xs font-semibold text-white opacity-0 transition-opacity group-hover:opacity-100">
-                  <Maximize2 className="h-4 w-4" aria-hidden />
-                  <span>Xem chi tiết</span>
+                {/* Bottom right: Maximize button */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: 'var(--spacing-2)',
+                    right: 'var(--spacing-2)',
+                    zIndex: 10,
+                  }}
+                >
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    icon={<Maximize2 size={14} />}
+                    label="Phóng to"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelected(camera);
+                    }}
+                    style={{
+                      backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                      color: 'var(--color-text-inverted)',
+                    }}
+                  />
                 </div>
               </div>
 
-              {active && (
-                <div className="flex items-center gap-2 border-t border-rose-200 dark:border-red-500/40 bg-rose-50 dark:bg-red-950/80 p-2.5 text-xs text-rose-800 dark:text-red-300">
-                  <ShieldAlert className="h-4 w-4 shrink-0 text-rose-600 dark:text-red-400" aria-hidden />
-                  <span className="truncate font-semibold">{active.description}</span>
-                </div>
-              )}
-            </button>
+              {/* Card Footer */}
+              <div style={{ padding: 'var(--spacing-2) var(--spacing-3)' }}>
+                <HStack justify="between" vAlign="center">
+                  <Text type="supporting" size="xsm" color="secondary">
+                    {camera.location}
+                  </Text>
+                  <SourceBadge sourceType={camera.sourceType} />
+                </HStack>
+              </div>
+            </Card>
           );
         })}
-      </div>
+      </Grid>
+
+      {/* Summary KPI Cards */}
+      <VStack gap={3}>
+        <Grid columns={{ minWidth: 240, max: 3 }} gap={3}>
+          <Card elevation="low" padding={3}>
+            <VStack gap={1}>
+              <HStack justify="between" vAlign="center">
+                <Text type="supporting" size="xsm" color="secondary">
+                  KÊNH TRỰC TUYẾN
+                </Text>
+                <Badge variant={healthyCount === cameras.length ? 'success' : 'warning'} label={`${healthyCount}/${cameras.length}`} />
+              </HStack>
+              <Text type="label" size="lg" weight="bold">
+                {healthyCount} Kênh hoạt động
+              </Text>
+              <Text type="supporting" size="xsm" color="secondary">
+                Tất cả camera được giám sát liên tục 24/7
+              </Text>
+            </VStack>
+          </Card>
+
+          <Card elevation="low" padding={3}>
+            <VStack gap={1}>
+              <HStack justify="between" vAlign="center">
+                <Text type="supporting" size="xsm" color="secondary">
+                  TRẠNG THÁI HỆ THỐNG
+                </Text>
+                <HealthDot health={healthyCount === cameras.length ? 'HEALTHY' : 'DEGRADED'} />
+              </HStack>
+              <Text type="label" size="lg" weight="bold">
+                {healthyCount === cameras.length ? 'Hoạt động ổn định' : 'Có kênh gặp sự cố'}
+              </Text>
+              <Text type="supporting" size="xsm" color="secondary">
+                {cameras.filter((c) => c.health === 'OFFLINE').length} kênh mất tín hiệu
+              </Text>
+            </VStack>
+          </Card>
+
+          <Card elevation="low" padding={3}>
+            <VStack gap={1}>
+              <HStack justify="between" vAlign="center">
+                <Text type="supporting" size="xsm" color="secondary">
+                  SỰ CỐ CẦN THEO DÕI
+                </Text>
+                <Activity size={16} color="var(--color-warning)" />
+              </HStack>
+              <Text type="label" size="lg" weight="bold" color={events.filter((e) => OPEN_STATES.includes(e.state)).length > 0 ? 'accent' : 'primary'}>
+                {events.filter((e) => OPEN_STATES.includes(e.state)).length} Sự cố chưa xử lý
+              </Text>
+              <Text type="supporting" size="xsm" color="secondary">
+                {events.filter((e) => OPEN_STATES.includes(e.state) && e.effectiveSeverity === 'CRITICAL').length} khẩn cấp · Cần xử lý
+              </Text>
+            </VStack>
+          </Card>
+        </Grid>
+
+        {/* Camera Channel Details Table */}
+        <Card elevation="low" padding={3}>
+          <VStack gap={2} style={{ width: '100%', minWidth: 0 }}>
+            <Text type="label" weight="bold">
+              DANH SÁCH CAMERA GIÁM SÁT
+            </Text>
+            <StackItem size="fill" isScrollable style={{ minWidth: 0, width: '100%' }}>
+              <Table<Camera>
+                density="balanced"
+                hasHover
+                data={cameras}
+                idKey="id"
+                columns={[
+                  {
+                    key: 'id',
+                    header: 'Mã & Tên Camera',
+                    width: pixel(200),
+                    renderCell: (cam) => (
+                      <HStack gap={2} vAlign="center">
+                        <Text type="code" size="xsm" weight="bold" color="accent">
+                          {cam.id <= 9 ? `CAM-0${cam.id}` : `CAM-${cam.id}`}
+                        </Text>
+                        <Text type="label" weight="semibold">
+                          {cam.name}
+                        </Text>
+                      </HStack>
+                    ),
+                  },
+                  {
+                    key: 'location',
+                    header: 'Vị trí lắp đặt',
+                    width: proportional(1, { minWidth: 180 }),
+                    renderCell: (cam) => (
+                      <Text type="body" size="xsm">
+                        {cam.location}
+                      </Text>
+                    ),
+                  },
+                  {
+                    key: 'health',
+                    header: 'Tín hiệu',
+                    width: pixel(140),
+                    renderCell: (cam) => (
+                      <HStack gap={1.5} vAlign="center">
+                        <HealthDot health={cam.health} />
+                        <Text type="label" size="xsm">
+                          {cam.health === 'HEALTHY'
+                            ? 'Trực tuyến'
+                            : cam.health === 'DEGRADED'
+                            ? 'Chập chờn'
+                            : 'Mất kết nối'}
+                        </Text>
+                      </HStack>
+                    ),
+                  },
+                  {
+                    key: 'sourceType',
+                    header: 'Loại nguồn',
+                    width: pixel(130),
+                    renderCell: (cam) => <SourceBadge sourceType={cam.sourceType} />,
+                  },
+                  {
+                    key: 'actions',
+                    header: 'Thao tác',
+                    width: pixel(120),
+                    renderCell: (cam) => (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        icon={<Maximize2 size={12} />}
+                        label="Phóng to"
+                        onClick={() => setSelected(cam)}
+                      />
+                    ),
+                  },
+                ]}
+              />
+            </StackItem>
+          </VStack>
+        </Card>
+      </VStack>
 
       {selected && (
         <CameraDetailModal
@@ -143,6 +358,6 @@ export function CameraGrid({ cameras, events }: CameraGridProps) {
           onClose={() => setSelected(null)}
         />
       )}
-    </section>
+    </VStack>
   );
 }

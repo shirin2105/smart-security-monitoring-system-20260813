@@ -6,7 +6,8 @@ import { StreamClockEntry } from '../../api/types';
 interface LiveCameraVideoProps {
   cameraId: number;
   src: string;
-  className: string;
+  className?: string;
+  style?: React.CSSProperties;
 }
 
 const SYNC_INTERVAL_MS = 10_000;
@@ -21,7 +22,7 @@ const MAX_DRIFT_S = 1.5;
  * nên mọi surface (tile, modal) cùng xem đúng vị trí model đang nhận diện — thay
  * vì mỗi element mở ra lại phát lại từ giây 0.
  */
-export function LiveCameraVideo({ cameraId, src, className }: LiveCameraVideoProps) {
+export function LiveCameraVideo({ cameraId, src, className, style }: LiveCameraVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [clock, setClock] = useState<StreamClockEntry | null>(null);
 
@@ -90,6 +91,7 @@ export function LiveCameraVideo({ cameraId, src, className }: LiveCameraVideoPro
       loop
       playsInline
       className={className}
+      style={style}
     />
   );
 }

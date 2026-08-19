@@ -1,84 +1,105 @@
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { History, ScrollText } from 'lucide-react';
+
+import { Card } from '@astryxdesign/core/Card';
+import { HStack, VStack } from '@astryxdesign/core/Stack';
+import { Text, Heading } from '@astryxdesign/core/Text';
+import { Button } from '@astryxdesign/core/Button';
 
 import { api } from '../api';
 import { EmptyState, ErrorState, LoadingState } from '../components/common/States';
 import { useAsync } from '../hooks/useAsync';
 import { useEvents } from '../realtime/EventsProvider';
 
-/** Nhật ký thao tác — append-only, không có chức năng sửa/xóa theo thiết kế. */
 export function AuditPage() {
+  const navigate = useNavigate();
   const { revision } = useEvents();
   const logs = useAsync(() => api.getAuditLog(), [revision]);
 
   return (
-    <div className="flex-1 overflow-y-auto">
-      <header className="mb-4 flex items-center gap-2.5">
-        <div className="rounded-xl border border-blue-500/40 bg-blue-600/10 dark:bg-blue-600/20 p-2 text-blue-600 dark:text-blue-400 shadow-sm">
-          <History className="h-5 w-5" aria-hidden />
-        </div>
-        <div>
-          <h1 className="text-base font-extrabold tracking-wide text-gray-900 dark:text-white">
+    <VStack gap={4} padding={4} height="100%" isScrollable>
+      {/* Header */}
+      <HStack gap={2} vAlign="center">
+        <History size={20} />
+        <VStack gap={0.5}>
+          <Heading level={1}>
             NHẬT KÝ THAO TÁC (AUDIT TRAIL)
-          </h1>
-          <p className="text-[11px] text-gray-500 dark:text-gray-400">
-            Chỉ ghi thêm, không thể sửa hoặc xóa — mọi quyết định của người trực đều lưu
-            vĩnh viễn.
-          </p>
-        </div>
-      </header>
+          </Heading>
+          <Text type="supporting" size="xsm" color="secondary">
+            Chỉ ghi thêm, không thể sửa hoặc xóa — mọi quyết định của người trực đều lưu vĩnh viễn.
+          </Text>
+        </VStack>
+      </HStack>
 
-      <section className="min-h-[20rem] rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/60 p-6 shadow-sm">
+      <Card elevation="low" padding={4}>
         {logs.loading && !logs.data ? (
           <LoadingState label="Đang tải nhật ký…" />
         ) : logs.error != null ? (
           <ErrorState error={logs.error} onRetry={logs.reload} />
         ) : !logs.data || logs.data.length === 0 ? (
           <EmptyState
-            icon={<ScrollText className="h-10 w-10 text-gray-400" />}
+            icon={<ScrollText size={40} />}
             title="Chưa có thao tác nào được ghi nhận"
             hint="Nhật ký sẽ xuất hiện ngay khi có người tiếp nhận hoặc xử lý một sự cố."
           />
         ) : (
-          <ol className="relative space-y-4 border-l border-gray-200 dark:border-gray-800 pl-6">
+          <VStack gap={3}>
             {logs.data.map((log) => (
-              <li key={log.id} className="relative">
-                <span
-                  className="absolute -left-[31px] top-1.5 h-3 w-3 rounded-full border-2 border-white dark:border-gray-900 bg-blue-600"
-                  aria-hidden
-                />
-                <div className="rounded-xl border border-gray-200 dark:border-gray-800/80 bg-slate-50 dark:bg-gray-950/70 p-4 shadow-sm">
-                  <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
-                    <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
+              <Card
+                key={log.id}
+                elevation="none"
+                padding={3}
+                style={{
+                  backgroundColor: 'var(--color-background-muted)',
+                  border: '1px solid var(--color-border)',
+                }}
+              >
+                <VStack gap={1.5}>
+                  <HStack justify="between" vAlign="center" gap={2} style={{ flexWrap: 'nowrap' }}>
+                    <Text type="label" weight="bold" color="accent">
                       {log.actorName}
-                    </span>
-                    <span className="font-mono text-[11px] text-gray-500 dark:text-gray-400">
+                    </Text>
+                    <Text type="code" size="xsm" color="secondary" style={{ flexShrink: 0, whiteSpace: 'nowrap' }}>
                       {new Date(log.at).toLocaleString('vi-VN')}
-                    </span>
-                  </div>
+                    </Text>
+                  </HStack>
 
-                  <p className="text-xs font-semibold text-gray-800 dark:text-gray-200">{log.action}</p>
+                  <Text type="body" weight="semibold">
+                    {log.action}
+                  </Text>
 
                   {log.reason && (
-                    <p className="mt-1.5 border-l-2 border-slate-300 dark:border-gray-700 pl-2 text-[11px] italic leading-relaxed text-gray-600 dark:text-gray-400">
-                      Lý do: {log.reason}
-                    </p>
+                    <VStack
+                      gap={0}
+                      paddingInline={2}
+                      paddingBlock={1}
+                      style={{
+                        borderLeft: '2px solid var(--color-border-emphasized)',
+                      }}
+                    >
+                      <Text type="supporting" color="secondary">
+                        Lý do: {log.reason}
+                      </Text>
+                    </VStack>
                   )}
 
                   {log.incidentId != null && (
-                    <Link
-                      to={`/incidents/${log.incidentId}`}
-                      className="mt-2 inline-block font-mono text-[11px] font-semibold text-blue-600 dark:text-blue-400 underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-                    >
-                      Sự cố #{log.incidentId} →
-                    </Link>
+                    <HStack justify="start">
+                      <Button
+                        label={`Sự cố #${log.incidentId} →`}
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => navigate(`/incidents/${log.incidentId}`)}
+                      />
+                    </HStack>
                   )}
-                </div>
-              </li>
+                </VStack>
+              </Card>
             ))}
-          </ol>
+          </VStack>
         )}
-      </section>
-    </div>
+      </Card>
+    </VStack>
   );
 }
+

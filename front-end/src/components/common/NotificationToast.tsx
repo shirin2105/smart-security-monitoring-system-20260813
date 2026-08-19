@@ -1,12 +1,15 @@
 import { useEffect, useState, useRef } from 'react';
-import { ShieldAlert, Package, X } from 'lucide-react';
+import { Banner } from '@astryxdesign/core/Banner';
+import { HStack, VStack } from '@astryxdesign/core/Stack';
+import { Text } from '@astryxdesign/core/Text';
+import { Token } from '@astryxdesign/core/Token';
 import { useEvents } from '../../realtime/EventsProvider';
 import { EVENT_TYPE_LABEL, SecurityEvent, SEVERITY_LABEL } from '../../domain/types';
 
 /** Web Audio API Synth Alert Sound */
 function playAlertSound(isCritical = false) {
   try {
-    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     if (!AudioCtx) return;
     const ctx = new AudioCtx();
     const osc = ctx.createOscillator();
@@ -14,7 +17,7 @@ function playAlertSound(isCritical = false) {
 
     const now = ctx.currentTime;
     osc.type = isCritical ? 'sawtooth' : 'sine';
-    
+
     // Frequency pattern (Alarm melody)
     osc.frequency.setValueAtTime(isCritical ? 880 : 660, now);
     osc.frequency.setValueAtTime(isCritical ? 1100 : 880, now + 0.12);
@@ -43,7 +46,6 @@ export function NotificationToast() {
   useEffect(() => {
     if (!events || events.length === 0) return;
 
-    // Tránh phát chuông tự động đối với các event có sẵn từ khi mở app lần đầu
     if (isFirstRender.current) {
       events.forEach((ev) => alertedIdsRef.current.add(ev.id));
       isFirstRender.current = false;
@@ -73,50 +75,52 @@ export function NotificationToast() {
 
   if (!activeToast) return null;
 
-  const isIntrusion =
-    activeToast.eventType === 'ZONE_INTRUSION' || (activeToast.eventType as string) === 'xam_nhap';
+  const isCritical = activeToast.effectiveSeverity === 'CRITICAL' || activeToast.effectiveSeverity === 'HIGH';
 
   return (
     <div
-      role="alert"
-      className="fixed top-5 left-1/2 -translate-x-1/2 z-50 flex w-full max-w-lg items-start gap-4 rounded-2xl border border-rose-500/50 bg-gray-900/95 p-4 text-white shadow-2xl backdrop-blur-md animate-bounce-short"
+      style={{
+        position: 'fixed',
+        top: 'var(--spacing-4)',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        zIndex: 9999,
+        maxWidth: 560,
+        width: '90%',
+      }}
     >
-      <div
-        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
-          isIntrusion ? 'bg-rose-600 text-white' : 'bg-amber-600 text-white'
-        }`}
-      >
-        {isIntrusion ? <ShieldAlert className="h-6 w-6" /> : <Package className="h-6 w-6" />}
-      </div>
-
-      <div className="flex-1 space-y-1">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-sm text-rose-400 uppercase tracking-wide">
+      <Banner
+        status={isCritical ? 'error' : 'warning'}
+        container="card"
+        elevation="high"
+        isDismissable
+        onDismiss={() => setActiveToast(null)}
+        title={
+          <HStack gap={2} vAlign="center" style={{ flexWrap: 'nowrap' }}>
+            <Text type="label" weight="bold">
               {EVENT_TYPE_LABEL[activeToast.eventType] || 'CẢNH BÁO TỨC THÌ'}
-            </span>
-            <span className="rounded bg-rose-950 px-2 py-0.5 font-mono text-[10px] font-bold text-rose-300 border border-rose-800/60">
-              {SEVERITY_LABEL[activeToast.effectiveSeverity] || activeToast.effectiveSeverity}
-            </span>
-          </div>
-          <span className="font-mono text-[11px] text-gray-400">
-            {new Date(activeToast.detectedAt).toLocaleTimeString('vi-VN')}
-          </span>
-        </div>
-
-        <p className="text-xs font-semibold text-gray-200">{activeToast.description}</p>
-        <p className="font-mono text-[11px] text-gray-400">
-          Camera: <span className="text-white font-bold">{activeToast.cameraName}</span>
-        </p>
-      </div>
-
-      <button
-        onClick={() => setActiveToast(null)}
-        className="rounded-lg p-1 text-gray-400 hover:bg-gray-800 hover:text-white"
-        aria-label="Đóng thông báo"
-      >
-        <X className="h-4 w-4" />
-      </button>
+            </Text>
+            <Token
+              size="sm"
+              color={isCritical ? 'red' : 'yellow'}
+              label={SEVERITY_LABEL[activeToast.effectiveSeverity] || activeToast.effectiveSeverity}
+            />
+            <Text type="code" size="xsm" color="secondary" style={{ flexShrink: 0, whiteSpace: 'nowrap' }}>
+              {new Date(activeToast.detectedAt).toLocaleTimeString('vi-VN')}
+            </Text>
+          </HStack>
+        }
+        description={
+          <VStack gap={1} paddingBlock={1}>
+            <Text type="body">
+              {activeToast.description}
+            </Text>
+            <Text type="supporting" color="secondary">
+              Camera: {activeToast.cameraName}
+            </Text>
+          </VStack>
+        }
+      />
     </div>
   );
 }

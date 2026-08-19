@@ -5,7 +5,8 @@ import { EventArtifact } from '../../domain/types';
 interface EvidenceMediaProps {
   artifact: EventArtifact;
   description: string;
-  className: string;
+  className?: string;
+  style?: React.CSSProperties;
   autoPlay?: boolean;
   controls?: boolean;
   loop?: boolean;
@@ -17,6 +18,7 @@ export function EvidenceMedia({
   artifact,
   description,
   className,
+  style,
   autoPlay = false,
   controls = false,
   loop = false,
@@ -31,6 +33,7 @@ export function EvidenceMedia({
         src={artifact.url}
         alt={`Ảnh bằng chứng ${description}`}
         className={className}
+        style={style}
         loading="lazy"
       />
     );
@@ -62,6 +65,7 @@ export function EvidenceMedia({
       src={artifact.url}
       aria-label={`Video bằng chứng ${description}`}
       className={className}
+      style={style}
       autoPlay={autoPlay}
       controls={controls}
       loop={loop && artifact.clipEndS == null}

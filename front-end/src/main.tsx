@@ -2,6 +2,9 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 
+import '@astryxdesign/core/reset.css';
+import '@astryxdesign/core/astryx.css';
+
 import App from './App';
 import './index.css';
 
