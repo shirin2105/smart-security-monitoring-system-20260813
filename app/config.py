@@ -40,6 +40,14 @@ class AppConfig(BaseSettings):
     def cameras(self) -> list[dict[str, Any]]:
         return self.load_yaml("cameras.yaml").get("cameras", [])
 
+    def camera_ai_enabled(self, camera_id: str) -> bool:
+        for cam in self.cameras:
+            if cam.get("camera_id") == camera_id:
+                if "ai_enabled" in cam:
+                    return bool(cam["ai_enabled"])
+                break
+        return self.llm_enabled
+
     @property
     def zones(self) -> list[dict[str, Any]]:
         return self.load_yaml("zones.yaml").get("zones", [])

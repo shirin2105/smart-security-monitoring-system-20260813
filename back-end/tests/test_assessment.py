@@ -12,11 +12,11 @@ from test_api import INGEST_HEADERS, candidate_payload, client
 
 
 def _ingest(candidate_id):
-    return client.post("/api/v1/events/ingest", headers=INGEST_HEADERS, json=candidate_payload(candidate_id))
+    return client.post("/api/v1/events/ingest", headers=INGEST_HEADERS, json=candidate_payload(candidate_id, camera_id="cam_02"))
 
 
 def test_ingest_enqueues_one_allowlisted_metadata_snapshot():
-    payload = candidate_payload("evt-assessment-allowlist")
+    payload = candidate_payload("evt-assessment-allowlist", camera_id="cam_02")
     payload["artifact"] = {"available": True, "contentType": "image/jpeg", "redactionStatus": "COMPLETE", "uri": "secret"}
     payload["trackIds"] = [123, 456]
     first = client.post("/api/v1/events/ingest", headers=INGEST_HEADERS, json=payload)
@@ -36,7 +36,7 @@ def test_ingest_enqueues_one_allowlisted_metadata_snapshot():
 
 
 def test_job_insert_failure_rolls_back_incident(monkeypatch):
-    payload = candidate_payload("evt-assessment-rollback")
+    payload = candidate_payload("evt-assessment-rollback", camera_id="cam_02")
     real_factory = ingest.SessionLocal
     db = real_factory()
     original_add = db.add

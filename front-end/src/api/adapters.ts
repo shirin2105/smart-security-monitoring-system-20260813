@@ -36,6 +36,7 @@ export interface RawCamera {
   stream_url: string;
   status: string;
   source?: string;
+  ai_enabled?: boolean;
 }
 
 export interface RawIncident {
@@ -175,12 +176,11 @@ export function toCamera(raw: RawCamera): Camera {
     name: raw.name,
     location: raw.location,
     health: HEALTH_MAP[String(raw.status).toLowerCase()] ?? 'OFFLINE',
-    // Nguồn theo backend: camera chạy CV pipeline thật là LIVE (PRD §8.1).
     sourceType: raw.source === 'CV' ? 'LIVE' : 'SIMULATED',
-    // stream_url có thể là path relative (/media/...) — resolve sang backend origin
     previewUrl: raw.stream_url.startsWith('http')
       ? raw.stream_url
       : `${API_BASE_URL}${raw.stream_url}`,
+    aiEnabled: raw.ai_enabled ?? true,
   };
 }
 

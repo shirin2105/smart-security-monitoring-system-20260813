@@ -7,6 +7,7 @@ if os.path.exists(TEST_DB_PATH):
     os.remove(TEST_DB_PATH)
 
 os.environ["DATABASE_URL"] = f"sqlite:///{TEST_DB_PATH}"
+os.environ["ENVIRONMENT"] = "dev"
 os.environ["EVENT_INGEST_TOKEN"] = "test-producer-token"
 
 from app.db.database import init_db_and_seed
@@ -48,6 +49,46 @@ def test_health():
     response = client.get("/health")
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
+
+
+def test_camera_ai_enabled_is_boolean_type():
+    """Regression: when the migration adds cameras.ai_enabled to a pre-existing
+    DB (table existed before the column), it must use a BOOLEAN type matching
+    the ORM model, not INTEGER, so the schema/ORM types stay consistent."""
+    from sqlalchemy import create_engine, inspect as sa_inspect, text
+    import app.db.database as dbmod
+
+    tmp_db = "./reg_ai_enabled_migration.sqlite"
+    tmp_engine = create_engine(f"sqlite:///{tmp_db}")
+    original_engine = dbmod.engine
+    try:
+        # Simulate a DB created before ai_enabled existed in the model.
+        with tmp_engine.begin() as conn:
+            conn.execute(text("DROP TABLE IF EXISTS cameras"))
+            conn.execute(text("DROP TABLE IF EXISTS incidents"))
+            conn.execute(text(
+                "CREATE TABLE cameras ("
+                "id INTEGER PRIMARY KEY, name VARCHAR, location VARCHAR, "
+                "stream_url VARCHAR, status VARCHAR, source VARCHAR)"
+            ))
+            conn.execute(text(
+                "CREATE TABLE incidents ("
+                "id INTEGER PRIMARY KEY, camera_id INTEGER, event_type VARCHAR, "
+                "severity VARCHAR, description TEXT, status VARCHAR, source VARCHAR)"
+            ))
+        dbmod.engine = tmp_engine
+        dbmod._ensure_incident_ingest_columns()
+
+        columns = {c["name"]: c for c in sa_inspect(tmp_engine).get_columns("cameras")}
+        assert "ai_enabled" in columns
+        type_name = str(columns["ai_enabled"]["type"]).upper()
+        assert "BOOLEAN" in type_name, f"expected BOOLEAN column type, got {type_name}"
+    finally:
+        dbmod.engine = original_engine
+        tmp_engine.dispose()
+        if os.path.exists(tmp_db):
+            os.remove(tmp_db)
+
 
 def test_login():
     response = client.post("/api/v1/auth/login", json={"username": "guard", "password": "guard123"})

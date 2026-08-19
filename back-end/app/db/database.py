@@ -2,12 +2,24 @@ import logging
 import os
 
 import bcrypt
-from sqlalchemy import create_engine, inspect, text
+from sqlalchemy import Boolean, create_engine, inspect, text
 from sqlalchemy.orm import sessionmaker
 
 from app.db.models import Base, Camera, User
 
 logger = logging.getLogger("uvicorn.error")
+
+
+def _is_dev_environment() -> bool:
+    """True when running in a local dev or test context.
+
+    In production, user seeding is disabled unless explicit credentials are
+    provided via environment variables to avoid shipping known default
+    credentials.
+    """
+    env = os.getenv("ENVIRONMENT", "dev").strip().lower()
+    return env in ("dev", "local", "test", "testing")
+
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
@@ -58,6 +70,65 @@ def get_db():
     finally:
         db.close()
 
+def _seed_default_users(db) -> bool:
+    """Seed the default guard and manager users.
+
+    Credentials are sourced from environment variables so that no known
+    passwords are ever hard-coded in source:
+
+      - SEED_GUARD_PASSWORD     password for the "guard" user
+      - SEED_MANAGER_PASSWORD   password for the "manager" user
+
+    Behaviour:
+      - Dev / test environments: fall back to local-only defaults when the
+        env var is absent so local development and CI remain functional.
+      - Production: seeding is skipped entirely unless both env vars are
+        explicitly provided. If only one is provided, that user is seeded
+        and the other is skipped (never falls back to a hard-coded value).
+
+    Returns True if any users were seeded.
+    """
+    guard_pwd = os.getenv("SEED_GUARD_PASSWORD")
+    manager_pwd = os.getenv("SEED_MANAGER_PASSWORD")
+
+    if _is_dev_environment():
+        guard_pwd = guard_pwd or "guard123"
+        manager_pwd = manager_pwd or "manager123"
+
+    if not guard_pwd and not manager_pwd:
+        logger.warning(
+            "Skipping user seeding: SEED_GUARD_PASSWORD and SEED_MANAGER_PASSWORD "
+            "are not set (and ENVIRONMENT is not dev/test)."
+        )
+        return False
+
+    seeded_any = False
+
+    if guard_pwd:
+        guard_user = User(
+            username="guard",
+            hashed_password=hash_password(guard_pwd),
+            role="bao_ve",
+            full_name="Bảo Vệ Nguyễn Văn A",
+        )
+        db.add(guard_user)
+        seeded_any = True
+
+    if manager_pwd:
+        manager_user = User(
+            username="manager",
+            hashed_password=hash_password(manager_pwd),
+            role="quan_ly",
+            full_name="Quản Lý Trần Văn B",
+        )
+        db.add(manager_user)
+        seeded_any = True
+
+    if seeded_any:
+        db.commit()
+    return seeded_any
+
+
 def init_db_and_seed():
     Base.metadata.create_all(bind=engine)
     _ensure_incident_ingest_columns()
@@ -65,42 +136,27 @@ def init_db_and_seed():
     try:
         # Seed users if empty
         if db.query(User).count() == 0:
-            guard_pwd = hash_password("guard123")
-            manager_pwd = hash_password("manager123")
-
-            guard_user = User(
-                username="guard",
-                hashed_password=guard_pwd,
-                role="bao_ve",
-                full_name="Bảo Vệ Nguyễn Văn A"
-            )
-            manager_user = User(
-                username="manager",
-                hashed_password=manager_pwd,
-                role="quan_ly",
-                full_name="Quản Lý Trần Văn B"
-            )
-            db.add(guard_user)
-            db.add(manager_user)
-            db.commit()
-            logger.info("Default seed users created: guard, manager")
+            users_seeded = _seed_default_users(db)
+            if users_seeded:
+                logger.info("Default seed users created: guard, manager")
 
         # Seed or update cameras
         cameras_seed = [
-            (1, "Camera Cổng Chính", "Cổng A - Tầng 1", "/media/walking_people.mp4"),
-            (2, "Camera Sảnh Chờ", "Sảnh Tòa Nhà - Tầng 1", "/media/aboda-video1.mp4"),
-            (3, "Camera Hàng Rào Tây", "Khu Vực Hàng Rào - Phía Tây", "/media/pets2006_3.mp4"),
-            (4, "Camera Phòng Server", "Khai Thác Kỹ Thuật - Tầng Hầm", "/media/aban3.mp4"),
-            (5, "Camera Bãi Xe B1", "Bãi Xe Ô Tô - Tầng B1", "/media/store-aisle-detection.mp4"),
-            (6, "Camera Hành Lang T4", "Hành Lang Văn Phòng - Tầng 4", "/media/person-bicycle-car-detection.mp4"),
+            (1, "Camera Cổng Chính", "Cổng A - Tầng 1", "/media/walking_people.mp4", False),
+            (2, "Camera Sảnh Chờ", "Sảnh Tòa Nhà - Tầng 1", "/media/aboda-video1.mp4", True),
+            (3, "Camera Hàng Rào Tây", "Khu Vực Hàng Rào - Phía Tây", "/media/pets2006_3.mp4", True),
+            (4, "Camera Phòng Server", "Khai Thác Kỹ Thuật - Tầng Hầm", "/media/aban3.mp4", True),
+            (5, "Camera Bãi Xe B1", "Bãi Xe Ô Tự - Tầng B1", "/media/store-aisle-detection.mp4", True),
+            (6, "Camera Hành Lang T4", "Hành Lang Văn Phòng - Tầng 4", "/media/person-bicycle-car-detection.mp4", True),
         ]
-        for cam_id, name, location, stream_url in cameras_seed:
+        for cam_id, name, location, stream_url, ai_enabled in cameras_seed:
             existing = db.query(Camera).filter(Camera.id == cam_id).first()
             if existing:
                 existing.stream_url = stream_url
                 existing.source = "CV"
+                existing.ai_enabled = ai_enabled
             else:
-                db.add(Camera(id=cam_id, name=name, location=location, stream_url=stream_url, status="online", source="CV"))
+                db.add(Camera(id=cam_id, name=name, location=location, stream_url=stream_url, status="online", source="CV", ai_enabled=ai_enabled))
         db.commit()
         logger.info("Default cameras seeded/updated in database")
 
@@ -131,6 +187,15 @@ def _ensure_incident_ingest_columns():
             connection.execute(text("ALTER TABLE incidents ADD COLUMN source VARCHAR(20) DEFAULT 'SIMULATOR' NOT NULL"))
         if "source" not in cam_columns:
             connection.execute(text("ALTER TABLE cameras ADD COLUMN source VARCHAR(20) DEFAULT 'SIMULATOR' NOT NULL"))
+        if "ai_enabled" not in cam_columns:
+            # Match the ORM model (models.Camera.ai_enabled is Column(Boolean)).
+            # Compile the Boolean type for the live dialect so Postgres gets
+            # BOOLEAN and SQLite gets BOOLEAN instead of INTEGER, keeping the
+            # schema and ORM types consistent across databases.
+            ai_enabled_type = Boolean().compile(dialect=engine.dialect)
+            connection.execute(
+                text(f"ALTER TABLE cameras ADD COLUMN ai_enabled {ai_enabled_type} DEFAULT TRUE NOT NULL")
+            )
         connection.execute(
             text("CREATE UNIQUE INDEX IF NOT EXISTS ix_incidents_candidate_id ON incidents (candidate_id)")
         )

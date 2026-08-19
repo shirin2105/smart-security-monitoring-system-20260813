@@ -149,6 +149,14 @@ describe('toCamera', () => {
     expect(toCamera({ ...REAL_CAMERA, status: 'online' }).health).toBe('HEALTHY');
     expect(toCamera({ ...REAL_CAMERA, status: 'offline' }).health).toBe('OFFLINE');
   });
+
+  it('ai_enabled = false → aiEnabled = false', () => {
+    expect(toCamera({ ...REAL_CAMERA, ai_enabled: false }).aiEnabled).toBe(false);
+  });
+
+  it('ai_enabled không truyền → aiEnabled mặc định true', () => {
+    expect(toCamera(REAL_CAMERA).aiEnabled).toBe(true);
+  });
 });
 
 describe('toUser — payload login thật', () => {

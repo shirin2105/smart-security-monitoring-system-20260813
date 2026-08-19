@@ -61,6 +61,7 @@ export interface Camera {
   health: CameraHealth;
   sourceType: SourceType;
   previewUrl: string;
+  aiEnabled: boolean;
 }
 
 export interface EventArtifact {

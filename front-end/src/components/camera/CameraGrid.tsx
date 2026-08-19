@@ -3,7 +3,7 @@ import { Maximize2, ShieldAlert, Video, VideoOff } from 'lucide-react';
 
 import { Camera, SecurityEvent } from '../../domain/types';
 import { EmptyState } from '../common/States';
-import { HealthDot, SourceBadge } from '../common/Badges';
+import { AiStatusBadge, HealthDot, SourceBadge } from '../common/Badges';
 import { CameraDetailModal } from './CameraDetailModal';
 import { LiveCameraVideo } from './LiveCameraVideo';
 
@@ -117,6 +117,7 @@ export function CameraGrid({ cameras, events }: CameraGridProps) {
                 <div className="absolute inset-x-0 bottom-0 z-20 flex items-center justify-between gap-2 bg-gradient-to-t from-black/90 to-transparent px-3.5 py-2 font-mono text-[11px] text-gray-300">
                   <span className="truncate">{camera.location}</span>
                   <SourceBadge sourceType={camera.sourceType} />
+                  <AiStatusBadge aiEnabled={camera.aiEnabled} />
                 </div>
 
                 <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center gap-2 bg-blue-900/40 backdrop-blur-[2px] text-xs font-semibold text-white opacity-0 transition-opacity group-hover:opacity-100">

@@ -4,7 +4,7 @@ import { VideoOff, X } from 'lucide-react';
 
 import { Camera, SecurityEvent } from '../../domain/types';
 import { EmptyState } from '../common/States';
-import { HealthDot, SeverityBadge, SourceBadge, StateBadge } from '../common/Badges';
+import { HealthDot, SeverityBadge, SourceBadge, StateBadge, AiStatusBadge } from '../common/Badges';
 import { LiveCameraVideo } from './LiveCameraVideo';
 
 interface CameraDetailModalProps {
@@ -40,6 +40,7 @@ export function CameraDetailModal({ camera, events, onClose }: CameraDetailModal
               <span className="text-xs font-medium text-gray-600 dark:text-gray-400">{camera.location}</span>
               <HealthDot health={camera.health} />
               <SourceBadge sourceType={camera.sourceType} />
+              <AiStatusBadge aiEnabled={camera.aiEnabled} />
             </div>
           </div>
           <button

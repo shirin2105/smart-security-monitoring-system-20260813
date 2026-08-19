@@ -6,6 +6,7 @@ cameras:
     location: Gate A
     inference_fps: 5
     enabled: true
+    ai_enabled: false
 
   - camera_id: cam_02
     name: Sảnh chính
@@ -14,6 +15,7 @@ cameras:
     location: Lobby
     inference_fps: 5
     enabled: true
+    ai_enabled: true
 
   - camera_id: cam_03
     name: Hàng rào Tây
@@ -22,6 +24,7 @@ cameras:
     location: Fence / Yard
     inference_fps: 5
     enabled: true
+    ai_enabled: true
 
   - camera_id: rtsp_test_01
     name: RTSP Test Camera
@@ -29,6 +32,7 @@ cameras:
     source_uri: ${RTSP_TEST_URL}
     inference_fps: 5
     enabled: false
+    ai_enabled: true
     rtsp:
       open_timeout_ms: 5000
       read_timeout_ms: 5000

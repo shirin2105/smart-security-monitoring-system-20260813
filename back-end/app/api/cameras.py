@@ -17,6 +17,7 @@ class CameraResponse(BaseModel):
     stream_url: str
     status: str
     source: str = "SIMULATOR"
+    ai_enabled: bool = True
 
 @router.get("", response_model=List[CameraResponse])
 def get_cameras(db: Session = Depends(get_db)):

@@ -126,3 +126,27 @@ export function AiGeneratedBadge() {
     </span>
   );
 }
+
+/** Trạng thái AI assessment cho camera: bật (AI phân tích sự kiện) / tắt (chỉ CV). */
+export function AiStatusBadge({ aiEnabled }: { aiEnabled: boolean }) {
+  if (aiEnabled) {
+    return (
+      <span
+        className={`${BASE} border-violet-300 dark:border-violet-500/40 bg-violet-50 dark:bg-violet-500/15 text-violet-700 dark:text-violet-300`}
+        title="AI assessment đang bật cho camera này"
+      >
+        <Bot className="h-3 w-3" aria-hidden />
+        AI bật
+      </span>
+    );
+  }
+  return (
+    <span
+      className={`${BASE} border-slate-300 dark:border-gray-700 bg-slate-100 dark:bg-gray-800/80 text-slate-600 dark:text-gray-400`}
+      title="AI assessment đã tắt cho camera này"
+    >
+      <Bot className="h-3 w-3" aria-hidden />
+      AI tắt
+    </span>
+  );
+}

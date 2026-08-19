@@ -33,6 +33,7 @@ export const MOCK_CAMERAS: Camera[] = [
     health: 'HEALTHY',
     sourceType: 'LIVE',
     previewUrl: '/media/walking_people.mp4',
+    aiEnabled: false,
   },
   {
     id: 2,
@@ -41,6 +42,7 @@ export const MOCK_CAMERAS: Camera[] = [
     health: 'HEALTHY',
     sourceType: 'LIVE',
     previewUrl: '/media/aboda-video1.mp4',
+    aiEnabled: true,
   },
   {
     id: 3,
@@ -49,6 +51,7 @@ export const MOCK_CAMERAS: Camera[] = [
     health: 'DEGRADED',
     sourceType: 'LIVE',
     previewUrl: '/media/pets2006_3.mp4',
+    aiEnabled: true,
   },
   {
     id: 4,
@@ -57,6 +60,7 @@ export const MOCK_CAMERAS: Camera[] = [
     health: 'HEALTHY',
     sourceType: 'SIMULATED',
     previewUrl: PREVIEW(4),
+    aiEnabled: true,
   },
   {
     id: 5,
@@ -65,6 +69,7 @@ export const MOCK_CAMERAS: Camera[] = [
     health: 'OFFLINE',
     sourceType: 'SIMULATED',
     previewUrl: PREVIEW(5),
+    aiEnabled: true,
   },
   {
     id: 6,
@@ -73,6 +78,7 @@ export const MOCK_CAMERAS: Camera[] = [
     health: 'HEALTHY',
     sourceType: 'SIMULATED',
     previewUrl: PREVIEW(6),
+    aiEnabled: true,
   },
 ];
 

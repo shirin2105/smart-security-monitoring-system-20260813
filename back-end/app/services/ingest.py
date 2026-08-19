@@ -86,7 +86,7 @@ def assessment_snapshot(payload: dict, camera_id: int) -> dict:
     }
 
 
-def _incident_payload(incident: Incident, camera_name: str) -> dict:
+def _incident_payload(incident: Incident, camera_name: str, ai_enabled: bool = True) -> dict:
     bbox = json.loads(incident.bbox_json) if incident.bbox_json else None
     return {
         "id": incident.id,
@@ -99,6 +99,7 @@ def _incident_payload(incident: Incident, camera_name: str) -> dict:
         "source": incident.source,
         "created_at": incident.created_at.isoformat(),
         "bbox": bbox,
+        "ai_enabled": ai_enabled,
     }
 
 
@@ -119,13 +120,16 @@ async def ingest_event_candidate(payload: dict) -> dict:
                 db.commit()
                 db.refresh(existing)
                 camera = db.query(Camera).filter(Camera.id == existing.camera_id).first()
-                incident_payload = _incident_payload(existing, camera.name if camera else f"Camera #{existing.camera_id}")
+                ai_enabled = camera.ai_enabled if camera else True
+                incident_payload = _incident_payload(existing, camera.name if camera else f"Camera #{existing.camera_id}", ai_enabled)
                 incident_payload["bbox"] = bbox_data
                 await manager.broadcast({"type": "UPDATE_ALERT", "incident": incident_payload})
                 return {"status": "ACCEPTED", "incident": incident_payload}
             return _duplicate_result(existing, digest, db)
 
         camera_id = map_camera_id(payload.get("cameraId", ""), db)
+        camera = db.query(Camera).filter(Camera.id == camera_id).first()
+        ai_enabled = camera.ai_enabled if camera else True
         canonical_event_type = payload["eventType"]
         event_type = map_event_type(canonical_event_type)
         severity = EVENT_SEVERITY_MAP[canonical_event_type]
@@ -147,11 +151,12 @@ async def ingest_event_candidate(payload: dict) -> dict:
         )
         db.add(incident)
         db.flush()
-        db.add(AssessmentJob(
-            incident_id=incident.id,
-            status="READY",
-            snapshot_json=json.dumps(assessment_snapshot(payload, camera_id), separators=(",", ":")),
-            available_at=datetime.now(UTC),
+        if ai_enabled:
+            db.add(AssessmentJob(
+                incident_id=incident.id,
+                status="READY",
+                snapshot_json=json.dumps(assessment_snapshot(payload, camera_id), separators=(",", ":")),
+                available_at=datetime.now(UTC),
         ))
         try:
             db.commit()
@@ -162,9 +167,11 @@ async def ingest_event_candidate(payload: dict) -> dict:
                 return _duplicate_result(existing, digest, db)
             raise
         db.refresh(incident)
-        camera = db.query(Camera).filter(Camera.id == camera_id).first()
-        incident_payload = _incident_payload(incident, camera.name if camera else f"Camera #{camera_id}")
+        camera_name = camera.name if camera else f"Camera #{camera_id}"
+        ai_enabled = camera.ai_enabled if camera else True
+        incident_payload = _incident_payload(incident, camera_name)
         incident_payload["bbox"] = bbox_data
+        incident_payload["ai_enabled"] = ai_enabled
         await manager.broadcast({"type": "NEW_ALERT", "incident": incident_payload})
         return {"status": "ACCEPTED", "incident": incident_payload}
     finally:
@@ -175,9 +182,10 @@ def _duplicate_result(existing: Incident, digest: str, db) -> dict:
     if existing.payload_hash != digest:
         raise IdempotencyConflict("Candidate identifier was already used with a different payload")
     camera = db.query(Camera).filter(Camera.id == existing.camera_id).first()
+    ai_enabled = camera.ai_enabled if camera else True
     return {
         "status": "DUPLICATE_IGNORED",
-        "incident": _incident_payload(existing, camera.name if camera else f"Camera #{existing.camera_id}"),
+        "incident": _incident_payload(existing, camera.name if camera else f"Camera #{existing.camera_id}", ai_enabled),
     }
 
 
@@ -211,7 +219,8 @@ async def mark_incident_artifact_ready(incident_id: int, uri: str, redaction_sta
         db.commit()
         db.refresh(incident)
         camera = db.query(Camera).filter(Camera.id == incident.camera_id).first()
-        incident_payload = _incident_payload(incident, camera.name if camera else f"Camera #{incident.camera_id}")
+        ai_enabled = camera.ai_enabled if camera else True
+        incident_payload = _incident_payload(incident, camera.name if camera else f"Camera #{incident.camera_id}", ai_enabled)
         await manager.broadcast({"type": "ALERT_UPDATED", "incident_id": incident.id})
         return incident_payload
     finally:

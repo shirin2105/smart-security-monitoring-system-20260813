@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, UniqueConstraint
+from sqlalchemy import Boolean, Column, Integer, String, Text, DateTime, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
@@ -27,6 +27,7 @@ class Camera(Base):
     stream_url = Column(String(255), nullable=False)
     status = Column(String(20), nullable=False, default="online")  # "online", "warning", "offline"
     source = Column(String(20), nullable=False, default="SIMULATOR")  # "CV", "SIMULATOR"
+    ai_enabled = Column(Boolean, nullable=False, default=True)  # AI assessment on/off per camera
 
     incidents = relationship("Incident", back_populates="camera")
 
