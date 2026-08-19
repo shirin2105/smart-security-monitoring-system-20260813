@@ -1,67 +1,136 @@
 package vn.t176.patrol.ui.theme
 
 import android.app.Activity
-import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 
 /**
- * Bảng màu giữ đúng ngữ nghĩa mức độ nghiêm trọng giống bản web, để người dùng
- * chuyển giữa hai màn hình không phải học lại ý nghĩa màu.
+ * Theme "Tactical Dark" — hệ thống chỉ có một chế độ.
+ *
+ * Không có light mode, và đó là quyết định có chủ đích chứ không phải thiếu sót:
+ * app này dùng trong ca đêm và ngoài hiện trường, một màn hình trắng loá giữa
+ * đêm vừa làm chói mắt người trực vừa biến họ thành mục tiêu dễ thấy. Giữ tham
+ * số `darkTheme` chỉ để điều khiển màu icon thanh trạng thái.
  */
-private val SurfaceDark = Color(0xFF0B0F19)
-private val SurfaceElevated = Color(0xFF141B2D)
-private val BrandBlue = Color(0xFF3B82F6)
 
-internal val SeverityInfo = Color(0xFF38BDF8)
-internal val SeverityWarning = Color(0xFFF59E0B)
-internal val SeverityHigh = Color(0xFFFB923C)
-internal val SeverityCritical = Color(0xFFEF4444)
-internal val StateOk = Color(0xFF10B981)
+private val TacticalColorScheme = darkColorScheme(
+    primary = TacticalPrimary,
+    onPrimary = TacticalOnPrimary,
+    primaryContainer = SeverityInfoContainer,
+    onPrimaryContainer = SeverityInfo,
 
-private val DarkColors = darkColorScheme(
-    primary = BrandBlue,
-    onPrimary = Color.White,
-    background = SurfaceDark,
-    onBackground = Color(0xFFE5E7EB),
-    surface = SurfaceDark,
-    onSurface = Color(0xFFE5E7EB),
-    surfaceVariant = SurfaceElevated,
-    onSurfaceVariant = Color(0xFF9CA3AF),
+    secondary = StateAcknowledged,
+    onSecondary = Color(0xFF04231A),
+
+    tertiary = TacticalTertiary,
+    onTertiary = TacticalOnTertiary,
+    tertiaryContainer = TacticalTertiary.copy(alpha = 0.16f),
+    onTertiaryContainer = TacticalTertiary,
+
+    background = TacticalBackground,
+    onBackground = TacticalOnSurface,
+
+    surface = TacticalBackground,
+    onSurface = TacticalOnSurface,
+
+    // surfaceVariant là card cấp 1 — hàng danh sách, khối nội dung.
+    surfaceVariant = TacticalSurface,
+    onSurfaceVariant = TacticalOnSurfaceVariant,
+
+    // surfaceContainerHigh là card cấp 2 — hộp thoại, ô nhập, khối nổi trên card.
+    surfaceContainer = TacticalSurface,
+    surfaceContainerHigh = TacticalSurfaceElevated,
+    surfaceContainerHighest = TacticalSurfaceElevated,
+
     error = SeverityCritical,
-    outline = Color(0xFF374151),
+    onError = Color.White,
+    errorContainer = SeverityCriticalContainer,
+    onErrorContainer = SeverityCritical,
+
+    outline = TacticalBorder,
+    outlineVariant = TacticalBorder.copy(alpha = 0.5f),
 )
 
-private val LightColors = lightColorScheme(
-    primary = BrandBlue,
-    error = SeverityCritical,
+/**
+ * Bo góc đồng bộ: 12dp cho phần tử nhỏ, 16dp cho khối lớn.
+ *
+ * Hai giá trị thôi. Nhiều bán kính khác nhau trên cùng màn hình làm bố cục
+ * trông lộn xộn mà người xem không chỉ ra được vì sao.
+ */
+private val TacticalShapes = Shapes(
+    extraSmall = RoundedCornerShape(8.dp),
+    small = RoundedCornerShape(10.dp),
+    medium = RoundedCornerShape(12.dp),
+    large = RoundedCornerShape(16.dp),
+    extraLarge = RoundedCornerShape(20.dp),
 )
+
+/**
+ * Kiểu chữ cho mã định danh: camera, sự cố, mốc thời gian.
+ *
+ * Monospace vì các mã này được đọc để **đối chiếu**, không phải để đọc hiểu.
+ * Chiều rộng ký tự cố định giúp mắt so từng ký tự giữa màn hình và bộ đàm,
+ * và `0` với `O` không còn lẫn vào nhau.
+ */
+val MonoLabel = TextStyle(
+    fontFamily = FontFamily.Monospace,
+    fontWeight = FontWeight.Medium,
+    fontSize = 12.sp,
+    letterSpacing = 0.5.sp,
+)
+
+val MonoLabelSmall = TextStyle(
+    fontFamily = FontFamily.Monospace,
+    fontWeight = FontWeight.Medium,
+    fontSize = 11.sp,
+    letterSpacing = 0.4.sp,
+)
+
+private val TacticalTypography = Typography().run {
+    copy(
+        headlineSmall = headlineSmall.copy(fontWeight = FontWeight.Bold),
+        titleLarge = titleLarge.copy(fontWeight = FontWeight.Bold),
+        titleMedium = titleMedium.copy(fontWeight = FontWeight.SemiBold),
+        titleSmall = titleSmall.copy(fontWeight = FontWeight.SemiBold),
+        // Nhãn đọc lướt trong lúc di chuyển nên cần đậm hơn mặc định.
+        labelLarge = labelLarge.copy(fontWeight = FontWeight.SemiBold),
+        labelMedium = labelMedium.copy(fontWeight = FontWeight.SemiBold),
+    )
+}
 
 @Composable
 fun PatrolTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = true,
     content: @Composable () -> Unit,
 ) {
-    // App dùng cho ca trực đêm là chính, nên mặc định nghiêng về nền tối.
-    val colors = if (darkTheme) DarkColors else LightColors
     val view = LocalView.current
 
     if (!view.isInEditMode) {
         SideEffect {
-            // Màu nền thanh trạng thái đã đặt trong themes.xml. Ở đây chỉ chỉnh
-            // màu icon cho tương phản, vì nó phụ thuộc theme sáng/tối lúc chạy.
             val window = (view.context as Activity).window
+            // Luôn dùng icon sáng: nền thanh trạng thái luôn tối.
             WindowCompat.getInsetsController(window, view)
-                .isAppearanceLightStatusBars = !darkTheme
+                .isAppearanceLightStatusBars = false
         }
     }
 
-    MaterialTheme(colorScheme = colors, content = content)
+    MaterialTheme(
+        colorScheme = TacticalColorScheme,
+        typography = TacticalTypography,
+        shapes = TacticalShapes,
+        content = content,
+    )
 }
