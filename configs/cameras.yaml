@@ -5,7 +5,7 @@ cameras:
     source_uri: ./tests/clips/walking_people.mp4
     location: Gate A
     inference_fps: 5
-    enabled: true
+    enabled: false
 
   - camera_id: cam_02
     name: Sảnh chính
@@ -21,7 +21,7 @@ cameras:
     source_uri: ./tests/clips/pets2006_3.mp4
     location: Fence / Yard
     inference_fps: 5
-    enabled: true
+    enabled: false
 
   - camera_id: rtsp_test_01
     name: RTSP Test Camera
